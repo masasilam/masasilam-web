@@ -1,0 +1,1225 @@
+/* ================================================================
+   EPUB READER STYLES FOR NASKAH
+   Path: src/styles/epub-styles.css
+   ================================================================ */
+
+/* ================================================================
+   1️⃣ CHAPTER CONTENT WRAPPER
+   ================================================================ */
+.chapter-content {
+  font-family: "Minion Pro", "Adobe Garamond Pro", "Garamond", "Times New Roman", "Liberation Serif", serif;
+  font-size: 1em;
+  line-height: 1.5;
+  max-width: 38em;
+  margin: 0 auto;
+  padding: 0.25em;
+  text-align: justify;
+  hyphens: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ================================================================
+   2️⃣ STRUKTUR TEKS UTAMA
+   ================================================================ */
+
+/* Judul dalam chapter */
+.chapter-content h1,
+.chapter-content h2,
+.chapter-content h3,
+.chapter-content h4,
+.chapter-content h5,
+.chapter-content h6 {
+  font-family: inherit;
+  text-align: center;
+  margin: 2.5em 0 0.25em 0;
+  hyphens: none;
+  page-break-after: avoid;
+}
+
+.chapter-content h1 { font-size: 1.5em; font-weight: 700; }
+.chapter-content h2 { font-size: 1.3em; font-weight: 650; }
+.chapter-content h3 { font-size: 1.2em; font-weight: 600; }
+.chapter-content h4 { font-size: 1.1em; font-weight: 550; }
+.chapter-content h5 { font-size: 1.05em; font-weight: 500; }
+.chapter-content h6 { font-size: 1em; font-weight: 450; }
+
+/* Paragraf */
+.chapter-content p {
+  margin: 0;
+  text-align: justify;
+  text-indent: 1.5em;
+  orphans: 2;
+  widows: 2;
+  hyphens: auto;
+  word-wrap: break-word;
+}
+
+/* Paragraf pertama setelah heading TIDAK ada indent */
+.chapter-content h1 + p,
+.chapter-content h2 + p,
+.chapter-content h3 + p,
+.chapter-content h4 + p,
+.chapter-content h5 + p,
+.chapter-content h6 + p,
+.chapter-content .first-paragraph,
+.chapter-content section > p:first-of-type {
+  text-indent: 0;
+  margin-top: 2em;
+}
+
+/* Separator / Ornament */
+.chapter-content p.separator,
+.chapter-content p.ornament,
+.chapter-content p.divider {
+  text-align: center !important;
+  text-indent: 0 !important;
+  margin: 2em 0 !important;
+  color: #666;
+}
+
+.chapter-content p.ornament-flower {
+  letter-spacing: 0.3em;
+  font-size: 1.1em;
+  text-align: center;
+  text-indent: 0;
+}
+
+/* ================================================================
+   3️⃣ HALAMAN KHUSUS - TITLEPAGE, COLOPHON, IMPRINT, UNCOPYRIGHT
+   ================================================================ */
+
+/* Titlepage */
+.chapter-content .titlepage {
+  text-align: center;
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chapter-content .titlepage h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content .titlepage .subtitle {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0 2em 0;
+  text-align: center;
+}
+
+.chapter-content .titlepage h2 {
+  font-size: 1.3em;
+  font-weight: 650;
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content .titlepage h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 2.5em 0 0.25em 0;
+}
+
+/* Chapter, Colophon, Imprint, Uncopyright */
+.chapter-content .chapter,
+.chapter-content .colophon,
+.chapter-content .imprint,
+.chapter-content .uncopyright {
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+}
+
+/* Colophon */
+.chapter-content .colophon p {
+  text-indent: 0;
+}
+
+.chapter-content .colophon > p:first-of-type {
+  text-align: center;
+}
+
+.chapter-content .colophon,
+.chapter-content .imprint,
+.chapter-content .uncopyright {
+  text-align: justify;
+}
+
+.chapter-content .colophon img,
+.chapter-content .imprint img {
+  max-width: 150px !important;
+  max-height: 150px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto 2em auto !important;
+  object-fit: contain;
+}
+
+/* ================================================================
+   4️⃣ PUISI (POEM)
+   ================================================================ */
+.chapter-content .poem {
+  margin: 2em 0;
+  text-align: left;
+  text-indent: 0;
+  hyphens: none;
+  line-height: 1.4;
+}
+
+.chapter-content .poem p,
+.chapter-content .poem div,
+.chapter-content .poem span {
+  text-align: left;
+  text-indent: 0;
+  margin: 0;
+  hyphens: none;
+}
+
+.chapter-content .poem .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .poem .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .poem .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .poem h1,
+.chapter-content .poem h2,
+.chapter-content .poem h3,
+.chapter-content .poem h4 {
+  text-align: center;
+  font-weight: 600;
+  margin: 1.5em 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.chapter-content .poem .author {
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.1em;
+  margin: 2em 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.chapter-content .poem span {
+  display: block;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.chapter-content .poem div + div {
+  margin-top: 1.5em;
+}
+
+.chapter-content .poem p:last-child {
+  text-align: right;
+  font-style: italic;
+  margin-top: 2em;
+  font-size: 0.9em;
+}
+
+.chapter-content .indent {
+  margin-left: 2em;
+}
+
+/* ================================================================
+   5️⃣ DAFTAR, KUTIPAN, DAN FORMAT TEKS LAINNYA
+   ================================================================ */
+.chapter-content ol,
+.chapter-content ul {
+  margin: 0;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.chapter-content ul.dash-list {
+  list-style: none;
+  padding-left: 1.5em;
+  margin: 0;
+}
+
+.chapter-content ul.dash-list li {
+  text-indent: -0.7em;
+  margin: 0;
+}
+
+.chapter-content ul.dash-list li::before {
+  content: "– ";
+}
+
+/* Kutipan & teks */
+.chapter-content strong,
+.chapter-content b {
+  font-weight: 600;
+}
+
+.chapter-content em,
+.chapter-content i {
+  font-style: italic;
+}
+
+.chapter-content q::before {
+  content: open-quote;
+}
+
+.chapter-content q::after {
+  content: close-quote;
+}
+
+.chapter-content blockquote {
+  margin: 0.25em 0;
+  padding: 0 0.25em;
+  border-left: 3px solid #ccc;
+  font-style: italic;
+  hyphens: auto;
+}
+
+.chapter-content blockquote p {
+  text-indent: 0;
+}
+
+.chapter-content blockquote p + p {
+  text-indent: 1.5em;
+}
+
+.chapter-content blockquote .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+  border-left: none !important;
+  font-style: normal !important;
+}
+
+.chapter-content blockquote .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content blockquote .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  font-style: normal !important;
+}
+
+.chapter-content a {
+  text-decoration: underline;
+  hyphens: none;
+}
+
+.chapter-content a:hover {
+  opacity: 0.8;
+}
+
+/* ================================================================
+   6️⃣ GAMBAR & TATA LETAK RESPONSIF
+   ================================================================ */
+.chapter-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.chapter-content .image-with-caption {
+  margin: 2em auto;
+  text-align: center;
+}
+
+.chapter-content .image-with-caption img {
+  margin: 0 auto;
+}
+
+.chapter-content .image-caption {
+  text-align: center;
+  font-size: 0.9em;
+  margin: 0.5em 0 0 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+.chapter-content .image-small {
+  max-width: 120px !important;
+  max-height: 120px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-medium {
+  max-width: 200px !important;
+  max-height: 200px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-container {
+  margin: 0.25em 0;
+  overflow: hidden;
+  clear: both;
+}
+
+.chapter-content .image-left {
+  float: left;
+  margin: 0 0.5em 0.25em 0;
+  max-width: 45%;
+}
+
+.chapter-content .image-right {
+  float: right;
+  margin: 0 0 0.25em 0.5em;
+  max-width: 45%;
+}
+
+.chapter-content .image-top,
+.chapter-content .image-bottom {
+  display: block;
+  margin: 0.25em auto;
+  max-width: 100%;
+}
+
+.chapter-content .image-container::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* ================================================================
+   7️⃣ FORMAT SURAT
+   ================================================================ */
+.chapter-content .letter {
+  margin: 3em auto;
+  padding: 2em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fdfcf8;
+  max-width: 36em;
+  line-height: 1.6;
+  hyphens: auto;
+}
+
+.chapter-content .letter p {
+  margin: 0;
+  text-align: justify;
+}
+
+.chapter-content .letter .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.chapter-content .letter .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .letter .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .letter .date {
+  text-align: right;
+  font-style: italic;
+  margin-bottom: 2em;
+  text-indent: 0;
+}
+
+.chapter-content .letter .salutation {
+  margin-bottom: 1.5em;
+  text-indent: 0;
+  font-weight: 500;
+}
+
+.chapter-content .letter .body {
+  text-indent: 1.5em;
+  text-align: justify;
+}
+
+.chapter-content .letter .body:first-of-type {
+  text-indent: 0;
+  margin-top: 0;
+}
+
+.chapter-content .letter .closing {
+  margin-top: 2em;
+  text-align: right;
+  font-style: italic;
+  text-indent: 0;
+}
+
+.chapter-content .letter .signature {
+  text-align: right;
+  font-weight: 600;
+  margin-top: 0.5em;
+  text-indent: 0;
+}
+
+.chapter-content .letter-date {
+  text-align: right;
+  font-style: italic;
+  text-indent: 0;
+}
+
+/* ================================================================
+   8️⃣ UNSUR TAMBAHAN & GAYA KHUSUS
+   ================================================================ */
+.chapter-content .epigraph {
+  font-style: italic;
+  text-align: center;
+  margin: 3em auto;
+  max-width: 32em;
+  hyphens: none;
+}
+
+.chapter-content .epigraph cite {
+  display: block;
+  margin-top: 1em;
+  font-size: 0.9em;
+  text-align: right;
+  font-style: normal;
+}
+
+.chapter-content .subtitle {
+  font-size: 1.1em;
+  text-align: center;
+  margin: 1.5em 0;
+}
+
+.chapter-content .dialog {
+  margin: 1em 0;
+  text-indent: 0;
+}
+
+.chapter-content .dialog p {
+  margin: 0.2em 0;
+  text-indent: -1em;
+  padding-left: 1em;
+}
+
+.chapter-content .dialog .speaker {
+  font-weight: 600;
+}
+
+.chapter-content .dialog .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .dialog .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .dialog .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  padding-left: 0 !important;
+}
+
+.chapter-content .scene-break {
+  text-align: center;
+  margin: 2em 0;
+  letter-spacing: 0.3em;
+  color: #666;
+}
+
+.chapter-content .scene-break::before {
+  content: "⁂";
+}
+
+/* ================================================================
+   🎯 NOTE & INFO-BOX
+   ================================================================ */
+
+/* Info-box */
+.chapter-content .info-box {
+  padding: 0.5em 1em;
+  margin: 1.5em 0;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chapter-content .info-box p,
+.chapter-content .info-box p:first-of-type {
+  text-align: left !important;
+  text-indent: 0 !important;
+}
+
+.chapter-content .info-box p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .info-box p:first-child {
+  margin-top: 0 !important;
+}
+
+.chapter-content .info-box p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Note/catatan kaki */
+.chapter-content .note {
+  margin: 2.5em 0 1.5em 0;
+  padding-top: 1em;
+  position: relative;
+  font-size: 0.9em;
+}
+
+/* Garis pemisah otomatis di atas note */
+.chapter-content .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .note p:first-child {
+  margin-top: 0 !important;
+}
+
+.chapter-content .note p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* ================================================================
+   9️⃣ TABEL, KODE, DAN TEKS KHUSUS
+   ================================================================ */
+.chapter-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+
+.chapter-content th,
+.chapter-content td {
+  border: 1px solid #ccc;
+  padding: 0.4em 0.6em;
+  text-align: left;
+  hyphens: none;
+}
+
+.chapter-content th {
+  background-color: #f0f0f0;
+  font-weight: 600;
+}
+
+.chapter-content code,
+.chapter-content pre {
+  font-family: "Courier New", monospace;
+  background-color: #f6f6f6;
+  border-radius: 4px;
+}
+
+.chapter-content pre {
+  padding: 0.5em;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+.chapter-content .smallcaps {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+}
+
+.chapter-content .uppercase {
+  text-transform: uppercase;
+}
+
+/* ================================================================
+   🔟 MODE GELAP
+   ================================================================ */
+.dark .chapter-content {
+  color: #e0e0e0;
+}
+
+.dark .chapter-content blockquote {
+  border-left-color: #666;
+}
+
+.dark .chapter-content .letter {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+.dark .chapter-content th {
+  background-color: #222;
+}
+
+.dark .chapter-content td,
+.dark .chapter-content th {
+  border-color: #444;
+}
+
+.dark .chapter-content pre {
+  background-color: #1e1e1e;
+}
+
+.dark .chapter-content .info-box {
+  background-color: #2d2d2d;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .chapter-content .note::before {
+  border-top-color: #666;
+}
+
+.dark .chapter-content img {
+  filter: invert(1);
+}
+
+.dark .chapter-content img.photo,
+.dark .chapter-content img.illustration,
+.dark .chapter-content img.colored,
+.dark .chapter-content .chapter img.no-invert {
+  filter: none;
+  opacity: 0.9;
+}
+
+.dark .chapter-content .image-caption {
+  color: #aaa;
+}
+
+.dark .chapter-content p.separator,
+.dark .chapter-content p.ornament,
+.dark .chapter-content p.divider {
+  color: #999;
+}
+
+.dark .chapter-content .scene-break {
+  color: #999;
+}
+
+/* ================================================================
+   1️⃣1️⃣ RESPONSIVE ADJUSTMENTS
+   ================================================================ */
+@media screen and (max-width: 600px) {
+  .chapter-content .image-left,
+  .chapter-content .image-right {
+    float: none;
+    display: block;
+    margin: 0.25em auto;
+    max-width: 90%;
+  }
+  
+  .chapter-content .indent {
+    margin-left: 1em;
+  }
+}
+
+.chapter-content .indent {
+  margin-left: 2em;
+}
+
+/* Note dalam poem */
+.chapter-content .poem .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .poem .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .poem .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+/* ================================================================
+   5️⃣ GAMBAR & MEDIA
+   ================================================================ */
+.chapter-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+}
+
+.chapter-content .image-container {
+  margin: 1.5em 0;
+  text-align: center;
+}
+
+.chapter-content .image-small {
+  max-width: 120px !important;
+  max-height: 120px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-medium {
+  max-width: 200px !important;
+  max-height: 200px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-with-caption {
+  margin: 2em auto;
+  text-align: center;
+}
+
+.chapter-content .image-caption {
+  text-align: center;
+  font-size: 0.9em;
+  margin: 0.5em 0 0 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* ================================================================
+   6️⃣ KUTIPAN & BLOCKQUOTE
+   ================================================================ */
+.chapter-content blockquote {
+  margin: 1.5em 0;
+  padding: 0 1em;
+  border-left: 3px solid #ccc;
+  font-style: italic;
+}
+
+.chapter-content blockquote p {
+  text-indent: 0 !important;
+}
+
+.chapter-content blockquote p + p {
+  text-indent: 1.5em !important;
+}
+
+/* Note dalam blockquote */
+.chapter-content blockquote .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+  border-left: none !important;
+  font-style: normal !important;
+}
+
+.chapter-content blockquote .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content blockquote .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  font-style: normal !important;
+}
+
+/* ================================================================
+   7️⃣ DAFTAR (LISTS)
+   ================================================================ */
+.chapter-content ol,
+.chapter-content ul {
+  margin: 1em 0;
+  padding-left: 2em;
+  text-align: justify;
+}
+
+.chapter-content ul.dash-list {
+  list-style: none;
+  padding-left: 1.5em;
+}
+
+.chapter-content ul.dash-list li {
+  text-indent: -0.7em;
+}
+
+.chapter-content ul.dash-list li::before {
+  content: "– ";
+}
+
+/* ================================================================
+   8️⃣ NOTE & INFO-BOX
+   ================================================================ */
+.chapter-content .note {
+  margin: 2.5em 0 1.5em 0;
+  padding-top: 1em;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .info-box {
+  padding: 0.5em 1em;
+  margin: 1.5em 0;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chapter-content .info-box p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+/* ================================================================
+   9️⃣ SURAT (LETTER)
+   ================================================================ */
+.chapter-content .letter {
+  margin: 3em auto;
+  padding: 2em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fdfcf8;
+  max-width: 36em;
+  line-height: 1.6;
+}
+
+.chapter-content .letter p {
+  margin: 0;
+  text-align: justify;
+  text-indent: 1.5em !important;
+}
+
+.chapter-content .letter .date {
+  text-align: right !important;
+  font-style: italic;
+  margin-bottom: 2em;
+  text-indent: 0 !important;
+}
+
+.chapter-content .letter .salutation {
+  margin-bottom: 1.5em;
+  text-indent: 0 !important;
+  font-weight: 500;
+}
+
+.chapter-content .letter .body {
+  text-indent: 1.5em !important;
+  text-align: justify;
+}
+
+.chapter-content .letter .body:first-of-type {
+  text-indent: 0 !important;
+  margin-top: 0;
+}
+
+.chapter-content .letter .closing {
+  margin-top: 2em;
+  text-align: right !important;
+  font-style: italic;
+  text-indent: 0 !important;
+}
+
+.chapter-content .letter .signature {
+  text-align: right !important;
+  font-weight: 600;
+  margin-top: 0.5em;
+  text-indent: 0 !important;
+}
+
+/* Note dalam letter */
+.chapter-content .letter .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.chapter-content .letter .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .letter .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+/* ================================================================
+   🔟 DIALOG
+   ================================================================ */
+.chapter-content .dialog {
+  margin: 1em 0;
+  text-indent: 0 !important;
+}
+
+.chapter-content .dialog p {
+  margin: 0.2em 0;
+  text-indent: -1em !important;
+  padding-left: 1em;
+}
+
+.chapter-content .dialog .speaker {
+  font-weight: 600;
+}
+
+/* Note dalam dialog */
+.chapter-content .dialog .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .dialog .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .dialog .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  padding-left: 0 !important;
+}
+
+/* ================================================================
+   1️⃣1️⃣ SCENE BREAK & EPIGRAPH
+   ================================================================ */
+.chapter-content .scene-break {
+  text-align: center;
+  margin: 2em 0;
+  letter-spacing: 0.3em;
+  color: #666;
+}
+
+.chapter-content .scene-break::before {
+  content: "⁂";
+}
+
+.chapter-content .epigraph {
+  font-style: italic;
+  text-align: center;
+  margin: 3em auto;
+  max-width: 32em;
+  hyphens: none;
+}
+
+.chapter-content .epigraph cite {
+  display: block;
+  margin-top: 1em;
+  font-size: 0.9em;
+  text-align: right;
+  font-style: normal;
+}
+
+.chapter-content .subtitle {
+  font-size: 1.1em;
+  text-align: center;
+  margin: 1.5em 0;
+}
+
+/* ================================================================
+   1️⃣2️⃣ TEXT FORMATTING
+   ================================================================ */
+.chapter-content strong,
+.chapter-content b {
+  font-weight: 600;
+}
+
+.chapter-content em,
+.chapter-content i {
+  font-style: italic;
+}
+
+.chapter-content .smallcaps {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+}
+
+.chapter-content .uppercase {
+  text-transform: uppercase;
+}
+
+/* ================================================================
+   1️⃣3️⃣ DARK MODE SUPPORT
+   ================================================================ */
+.dark .chapter-content {
+  color: #e0e0e0;
+}
+
+.dark .chapter-content .separator,
+.dark .chapter-content .ornament,
+.dark .chapter-content .divider,
+.dark .chapter-content .scene-break {
+  color: #999;
+}
+
+.dark .chapter-content .image-caption {
+  color: #aaa;
+}
+
+.dark .chapter-content blockquote {
+  border-left-color: #666;
+}
+
+.dark .chapter-content .note::before {
+  border-top-color: #666;
+}
+
+.dark .chapter-content .info-box {
+  background-color: #2d2d2d;
+  border-color: #555;
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .chapter-content .letter {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+/* Invert images in dark mode except photos */
+.dark .chapter-content img {
+  filter: invert(1) brightness(0.9);
+}
+
+.dark .chapter-content img.photo,
+.dark .chapter-content img.illustration,
+.dark .chapter-content img.colored,
+.dark .chapter-content .no-invert {
+  filter: none;
+  opacity: 0.9;
+}
+
+/* ================================================================
+   1️⃣4️⃣ RESPONSIVE ADJUSTMENTS
+   ================================================================ */
+@media screen and (max-width: 768px) {
+  .chapter-content {
+    font-size: 1rem;
+    padding: 1rem 0.75rem;
+  }
+  
+  .chapter-content .indent {
+    margin-left: 1em;
+  }
+  
+  .chapter-content .image-left,
+  .chapter-content .image-right {
+    float: none;
+    display: block;
+    margin: 1em auto;
+    max-width: 90%;
+  }
+}
