@@ -12,7 +12,7 @@ const AboutPage = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-6">
             <img 
-              src="masasilam-logo.svg"
+              src="/masasilam-logo.svg"
               alt="masasilam Logo" 
               className="w-16 h-16 sm:w-20 sm:h-20 object-contain dark:invert"
             />

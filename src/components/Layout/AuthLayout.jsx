@@ -3,7 +3,7 @@
 // ============================================
 
 import { Link } from 'react-router-dom'
-import MasasilamLogo from 'masasilam-logo.svg'
+import MasasilamLogo from '/masasilam-logo.svg'
 
 const AuthLayout = ({ children }) => {
   return (

@@ -13,7 +13,7 @@ const Footer = () => {
           {/* Brand - Desktop Only */}
           <div className="flex flex-col">
             <img 
-              src="masasilam-logo.svg"
+              src="/masasilam-logo.svg"
               alt="masasilam Logo" 
               className="w-16 h-16 object-contain dark:invert mb-2"
             />
@@ -59,7 +59,7 @@ const Footer = () => {
           {/* Brand - Mobile */}
           <div className="mb-6 flex flex-col items-center">
             <img 
-              src="masasilam-logo.svg"
+              src="/masasilam-logo.svg"
               alt="masasilam Logo" 
               className="w-24 h-24 object-contain dark:invert mb-2"
             />

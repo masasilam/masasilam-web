@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { chapterService } from '../../services/chapterService'
-import logoSvg from 'masasilam-logo.svg'
+import logoSvg from '/masasilam-logo.svg'
 
 const ReaderLayout = ({ children, fontSize, setFontSize, readingProgress, contentWidth, setContentWidth }) => {
   const { theme, toggleTheme } = useTheme()

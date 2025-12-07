@@ -77,7 +77,7 @@ const HomePage = () => {
                 
                 <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40">
                   <img 
-                    src="masasilam-logo.svg" 
+                    src="/masasilam-logo.svg"
                     alt="masasilam Logo" 
                     className="w-full h-full object-contain dark:invert"
                   />
@@ -118,7 +118,7 @@ const HomePage = () => {
               <div className="relative h-64 sm:h-80 md:h-96 lg:h-full lg:min-h-[600px] xl:min-h-[650px] rounded-sm overflow-hidden shadow-2xl">
                 {/* Hero Image */}
                 <img 
-                  src="perpustakaan-keliling.jpg"
+                  src="/perpustakaan-keliling.jpg"
                   alt="Perpustakaan Keliling" 
                   className="absolute inset-0 w-full h-full object-cover"
                 />
@@ -312,7 +312,7 @@ const HomePage = () => {
           <div className="max-w-3xl mx-auto">
             <div className="inline-block mb-3 sm:mb-4 md:mb-6">
               <img 
-                src="masasilam-logo.svg" 
+                src="/masasilam-logo.svg"
                 alt="masasilam Logo" 
                 className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 object-contain dark:invert"
               />

@@ -42,7 +42,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <img 
-              src="masasilam-logo.svg"
+              src="/masasilam-logo.svg"
               alt="masasilam Logo" 
               className="h-10 w-auto object-contain dark:invert"
             />
