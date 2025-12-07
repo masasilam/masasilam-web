@@ -77,7 +77,7 @@ const HomePage = () => {
                 
                 <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40">
                   <img 
-                    src="/src/assets/masasilam-logo.svg" 
+                    src="masasilam-logo.svg" 
                     alt="masasilam Logo" 
                     className="w-full h-full object-contain dark:invert"
                   />
@@ -312,7 +312,7 @@ const HomePage = () => {
           <div className="max-w-3xl mx-auto">
             <div className="inline-block mb-3 sm:mb-4 md:mb-6">
               <img 
-                src="/src/assets/masasilam-logo.svg" 
+                src="masasilam-logo.svg" 
                 alt="masasilam Logo" 
                 className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 object-contain dark:invert"
               />
