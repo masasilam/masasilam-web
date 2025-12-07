@@ -118,7 +118,7 @@ const HomePage = () => {
               <div className="relative h-64 sm:h-80 md:h-96 lg:h-full lg:min-h-[600px] xl:min-h-[650px] rounded-sm overflow-hidden shadow-2xl">
                 {/* Hero Image */}
                 <img 
-                  src="/src/assets/perpustakaan-keliling.jpg" 
+                  src="perpustakaan-keliling.jpg"
                   alt="Perpustakaan Keliling" 
                   className="absolute inset-0 w-full h-full object-cover"
                 />
