@@ -18,7 +18,7 @@ const AboutPage = () => {
             />
           </div>
           <h1 className="font-serif text-4xl sm:text-5xl font-bold mb-4 text-gray-900 dark:text-white">
-            Tentang masasilam
+            Tentang MasasilaM
           </h1>
           <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300">
             Perpustakaan online untuk buku-buku domain publik yang terbengkalai dan terdegradasi

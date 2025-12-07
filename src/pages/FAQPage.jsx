@@ -10,8 +10,8 @@ const FAQPage = () => {
 
   const faqs = [
     {
-      question: 'Apakah Naskah benar-benar gratis?',
-      answer: 'Ya, Naskah 100% gratis tanpa biaya langganan. Semua buku dapat diakses dan diunduh tanpa batasan.'
+      question: 'Apakah MasasilaM benar-benar gratis?',
+      answer: 'Ya, MasasilaM 100% gratis tanpa biaya langganan. Semua buku dapat diakses dan diunduh tanpa batasan.'
     },
     {
       question: 'Apakah saya perlu membuat akun?',
@@ -31,7 +31,7 @@ const FAQPage = () => {
     },
     {
       question: 'Apakah buku-bukunya legal?',
-      answer: 'Ya, semua buku di Naskah adalah buku dengan hak cipta yang sudah habis masa berlakunya atau memiliki lisensi distribusi gratis.'
+      answer: 'Ya, semua buku di MasasilaM adalah buku dengan hak cipta yang sudah habis masa berlakunya atau memiliki lisensi distribusi gratis.'
     },
   ]
 

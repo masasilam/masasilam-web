@@ -24,10 +24,6 @@ const AuthLayout = ({ children }) => {
       <main className="flex-1 flex items-center justify-center px-4">
         {children}
       </main>
-      
-      <div className="py-4 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>© {new Date().getFullYear()} Masasilam</p>
-      </div>
     </div>
   )
 }

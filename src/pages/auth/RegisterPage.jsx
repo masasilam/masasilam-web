@@ -115,7 +115,7 @@ const RegisterPage = () => {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Daftar Akun Baru</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Bergabung dengan Naskah sekarang
+          Bergabung dengan MasasilaM sekarang
         </p>
       </div>
 

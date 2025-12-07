@@ -14,17 +14,17 @@ const TermsOfServicePage = () => {
         <div className="prose dark:prose-invert max-w-none">
           <h2>1. Penerimaan Syarat</h2>
           <p>
-            Dengan menggunakan Naskah, Anda setuju untuk terikat dengan syarat dan ketentuan ini.
+            Dengan menggunakan MasasilaM, Anda setuju untuk terikat dengan syarat dan ketentuan ini.
           </p>
 
           <h2>2. Penggunaan Layanan</h2>
           <p>
-            Layanan Naskah disediakan gratis untuk penggunaan personal dan non-komersial.
+            Layanan MasasilaM disediakan gratis untuk penggunaan personal dan non-komersial.
           </p>
 
           <h2>3. Hak Cipta</h2>
           <p>
-            Semua buku di Naskah telah melewati masa berlaku hak cipta atau memiliki lisensi distribusi gratis.
+            Semua buku di MasasilaM  telah melewati masa berlaku hak cipta atau memiliki lisensi distribusi gratis.
           </p>
 
           <h2>4. Akun Pengguna</h2>
