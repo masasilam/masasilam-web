@@ -2,7 +2,7 @@
   <!-- Transparent background -->
   
   <!-- Main composition -->
-  <g transform="translate(400, 110)">
+  <g transform="translate(400, 130)">
     
     <!-- Open book as foundation - refined -->
     <g transform="translate(0, 0)">
@@ -68,7 +68,7 @@
   </g>
   
   <!-- Brand name - refined bold typography -->
-  <g transform="translate(400, 210)">
+  <g transform="translate(400, 230)">
     <text x="0" y="0" 
           font-family="'Futura', 'Century Gothic', 'Helvetica Neue', sans-serif" 
           font-size="48" 
@@ -80,14 +80,14 @@
   
   <!-- Elegant underline with refined style -->
   <g>
-    <line x1="270" y1="228" x2="530" y2="228" 
+    <line x1="270" y1="248" x2="530" y2="248" 
           stroke="#C41E3A" 
           stroke-width="3.5"
           stroke-linecap="round"/>
     
     <!-- Subtle dots accent -->
-    <circle cx="260" cy="228" r="2.5" fill="#C41E3A"/>
-    <circle cx="540" cy="228" r="2.5" fill="#C41E3A"/>
+    <circle cx="260" cy="248" r="2.5" fill="#C41E3A"/>
+    <circle cx="540" cy="248" r="2.5" fill="#C41E3A"/>
   </g>
   
 </svg>
