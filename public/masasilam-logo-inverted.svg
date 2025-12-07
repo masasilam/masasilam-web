@@ -1,0 +1,94 @@
+<svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background -->
+  <rect width="800" height="400" fill="#1A1A1A"/>
+  
+  <!-- Main composition -->
+  <g transform="translate(400, 130)">
+    
+    <!-- Open book as foundation - inverted -->
+    <g transform="translate(0, 0)">
+      <!-- Left page with subtle curve -->
+      <path d="M -40 -18 Q -40 -30, -22 -34 L -5 -36 L -5 30 L -22 27 Q -40 23, -40 10 Z" 
+            fill="none" 
+            stroke="#F5F5F5" 
+            stroke-width="2.2"
+            stroke-linejoin="round"
+            stroke-linecap="round"/>
+      
+      <!-- Right page with subtle curve -->
+      <path d="M 40 -18 Q 40 -30, 22 -34 L 5 -36 L 5 30 L 22 27 Q 40 23, 40 10 Z" 
+            fill="none" 
+            stroke="#F5F5F5" 
+            stroke-width="2.2"
+            stroke-linejoin="round"
+            stroke-linecap="round"/>
+      
+      <!-- Spine with elegant line -->
+      <line x1="0" y1="-36" x2="0" y2="30" 
+            stroke="#F5F5F5" 
+            stroke-width="2.5"
+            stroke-linecap="round"/>
+      
+      <!-- Book pages detail - left side -->
+      <g opacity="0.25">
+        <line x1="-30" y1="-20" x2="-10" y2="-22" stroke="#F5F5F5" stroke-width="0.8"/>
+        <line x1="-30" y1="-14" x2="-10" y2="-16" stroke="#F5F5F5" stroke-width="0.8"/>
+        <line x1="-30" y1="-8" x2="-10" y2="-10" stroke="#F5F5F5" stroke-width="0.8"/>
+      </g>
+      
+      <!-- Book pages detail - right side -->
+      <g opacity="0.25">
+        <line x1="30" y1="-20" x2="10" y2="-22" stroke="#F5F5F5" stroke-width="0.8"/>
+        <line x1="30" y1="-14" x2="10" y2="-16" stroke="#F5F5F5" stroke-width="0.8"/>
+        <line x1="30" y1="-8" x2="10" y2="-10" stroke="#F5F5F5" stroke-width="0.8"/>
+      </g>
+    </g>
+    
+    <!-- Red star above book - same red color -->
+    <g transform="translate(0, -60)">
+      <!-- Outer glow effect -->
+      <path d="M 0 -12 L 3.6 -3.6 L 12 -3.6 L 5.4 1.8 L 8.4 10.8 L 0 4.8 L -8.4 10.8 L -5.4 1.8 L -12 -3.6 L -3.6 -3.6 Z" 
+            fill="#C41E3A"
+            opacity="0.2"/>
+      
+      <!-- Main star -->
+      <path d="M 0 -10 L 3 -3 L 10 -3 L 4.5 1.5 L 7 9 L 0 4 L -7 9 L -4.5 1.5 L -10 -3 L -3 -3 Z" 
+            fill="#C41E3A"
+            stroke="#B71C1C"
+            stroke-width="0.8"/>
+    </g>
+    
+    <!-- Decorative elements - subtle rays of knowledge -->
+    <g opacity="0.3">
+      <line x1="-50" y1="-40" x2="-65" y2="-55" stroke="#F5F5F5" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="50" y1="-40" x2="65" y2="-55" stroke="#F5F5F5" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="-35" y1="-50" x2="-45" y2="-68" stroke="#F5F5F5" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="35" y1="-50" x2="45" y2="-68" stroke="#F5F5F5" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+    
+  </g>
+  
+  <!-- Brand name - inverted (white text) -->
+  <g transform="translate(400, 230)">
+    <text x="0" y="0" 
+          font-family="'Futura', 'Century Gothic', 'Helvetica Neue', sans-serif" 
+          font-size="48" 
+          font-weight="700"
+          letter-spacing="14"
+          fill="#F5F5F5"
+          text-anchor="middle">MASASILAM</text>
+  </g>
+  
+  <!-- Elegant underline with refined style -->
+  <g>
+    <line x1="270" y1="248" x2="530" y2="248" 
+          stroke="#C41E3A" 
+          stroke-width="3.5"
+          stroke-linecap="round"/>
+    
+    <!-- Subtle dots accent -->
+    <circle cx="260" cy="248" r="2.5" fill="#C41E3A"/>
+    <circle cx="540" cy="248" r="2.5" fill="#C41E3A"/>
+  </g>
+  
+</svg>
