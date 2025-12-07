@@ -1,4 +1,4 @@
-// src/pages/ChapterReaderPage.jsx - FIXED VERSION
+// src/pages/ChapterReaderPage.jsx - WITH TTS FEATURE
 import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
@@ -6,7 +6,8 @@ import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 import { 
   ChevronLeft, ChevronRight, Bookmark, Highlighter,
-  StickyNote, MessageSquare, ThumbsUp, Send, X, Check, Menu
+  StickyNote, MessageSquare, ThumbsUp, Send, X, Check, Menu,
+  Volume2, VolumeX, Pause, Play, SkipForward, SkipBack
 } from 'lucide-react'
 import '../styles/epub-styles.css'
 
@@ -66,7 +67,229 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [reviewRating, setReviewRating] = useState(5)
   const [isMobile, setIsMobile] = useState(true)
 
+  // TTS States
+  const [ttsEnabled, setTtsEnabled] = useState(false)
+  const [ttsPlaying, setTtsPlaying] = useState(false)
+  const [ttsPaused, setTtsPaused] = useState(false)
+  const [ttsRate, setTtsRate] = useState(1.0)
+  const [ttsPitch, setTtsPitch] = useState(1.0)
+  const [ttsVoiceIndex, setTtsVoiceIndex] = useState(0)
+  const [availableVoices, setAvailableVoices] = useState([])
+  const [showTTSSettings, setShowTTSSettings] = useState(false)
+  const [ttsFullText, setTtsFullText] = useState('')
+  const [currentCharIndex, setCurrentCharIndex] = useState(0)
+  const utteranceRef = useRef(null)
+  const startTimeRef = useRef(0)
+  const startCharRef = useRef(0)
+
   const fullChapterPath = chapterPath || ''
+
+  // Initialize TTS voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      // Filter Indonesian voices first, then all voices
+      const indonesianVoices = voices.filter(v => v.lang.startsWith('id'))
+      setAvailableVoices(indonesianVoices.length > 0 ? indonesianVoices : voices)
+    }
+
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+  }, [])
+
+  // TTS Functions
+  const extractTextFromHTML = (html) => {
+    const temp = document.createElement('div')
+    temp.innerHTML = html
+    return temp.textContent || temp.innerText || ''
+  }
+
+  // Estimate character position based on time elapsed
+  const estimateCharPosition = (text, startChar, elapsedMs, rate) => {
+    // Average speaking rate: ~150 words per minute at rate 1.0
+    // Average word length: ~5 characters
+    // So roughly 12.5 chars per second at rate 1.0
+    const charsPerSecond = 12.5 * rate
+    const elapsedSeconds = elapsedMs / 1000
+    const estimatedChars = Math.floor(elapsedSeconds * charsPerSecond)
+    return Math.min(startChar + estimatedChars, text.length)
+  }
+
+  const speak = (text, startFromChar = 0) => {
+    if (!text) {
+      console.warn('No text to speak')
+      return
+    }
+
+    // Cancel any existing speech
+    window.speechSynthesis.cancel()
+
+    // Get text from the starting position
+    const textToSpeak = startFromChar > 0 ? text.substring(startFromChar) : text
+    
+    if (!textToSpeak.trim()) {
+      console.warn('No more text to speak')
+      setTtsPlaying(false)
+      setTtsEnabled(false)
+      return
+    }
+
+    console.log('🔊 Speaking from char:', startFromChar, 'Preview:', textToSpeak.substring(0, 50))
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak)
+    
+    // Set voice
+    if (availableVoices.length > 0 && availableVoices[ttsVoiceIndex]) {
+      utterance.voice = availableVoices[ttsVoiceIndex]
+    }
+    
+    utterance.rate = ttsRate
+    utterance.pitch = ttsPitch
+    utterance.lang = 'id-ID'
+
+    utterance.onstart = () => {
+      setTtsPlaying(true)
+      setTtsPaused(false)
+      setTtsEnabled(true)
+      startTimeRef.current = Date.now()
+      startCharRef.current = startFromChar
+      console.log('▶️ Started at:', startFromChar)
+    }
+
+    utterance.onboundary = (event) => {
+      // Update actual position in full text
+      const actualPosition = startFromChar + event.charIndex
+      setCurrentCharIndex(actualPosition)
+    }
+
+    utterance.onpause = () => {
+      // Only triggered if native pause works
+      const elapsed = Date.now() - startTimeRef.current
+      const estimatedPos = estimateCharPosition(text, startCharRef.current, elapsed, ttsRate)
+      setCurrentCharIndex(estimatedPos)
+      setTtsPaused(true)
+      setTtsPlaying(false)
+      console.log('⏸️ Native paused at:', estimatedPos)
+    }
+
+    utterance.onresume = () => {
+      startTimeRef.current = Date.now()
+      startCharRef.current = currentCharIndex
+      setTtsPlaying(true)
+      setTtsPaused(false)
+      console.log('▶️ Resumed from:', currentCharIndex)
+    }
+
+    utterance.onend = () => {
+      setTtsPlaying(false)
+      setTtsPaused(false)
+      setTtsEnabled(false)
+      setCurrentCharIndex(0)
+      console.log('⏹️ Ended')
+    }
+
+    utterance.onerror = (event) => {
+      console.error('❌ TTS Error:', event.error)
+      setTtsPlaying(false)
+      setTtsPaused(false)
+    }
+
+    utteranceRef.current = utterance
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const startTTS = () => {
+    if (!chapter?.content) return
+
+    // Extract full text
+    const text = extractTextFromHTML(chapter.htmlContent || chapter.content)
+    
+    if (!text.trim()) {
+      console.warn('No text to speak')
+      return
+    }
+
+    setTtsFullText(text)
+    setCurrentCharIndex(0)
+    speak(text, 0)
+  }
+
+  const pauseTTS = () => {
+    if (!window.speechSynthesis.speaking) return
+    
+    console.log('🛑 User clicked pause')
+    
+    // Calculate current position before canceling
+    const elapsed = Date.now() - startTimeRef.current
+    const estimatedPos = estimateCharPosition(ttsFullText, startCharRef.current, elapsed, ttsRate)
+    
+    // Update position BEFORE canceling
+    setCurrentCharIndex(estimatedPos)
+    
+    // Try native pause
+    window.speechSynthesis.pause()
+    
+    // Check if pause worked, if not cancel
+    setTimeout(() => {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        // Native pause didn't work, cancel it
+        window.speechSynthesis.cancel()
+        console.log('⏸️ Cancelled at position:', estimatedPos)
+      } else {
+        console.log('⏸️ Native pause at position:', estimatedPos)
+      }
+      setTtsPlaying(false)
+      setTtsPaused(true)
+    }, 50)
+  }
+
+  const resumeTTS = () => {
+    if (!ttsFullText) {
+      startTTS()
+      return
+    }
+    
+    // Try native resume first
+    if (window.speechSynthesis.paused) {
+      try {
+        window.speechSynthesis.resume()
+        console.log('▶️ Native resume')
+        return
+      } catch (e) {
+        console.log('❌ Native resume failed:', e)
+      }
+    }
+    
+    // Fallback: restart from saved position
+    console.log('🔄 Restart from position:', currentCharIndex)
+    speak(ttsFullText, currentCharIndex)
+  }
+
+  const stopTTS = () => {
+    window.speechSynthesis.cancel()
+    setTtsPlaying(false)
+    setTtsPaused(false)
+    setTtsEnabled(false)
+    setTtsFullText('')
+    setCurrentCharIndex(0)
+  }
+
+  const toggleTTS = () => {
+    if (!ttsEnabled && !ttsPaused) {
+      startTTS()
+    } else if (ttsPlaying) {
+      pauseTTS()
+    } else if (ttsPaused || ttsEnabled) {
+      resumeTTS()
+    }
+  }
+
+  // Stop TTS when chapter changes
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel()
+    }
+  }, [fullChapterPath])
 
   useEffect(() => {
     const initializeChapterData = async () => {
@@ -352,12 +575,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   // Navigation using chapter info from response
   const handleNextChapter = () => {
     if (!chapter?.nextChapter) return
+    stopTTS() // Stop TTS when navigating
     const nextUrl = buildChapterUrl(bookSlug, chapter.nextChapter)
     navigate(nextUrl)
   }
 
   const handlePrevChapter = () => {
     if (!chapter?.previousChapter) return
+    stopTTS() // Stop TTS when navigating
     const prevUrl = buildChapterUrl(bookSlug, chapter.previousChapter)
     navigate(prevUrl)
   }
@@ -447,9 +672,153 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </nav>
       )}
       
+      {/* TTS Control Panel - Floating */}
+      {ttsEnabled && (
+        <div className="fixed top-20 right-4 z-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-72">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold text-sm flex items-center gap-2">
+              <Volume2 className="w-4 h-4" />
+              Text to Speech
+            </h4>
+            <button onClick={stopTTS} className="text-red-500 hover:text-red-700">
+              <VolumeX className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Progress indicator */}
+          {ttsFullText && (
+            <div className="mb-3">
+              <div className="text-xs text-gray-500 mb-1">
+                Progress: {Math.round((currentCharIndex / ttsFullText.length) * 100)}%
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                <div 
+                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${(currentCharIndex / ttsFullText.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <button
+              onClick={handlePrevChapter}
+              disabled={!chapter?.previousChapter}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+              title="Bab sebelumnya"
+            >
+              <SkipBack className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={toggleTTS}
+              className="p-3 rounded-full bg-primary text-white hover:bg-primary/90"
+              title={ttsPlaying ? 'Pause' : 'Play'}
+            >
+              {ttsPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+            </button>
+            
+            <button
+              onClick={handleNextChapter}
+              disabled={!chapter?.nextChapter}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+              title="Bab selanjutnya"
+            >
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowTTSSettings(!showTTSSettings)}
+            className="w-full text-xs text-center text-primary hover:underline"
+          >
+            {showTTSSettings ? 'Sembunyikan' : 'Pengaturan'} ⚙️
+          </button>
+
+          {showTTSSettings && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              {/* Speed Control */}
+              <div>
+                <label className="text-xs font-medium block mb-1">
+                  Kecepatan: {ttsRate.toFixed(1)}x
+                </label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={ttsRate}
+                  onChange={(e) => setTtsRate(parseFloat(e.target.value))}
+                  className="w-full accent-primary"
+                />
+              </div>
+
+              {/* Pitch Control */}
+              <div>
+                <label className="text-xs font-medium block mb-1">
+                  Nada: {ttsPitch.toFixed(1)}
+                </label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={ttsPitch}
+                  onChange={(e) => setTtsPitch(parseFloat(e.target.value))}
+                  className="w-full accent-primary"
+                />
+              </div>
+
+              {/* Voice Selection */}
+              {availableVoices.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium block mb-1">Suara</label>
+                  <select
+                    value={ttsVoiceIndex}
+                    onChange={(e) => setTtsVoiceIndex(parseInt(e.target.value))}
+                    className="w-full text-xs p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    {availableVoices.map((voice, index) => (
+                      <option key={index} value={index}>
+                        {voice.name} ({voice.lang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  const wasPlaying = ttsPlaying
+                  stopTTS()
+                  if (wasPlaying) {
+                    setTimeout(() => startTTS(), 100)
+                  }
+                }}
+                className="w-full py-2 bg-primary text-white rounded-lg text-xs hover:bg-primary/90"
+              >
+                Terapkan Pengaturan
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Bottom Toolbar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50">
         <div className="flex items-center justify-around py-3 px-2 max-w-2xl mx-auto">
+          <button 
+            onClick={toggleTTS} 
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+              ttsPlaying 
+                ? 'bg-primary text-white' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            {ttsPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            <span className="text-xs">{ttsPlaying ? 'Pause' : 'Dengar'}</span>
+          </button>
+          
           {isAuthenticated && (
             <button onClick={() => setShowToolbar(!showToolbar)} className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
               <Menu className="w-5 h-5" /><span className="text-xs">Anotasi</span>
@@ -557,6 +926,38 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 </div>
               )}
 
+              {/* Highlights */}
+              {currentChapterHighlights?.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Highlighter className="w-4 h-4" /> Highlight
+                  </h4>
+                  <div className="space-y-2">
+                    {currentChapterHighlights.map(h => (
+                      <div key={h.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div 
+                              className="text-sm mb-2 p-2 rounded" 
+                              style={{ backgroundColor: h.color + '40' }}
+                            >
+                              "{h.selectedText}"
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteHighlight(h.id)}
+                            className="ml-2 p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                            title="Hapus highlight"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Notes */}
               {annotations.notes?.length > 0 && (
                 <div className="mb-6">
@@ -576,6 +977,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                                 </div>
                               )}
                               <p className="text-sm mb-2">{n.content}</p>
+                              {n.selectedText && (
+                                <div className="text-xs text-gray-500 italic mb-2">
+                                  "{n.selectedText}"
+                                </div>
+                              )}
                               <button onClick={(e) => handleAnnotationClick(e, n)} className="text-xs text-primary font-medium hover:underline">
                                 {isDiff ? 'Buka bab ini →' : 'Lompat ke lokasi →'}
                               </button>
@@ -592,6 +998,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {annotations.bookmarks?.length === 0 && 
+               annotations.highlights?.length === 0 && 
+               annotations.notes?.length === 0 && (
+                <div className="text-center text-gray-500 py-8">
+                  Belum ada anotasi
                 </div>
               )}
             </div>

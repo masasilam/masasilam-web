@@ -1,15 +1,15 @@
 // ============================================
-// src/components/Layout/ReaderLayout.jsx - SIMPLIFIED VERSION
+// src/components/Layout/ReaderLayout.jsx - WITH TTS
 // ============================================
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type } from 'lucide-react'
+import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, VolumeX, Pause, Play } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { chapterService } from '../../services/chapterService'
 import logoSvg from '/masasilam-logo.svg'
 
-const ReaderLayout = ({ children, fontSize, setFontSize, readingProgress, contentWidth, setContentWidth }) => {
+const ReaderLayout = ({ children, fontSize, setFontSize, readingProgress, contentWidth, setContentWidth, ttsState, onTTSToggle }) => {
   const { theme, toggleTheme } = useTheme()
   const { bookSlug } = useParams()
   const navigate = useNavigate()
@@ -99,6 +99,25 @@ const ReaderLayout = ({ children, fontSize, setFontSize, readingProgress, conten
             </Link>
 
             <div className="flex items-center gap-2">
+              {/* TTS Control Button */}
+              {onTTSToggle && (
+                <button
+                  onClick={onTTSToggle}
+                  className={`p-2 rounded-lg transition-colors ${
+                    ttsState?.isPlaying 
+                      ? 'bg-primary text-white hover:bg-primary/90' 
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                  aria-label={ttsState?.isPlaying ? 'Pause TTS' : 'Play TTS'}
+                >
+                  {ttsState?.isEnabled ? (
+                    ttsState?.isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />
+                  ) : (
+                    <Volume2 className="w-5 h-5" />
+                  )}
+                </button>
+              )}
+
               <div className="relative">
                 <button
                   onClick={() => setTocOpen(!tocOpen)}
