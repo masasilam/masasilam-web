@@ -1,12 +1,12 @@
 // ============================================
-// src/pages/BookDetailPage.jsx - COMPLETE FIXED VERSION
+// src/pages/BookDetailPage.jsx - FIXED VERSION
 // ============================================
 
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { 
-  Book, BookOpen, Calendar, Clock, Download, 
-  Eye, Heart, Share2, Star, User, FileText, Globe, Building2
+import {
+  Book, BookOpen, Calendar, Clock, Download,
+  Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X
 } from 'lucide-react'
 import bookService from '../services/bookService'
 import { useAuth } from '../hooks/useAuth'
@@ -14,15 +14,185 @@ import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 import Alert from '../components/Common/Alert'
 
+// ============================================
+// Rating Modal Component - FIXED LAYOUT
+// ============================================
+const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
+  const [rating, setRating] = useState(0)
+  const [hoverRating, setHoverRating] = useState(0)
+  const [review, setReview] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (rating === 0) {
+      alert('Silakan pilih rating bintang')
+      return
+    }
+
+    setSubmitting(true)
+    await onSubmit({ rating, review })
+    setSubmitting(false)
+
+    // Reset form
+    setRating(0)
+    setReview('')
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold">Beri Rating & Ulasan</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Book Title */}
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Buku:</p>
+            <p className="font-medium">{bookTitle}</p>
+          </div>
+
+          {/* ✅ FIXED: Star Rating with Proper Layout */}
+          <div>
+            <label className="block text-sm font-medium mb-3">
+              Rating Bintang <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2 items-center">
+              {[1, 2, 3, 4, 5].map((star) => {
+                const isHalfFilled = (hoverRating || rating) === star - 0.5
+                const isFullFilled = (hoverRating || rating) >= star
+
+                return (
+                  <div key={star} className="relative cursor-pointer group">
+                    {/* Full Star Background */}
+                    <Star
+                      className={`w-12 h-12 transition-all ${
+                        isFullFilled
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'fill-gray-200 text-gray-300 dark:fill-gray-700 dark:text-gray-600'
+                      } group-hover:scale-110`}
+                    />
+
+                    {/* Half Star Overlay (Left Half) */}
+                    {isHalfFilled && !isFullFilled && (
+                      <Star
+                        className="w-12 h-12 absolute top-0 left-0 fill-yellow-400 text-yellow-400 transition-all"
+                        style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }}
+                      />
+                    )}
+
+                    {/* Click handlers */}
+                    <div className="absolute inset-0 flex">
+                      {/* Left half click area */}
+                      <button
+                        type="button"
+                        className="w-1/2 h-full focus:outline-none"
+                        onClick={() => setRating(star - 0.5)}
+                        onMouseEnter={() => setHoverRating(star - 0.5)}
+                        onMouseLeave={() => setHoverRating(0)}
+                      />
+                      {/* Right half click area */}
+                      <button
+                        type="button"
+                        className="w-1/2 h-full focus:outline-none"
+                        onClick={() => setRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Rating Description */}
+            {rating > 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                {rating === 0.5 && '⭐ 0.5 - Sangat Buruk'}
+                {rating === 1 && '⭐ 1.0 - Sangat Buruk'}
+                {rating === 1.5 && '⭐ 1.5 - Buruk'}
+                {rating === 2 && '⭐⭐ 2.0 - Buruk'}
+                {rating === 2.5 && '⭐⭐ 2.5 - Kurang'}
+                {rating === 3 && '⭐⭐⭐ 3.0 - Cukup'}
+                {rating === 3.5 && '⭐⭐⭐ 3.5 - Lumayan'}
+                {rating === 4 && '⭐⭐⭐⭐ 4.0 - Bagus'}
+                {rating === 4.5 && '⭐⭐⭐⭐ 4.5 - Sangat Bagus'}
+                {rating === 5 && '⭐⭐⭐⭐⭐ 5.0 - Sempurna'}
+              </p>
+            )}
+          </div>
+
+          {/* Review Text */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Ulasan (Opsional)
+            </label>
+            <textarea
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
+              placeholder="Tulis ulasan Anda tentang buku ini..."
+              rows="4"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+              maxLength={500}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {review.length}/500 karakter
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              loading={submitting}
+              disabled={submitting || rating === 0}
+            >
+              {submitting ? 'Mengirim...' : 'Kirim Rating'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// Main Book Detail Page Component
+// ============================================
 const BookDetailPage = () => {
   const { bookSlug } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
   const [downloadLoading, setDownloadLoading] = useState(false)
   const [readingLoading, setReadingLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Rating Modal State
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
 
   useEffect(() => {
     fetchBookDetail()
@@ -33,9 +203,6 @@ const BookDetailPage = () => {
       setLoading(true)
       setError(null)
       const response = await bookService.getBookBySlug(bookSlug)
-      
-      console.log('📖 Book data loaded:', response)
-      
       setBook(response)
     } catch (error) {
       console.error('❌ Error fetching book:', error)
@@ -45,29 +212,17 @@ const BookDetailPage = () => {
     }
   }
 
-  /**
-   * ✅ Handle "Mulai Membaca" - Smart navigation
-   * - Jika ada last read → langsung ke chapter terakhir
-   * - Jika belum pernah baca → ke Daftar Isi dulu
-   */
   const handleStartReading = async () => {
     try {
       setReadingLoading(true)
-      console.log('📖 Starting reading for book:', bookSlug)
-      
-      // 1. Cek last read chapter dari localStorage
       const lastReadSlug = localStorage.getItem(`lastChapter_${bookSlug}`)
-      
+
       if (lastReadSlug) {
-        console.log('✅ Found last read chapter, continuing:', lastReadSlug)
         navigate(`/buku/${bookSlug}/${lastReadSlug}`)
         return
       }
 
-      // 2. ✅ Belum pernah baca → Arahkan ke Daftar Isi
-      console.log('📚 First time reading, redirecting to table of contents')
       navigate(`/buku/${bookSlug}/daftar-isi`)
-
     } catch (error) {
       console.error('❌ Error starting reading:', error)
       alert(`❌ Gagal memulai membaca: ${error.message || 'Unknown error'}`)
@@ -76,9 +231,6 @@ const BookDetailPage = () => {
     }
   }
 
-  /**
-   * ✅ Handle Download - Langsung download dari fileUrl
-   */
   const handleDownload = async () => {
     if (!book.fileUrl) {
       alert('File buku tidak tersedia')
@@ -87,8 +239,6 @@ const BookDetailPage = () => {
 
     try {
       setDownloadLoading(true)
-      
-      // Langsung download dari URL yang sudah ada
       const link = document.createElement('a')
       link.href = book.fileUrl
       link.download = `${book.title}.${book.fileFormat || 'epub'}`
@@ -96,8 +246,6 @@ const BookDetailPage = () => {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      console.log('✅ Download started:', book.fileUrl)
     } catch (error) {
       console.error('❌ Error downloading book:', error)
       alert('Gagal mengunduh buku')
@@ -106,9 +254,6 @@ const BookDetailPage = () => {
     }
   }
 
-  /**
-   * ✅ Handle Share - Web Share API
-   */
   const handleShare = async () => {
     const shareData = {
       title: book.title,
@@ -117,18 +262,87 @@ const BookDetailPage = () => {
     }
 
     try {
-      // Gunakan Web Share API langsung
       if (navigator.share) {
         await navigator.share(shareData)
-        console.log('✅ Shared successfully')
       } else {
-        // Jika browser tidak support, beri tahu user
-        alert('❌ Browser Anda tidak mendukung fitur berbagi. Silakan salin link secara manual.')
+        await navigator.clipboard.writeText(window.location.href)
+        alert('✅ Link berhasil disalin ke clipboard!')
       }
     } catch (error) {
-      // User membatalkan atau error lain
       if (error.name !== 'AbortError') {
         console.error('❌ Error sharing:', error)
+      }
+    }
+  }
+
+  const handleAddToFavorite = async () => {
+    if (!isAuthenticated) {
+      alert('Silakan login terlebih dahulu')
+      navigate('/login')
+      return
+    }
+
+    try {
+      alert('Fitur favorite akan segera hadir!')
+    } catch (error) {
+      console.error('❌ Error adding to favorite:', error)
+      alert('Gagal menambahkan ke favorit')
+    }
+  }
+
+  const handleOpenRatingModal = () => {
+    if (!isAuthenticated) {
+      alert('Silakan login terlebih dahulu untuk memberi rating')
+      navigate('/login')
+      return
+    }
+    setIsRatingModalOpen(true)
+  }
+
+  /**
+   * ✅ FIXED: Handle Submit Rating - Separate rating and review
+   */
+  const handleSubmitRating = async (ratingData) => {
+    try {
+      // ✅ Step 1: Submit rating ONLY (always required)
+      await bookService.addRating(bookSlug, {
+        rating: ratingData.rating
+      })
+
+      // ✅ Step 2: Submit review ONLY if user wrote something (optional)
+      if (ratingData.review && ratingData.review.trim()) {
+        try {
+          await bookService.addReview(bookSlug, {
+            comment: ratingData.review,
+            title: null
+          })
+          alert('✅ Rating dan ulasan berhasil ditambahkan!')
+        } catch (reviewError) {
+          // If review fails (e.g., already exists), show specific message
+          console.warn('⚠️ Review error:', reviewError)
+          alert('✅ Rating berhasil ditambahkan, tapi ulasan gagal disimpan. Mungkin Anda sudah pernah memberi ulasan sebelumnya.')
+        }
+      } else {
+        alert('✅ Rating berhasil ditambahkan!')
+      }
+
+      setIsRatingModalOpen(false)
+
+      // Refresh book data
+      fetchBookDetail()
+
+    } catch (error) {
+      console.error('❌ Error submitting rating:', error)
+
+      // ✅ Better error handling
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error'
+
+      if (errorMessage.includes('already have a rating')) {
+        alert('❌ Anda sudah pernah memberi rating. Gunakan tombol edit untuk mengubah rating Anda.')
+      } else if (errorMessage.includes('already have a review')) {
+        alert('❌ Anda sudah pernah memberi ulasan. Gunakan tombol edit untuk mengubah ulasan Anda.')
+      } else {
+        alert(`❌ Gagal menambahkan rating: ${errorMessage}`)
       }
     }
   }
@@ -157,12 +371,11 @@ const BookDetailPage = () => {
                 alt={book.title}
                 className="w-full rounded-lg shadow-lg"
               />
-              
+
               <div className="mt-6 space-y-3">
-                {/* ✅ Smart reading button with loading state */}
-                <Button 
-                  fullWidth 
-                  variant="primary" 
+                <Button
+                  fullWidth
+                  variant="primary"
                   size="lg"
                   onClick={handleStartReading}
                   loading={readingLoading}
@@ -171,10 +384,9 @@ const BookDetailPage = () => {
                   <BookOpen className="w-5 h-5 mr-2" />
                   {readingLoading ? 'Memuat...' : 'Mulai Membaca'}
                 </Button>
-                
-                {/* ✅ Download button - working */}
-                <Button 
-                  fullWidth 
+
+                <Button
+                  fullWidth
                   variant="secondary"
                   onClick={handleDownload}
                   loading={downloadLoading}
@@ -183,19 +395,41 @@ const BookDetailPage = () => {
                   <Download className="w-5 h-5 mr-2" />
                   {downloadLoading ? 'Mengunduh...' : 'Unduh EPUB'}
                 </Button>
-                
-                <div className="flex gap-2">
-                  <Button fullWidth variant="outline">
-                    <Heart className="w-5 h-5" />
+
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    onClick={handleAddToFavorite}
+                    className="flex-col py-3"
+                  >
+                    <Heart className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Favorit</span>
                   </Button>
-                  {/* ✅ Share button - working */}
-                  <Button fullWidth variant="outline" onClick={handleShare}>
-                    <Share2 className="w-5 h-5" />
+
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    onClick={handleOpenRatingModal}
+                    className="flex-col py-3"
+                  >
+                    <Star className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Rating</span>
+                  </Button>
+
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    onClick={handleShare}
+                    className="flex-col py-3"
+                  >
+                    <Share2 className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Bagikan</span>
                   </Button>
                 </div>
               </div>
 
-              {/* ✅ Additional Info Card */}
+              {/* Additional Info Card */}
               <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3 text-sm">
                 {book.publisher && (
                   <div className="flex items-center gap-2">
@@ -206,7 +440,7 @@ const BookDetailPage = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {book.language && (
                   <div className="flex items-center gap-2">
                     <Globe className="w-4 h-4 text-gray-500" />
@@ -252,7 +486,7 @@ const BookDetailPage = () => {
           {/* Book Info */}
           <div className="lg:col-span-2">
             <h1 className="text-4xl font-bold mb-2">{book.title}</h1>
-            
+
             {book.subtitle && (
               <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
                 {book.subtitle}
@@ -262,9 +496,7 @@ const BookDetailPage = () => {
             {book.authorNames && (
               <div className="flex items-center gap-2 mb-6">
                 <User className="w-5 h-5 text-gray-500" />
-                <span className="text-lg">
-                  {book.authorNames}
-                </span>
+                <span className="text-lg">{book.authorNames}</span>
               </div>
             )}
 
@@ -303,7 +535,6 @@ const BookDetailPage = () => {
             {book.genres && (
               <div className="mb-6">
                 <div className="flex flex-wrap gap-2">
-                  {/* Genres - reversed order */}
                   {book.genres.split(',').reverse().map((genre, index) => (
                     <span
                       key={index}
@@ -352,17 +583,27 @@ const BookDetailPage = () => {
                     Daftar Isi
                   </Button>
                 </Link>
-                <Link to={`/buku/${bookSlug}/ulasan`}>
-                  <Button variant="secondary">
-                    <Star className="w-5 h-5 mr-2" />
-                    Lihat Ulasan
-                  </Button>
-                </Link>
+                {/* ✅ FIXED: Use button with onClick instead of Link */}
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/buku/${bookSlug}/ulasan`)}
+                >
+                  <Star className="w-5 h-5 mr-2" />
+                  Lihat Ulasan
+                </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => setIsRatingModalOpen(false)}
+        onSubmit={handleSubmitRating}
+        bookTitle={book.title}
+      />
     </div>
   )
 }

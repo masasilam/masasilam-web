@@ -21,12 +21,6 @@ const ChapterReaderWrapper = () => {
   const pathParts = location.pathname.split(`/buku/${bookSlug}/`)
   const chapterPath = pathParts[1] ? pathParts[1].replace(/\/$/, '') : ''
 
-  console.log('📖 ChapterReaderWrapper:', {
-    bookSlug,
-    fullPathname: location.pathname,
-    extractedChapterPath: chapterPath,
-  })
-
   // ✅ If no chapter path, show book detail page instead
   if (!chapterPath) {
     return (

@@ -6,7 +6,7 @@ import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 import TTSControlPanel from '../components/Reader/TTSControlPanel'
 import { useTTS } from '../hooks/useTTS'
-import { 
+import {
   ChevronLeft, ChevronRight, Bookmark, Highlighter,
   StickyNote, MessageSquare, ThumbsUp, Send, X, Check, Menu,
   Volume2, Pause, Play
@@ -16,26 +16,26 @@ import '../styles/epub-styles.css'
 // Helper: Build chapter URL from chapter navigation info
 const buildChapterUrl = (bookSlug, chapterInfo) => {
   if (!chapterInfo) return ''
-  
+
   const { slug, chapterLevel, parentSlug } = chapterInfo
-  
+
   if (chapterLevel === 1) {
     return `/buku/${bookSlug}/${slug}`
   }
-  
+
   if (!parentSlug) {
     return `/buku/${bookSlug}/${slug}`
   }
-  
+
   return `/buku/${bookSlug}/${parentSlug}/${slug}`
 }
 
 const ChapterContent = memo(({ htmlContent, fontSize }) => {
   return (
-    <div 
-      className="chapter-content prose dark:prose-invert max-w-none mb-12" 
+    <div
+      className="chapter-content prose dark:prose-invert max-w-none mb-12"
       style={{ fontSize: `${fontSize}px`, lineHeight: '1.8', userSelect: 'text' }}
-      dangerouslySetInnerHTML={{ __html: htmlContent }} 
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
     />
   )
 })
@@ -45,7 +45,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const contentRef = useRef(null)
-  
+
   const isAuthenticated = !!localStorage.getItem('token')
 
   // TTS Hook - All TTS logic is now in the hook
@@ -55,7 +55,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [loading, setLoading] = useState(true)
   const [annotations, setAnnotations] = useState({ bookmarks: [], highlights: [], notes: [] })
   const [reviews, setReviews] = useState([])
-  
+
   const [showToolbar, setShowToolbar] = useState(false)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
   const [showReviewPanel, setShowReviewPanel] = useState(false)
@@ -63,12 +63,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [selectionRange, setSelectionRange] = useState(null)
   const [selectionCoords, setSelectionCoords] = useState(null)
   const [isInteractingWithPopup, setIsInteractingWithPopup] = useState(false)
-  
+
   const [highlightColor, setHighlightColor] = useState('#FFEB3B')
   const [noteContent, setNoteContent] = useState('')
   const [reviewContent, setReviewContent] = useState('')
   const [reviewRating, setReviewRating] = useState(5)
   const [isMobile, setIsMobile] = useState(true)
+
+  // Swipe gesture states
+  const [touchStart, setTouchStart] = useState(null)
+  const [touchEnd, setTouchEnd] = useState(null)
+  const [swipeDirection, setSwipeDirection] = useState(null) // 'left' | 'right' | null
 
   const fullChapterPath = chapterPath || ''
 
@@ -79,20 +84,126 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }, [fullChapterPath])
 
+  // Keyboard shortcuts for navigation
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Ignore if user is typing in input/textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return
+      }
+
+      // Arrow Left or 'P' for Previous
+      if ((e.key === 'ArrowLeft' || e.key.toLowerCase() === 'p') && chapter?.previousChapter) {
+        e.preventDefault()
+        handlePrevChapter()
+      }
+
+      // Arrow Right or 'N' for Next
+      if ((e.key === 'ArrowRight' || e.key.toLowerCase() === 'n') && chapter?.nextChapter) {
+        e.preventDefault()
+        handleNextChapter()
+      }
+
+      // Space or 'K' for TTS toggle
+      if ((e.key === ' ' || e.key.toLowerCase() === 'k') && chapter?.htmlContent) {
+        e.preventDefault()
+        handleTTSToggle()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [chapter, tts.isPlaying])
+
+  // Swipe gesture for navigation
+  useEffect(() => {
+    const minSwipeDistance = 50 // minimum distance for swipe (in pixels)
+
+    const handleTouchStart = (e) => {
+      // Ignore if touching interactive elements
+      const target = e.target
+      if (target.closest('button') || target.closest('a') || target.closest('input') ||
+          target.closest('textarea') || target.closest('[role="button"]')) {
+        return
+      }
+
+      setTouchEnd(null)
+      setTouchStart(e.targetTouches[0].clientX)
+      setSwipeDirection(null)
+    }
+
+    const handleTouchMove = (e) => {
+      if (touchStart === null) return
+
+      const currentTouch = e.targetTouches[0].clientX
+      const distance = touchStart - currentTouch
+
+      setTouchEnd(currentTouch)
+
+      // Show visual feedback during swipe
+      if (Math.abs(distance) > 20) {
+        if (distance > 0) {
+          setSwipeDirection('left') // Swiping left (next)
+        } else {
+          setSwipeDirection('right') // Swiping right (previous)
+        }
+      }
+    }
+
+    const handleTouchEnd = () => {
+      if (!touchStart || !touchEnd) {
+        setSwipeDirection(null)
+        return
+      }
+
+      const distance = touchStart - touchEnd
+      const isLeftSwipe = distance > minSwipeDistance
+      const isRightSwipe = distance < -minSwipeDistance
+
+      if (isLeftSwipe && chapter?.nextChapter) {
+        // Swipe left -> Next chapter
+        handleNextChapter()
+      }
+
+      if (isRightSwipe && chapter?.previousChapter) {
+        // Swipe right -> Previous chapter
+        handlePrevChapter()
+      }
+
+      // Reset
+      setTouchStart(null)
+      setTouchEnd(null)
+      setSwipeDirection(null)
+    }
+
+    const contentElement = contentRef.current
+    if (contentElement) {
+      contentElement.addEventListener('touchstart', handleTouchStart, { passive: true })
+      contentElement.addEventListener('touchmove', handleTouchMove, { passive: true })
+      contentElement.addEventListener('touchend', handleTouchEnd)
+
+      return () => {
+        contentElement.removeEventListener('touchstart', handleTouchStart)
+        contentElement.removeEventListener('touchmove', handleTouchMove)
+        contentElement.removeEventListener('touchend', handleTouchEnd)
+      }
+    }
+  }, [touchStart, touchEnd, chapter])
+
   useEffect(() => {
     const initializeChapterData = async () => {
       if (!fullChapterPath) return
-      
+
       await fetchChapter()
-      
+
       if (isAuthenticated) {
         fetchAnnotations()
       }
     }
-    
+
     initializeChapterData()
   }, [bookSlug, fullChapterPath, isAuthenticated])
-  
+
   useEffect(() => {
     if (chapter?.chapterNumber && fullChapterPath) {
       fetchReviews()
@@ -122,47 +233,47 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
-    
+
     return () => window.removeEventListener('scroll', handleScroll)
   }, [chapter, setReadingProgress])
 
   useEffect(() => {
     const handleSelection = () => {
       if (isInteractingWithPopup) return
-      
+
       const selection = window.getSelection()
       const text = selection.toString().trim()
-      
+
       const target = selection.anchorNode
       if (!target) return
-      
-      const isInForm = target.nodeType === Node.TEXT_NODE 
+
+      const isInForm = target.nodeType === Node.TEXT_NODE
         ? (target.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
         : (target.closest?.('textarea, input, [contenteditable="true"]') !== null)
-      
+
       if (isInForm) return
-      
+
       const chapterContentDiv = contentRef.current?.querySelector('.chapter-content')
       const isInChapterContent = chapterContentDiv?.contains(selection.anchorNode)
-      
+
       if (text && isInChapterContent) {
         setSelectedText(text)
         const range = selection.getRangeAt(0).cloneRange()
         setSelectionRange(range)
         const rect = range.getBoundingClientRect()
-        
+
         const popupHeight = 400
         const spaceBelow = window.innerHeight - rect.bottom
         const spaceAbove = rect.top
-        
+
         const showAbove = spaceAbove > spaceBelow || spaceBelow < popupHeight
-        
-        const top = showAbove 
+
+        const top = showAbove
           ? rect.top + window.scrollY - popupHeight - 10
           : rect.bottom + window.scrollY + 10
-        
+
         const left = rect.left + (rect.width / 2)
-        
+
         setSelectionCoords({ top, left })
         setShowAnnotationPanel(true)
       } else if (!isInteractingWithPopup && !isInForm) {
@@ -218,7 +329,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       navigate('/masuk', { state: { from: location.pathname } })
       return
     }
-    
+
     try {
       await chapterService.addBookmark(bookSlug, parseInt(chapter.chapterNumber), { position: window.scrollY, note: '' })
       setShowToolbar(false)
@@ -235,9 +346,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       navigate('/masuk', { state: { from: location.pathname } })
       return
     }
-    
+
     if (!selectedText || !selectionRange) return
-    
+
     try {
       await chapterService.addHighlight(bookSlug, parseInt(chapter.chapterNumber), {
         selectedText, color: highlightColor,
@@ -258,9 +369,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       navigate('/masuk', { state: { from: location.pathname } })
       return
     }
-    
+
     if (!noteContent.trim()) return
-    
+
     try {
       await chapterService.addNote(bookSlug, parseInt(chapter.chapterNumber), {
         content: noteContent, selectedText: selectedText || '', position: window.scrollY
@@ -314,18 +425,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       navigate('/masuk', { state: { from: location.pathname } })
       return
     }
-    
+
     if (!reviewContent.trim()) {
       alert('⚠️ Silakan tulis review terlebih dahulu')
       return
     }
-    
+
     try {
       await chapterService.addChapterReview(bookSlug, parseInt(chapter.chapterNumber), {
-        content: reviewContent, 
+        content: reviewContent,
         rating: reviewRating
       })
-      
+
       setReviewContent('')
       setReviewRating(5)
       setShowReviewPanel(false)
@@ -379,10 +490,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const handleAnnotationClick = (e, annotation) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     const position = parseInt(annotation.position) || 0
     setShowToolbar(false)
-    
+
     // Check if annotation is in current chapter
     if (annotation.page === parseInt(chapter?.chapterNumber)) {
       // Same chapter - just scroll
@@ -418,7 +529,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   // Add target="_blank" to external links
   useEffect(() => {
     if (!contentRef.current) return
-    
+
     const links = contentRef.current.querySelectorAll('.chapter-content a')
     links.forEach(link => {
       const href = link.getAttribute('href')
@@ -445,6 +556,27 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   return (
     <div className="relative pb-20">
+      {/* Swipe Indicator */}
+      {swipeDirection && (
+        <div className="fixed inset-0 pointer-events-none z-[60] flex items-center justify-center">
+          <div className={`bg-black/50 text-white px-6 py-4 rounded-full flex items-center gap-3 animate-in fade-in zoom-in duration-200 ${
+            swipeDirection === 'left' ? 'slide-in-from-right-10' : 'slide-in-from-left-10'
+          }`}>
+            {swipeDirection === 'right' ? (
+              <>
+                <ChevronLeft className="w-8 h-8" />
+                <span className="text-lg font-semibold">Bab Sebelumnya</span>
+              </>
+            ) : (
+              <>
+                <span className="text-lg font-semibold">Bab Selanjutnya</span>
+                <ChevronRight className="w-8 h-8" />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumbs Navigation */}
       {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
         <nav className="mb-6 text-sm">
@@ -472,7 +604,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           </ol>
         </nav>
       )}
-      
+
       {/* TTS Control Panel - Uses separated component */}
       {tts.isEnabled && (
         <TTSControlPanel
@@ -498,45 +630,94 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       )}
 
       {/* Bottom Toolbar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50">
-        <div className="flex items-center justify-around py-3 px-2 max-w-2xl mx-auto">
-          <button 
-            onClick={handleTTSToggle} 
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
-              tts.isPlaying 
-                ? 'bg-primary text-white' 
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 shadow-lg">
+        <div className="flex items-center justify-between py-3 px-3 sm:px-4 max-w-4xl mx-auto gap-1 sm:gap-2">
+          {/* Left: Previous Chapter */}
+          <button
+            onClick={handlePrevChapter}
+            disabled={!chapter?.previousChapter}
+            className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all min-w-[60px] sm:min-w-[70px] ${
+              chapter?.previousChapter
+                ? 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+                : 'opacity-30 cursor-not-allowed'
             }`}
+            title={chapter?.previousChapter ? 'Bab sebelumnya' : 'Tidak ada bab sebelumnya'}
           >
-            {tts.isPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            <span className="text-xs">{tts.isPlaying ? 'Pause' : 'Dengar'}</span>
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-[10px] sm:text-xs">Sebelum</span>
           </button>
-          
-          {isAuthenticated && (
-            <button onClick={() => setShowToolbar(!showToolbar)} className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-              <Menu className="w-5 h-5" /><span className="text-xs">Anotasi</span>
+
+          {/* Center: Main Actions */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={handleTTSToggle}
+              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+                tts.isPlaying
+                  ? 'bg-primary text-white shadow-md scale-105'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+              }`}
+              title={tts.isPlaying ? 'Pause' : 'Dengar'}
+            >
+              {tts.isPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              <span className="text-[10px] sm:text-xs">{tts.isPlaying ? 'Pause' : 'Dengar'}</span>
             </button>
-          )}
-          <button onClick={handleAddBookmark} className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-            <Bookmark className="w-5 h-5" /><span className="text-xs">Penanda</span>
+
+            {isAuthenticated && (
+              <button
+                onClick={() => setShowToolbar(!showToolbar)}
+                className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+                  showToolbar
+                    ? 'bg-primary/10 text-primary scale-105'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+                }`}
+                title="Anotasi"
+              >
+                <Menu className="w-5 h-5" />
+                <span className="text-[10px] sm:text-xs">Anotasi</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleAddBookmark}
+              className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hover:scale-105"
+              title="Tambah penanda"
+            >
+              <Bookmark className="w-5 h-5" />
+              <span className="text-[10px] sm:text-xs">Penanda</span>
+            </button>
+          </div>
+
+          {/* Right: Next Chapter */}
+          <button
+            onClick={handleNextChapter}
+            disabled={!chapter?.nextChapter}
+            className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all min-w-[60px] sm:min-w-[70px] ${
+              chapter?.nextChapter
+                ? 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+                : 'opacity-30 cursor-not-allowed'
+            }`}
+            title={chapter?.nextChapter ? 'Bab selanjutnya' : 'Tidak ada bab selanjutnya'}
+          >
+            <ChevronRight className="w-5 h-5" />
+            <span className="text-[10px] sm:text-xs">Selanjut</span>
           </button>
         </div>
       </div>
 
       {/* Text Selection Popup */}
       {selectedText && selectionCoords && (
-        <div 
-          className="fixed z-[100] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-primary" 
+        <div
+          className="fixed z-[100] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-primary"
           style={{
-            top: `${selectionCoords.top}px`, 
-            left: `${selectionCoords.left}px`, 
-            transform: 'translateX(-50%)', 
-            maxWidth: '90vw', 
+            top: `${selectionCoords.top}px`,
+            left: `${selectionCoords.left}px`,
+            transform: 'translateX(-50%)',
+            maxWidth: '90vw',
             width: '320px',
             maxHeight: '80vh',
             overflowY: 'auto'
-          }} 
-          onMouseDown={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true); }} 
+          }}
+          onMouseDown={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true); }}
           onTouchStart={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true); }}
         >
           <div className="p-4">
@@ -573,7 +754,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       {/* Annotation Panel - Collapsed for brevity, same as before */}
       {isAuthenticated && isMobile && showToolbar && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowToolbar(false)}>
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl z-50 max-h-[80vh] overflow-y-auto pb-24" 
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl z-50 max-h-[80vh] overflow-y-auto pb-24"
             onClick={e => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -592,28 +773,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           <h1 className="text-2xl md:text-3xl font-bold mb-2">{chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}</h1>
           <p className="text-gray-600">{chapter.bookTitle}</p>
         </header>
-        
+
         <ChapterContent htmlContent={memoizedContent} fontSize={fontSize} />
-        
-        <div className="pt-8 border-t mb-8">
-          <div className="flex justify-between gap-4">
-            <Button 
-              variant="secondary" 
-              onClick={handlePrevChapter} 
-              disabled={!chapter?.previousChapter}
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              Sebelumnya
-            </Button>
-            <Button 
-              onClick={handleNextChapter} 
-              disabled={!chapter?.nextChapter}
-            >
-              Selanjutnya
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          </div>
-        </div>
 
         {/* Reviews section - Same as before */}
         <div className="mt-12 pt-8 border-t">

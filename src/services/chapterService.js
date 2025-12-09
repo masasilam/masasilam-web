@@ -43,10 +43,8 @@ export const chapterService = {
   
   getAllBookAnnotations: async (slug) => {
     const response = await api.get(`/books/${slug}/my-annotations`)
-    console.log('🔍 Raw API Response:', response.data)
     
     const data = response.data?.data || response.data
-    console.log('🔍 Extracted data:', data)
     
     return {
       bookmarks: data.bookmarks || [],
