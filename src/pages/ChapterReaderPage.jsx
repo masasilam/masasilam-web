@@ -1,4 +1,4 @@
-// src/pages/ChapterReaderPage.jsx - REFACTORED WITH SEPARATED TTS
+// src/pages/ChapterReaderPage.jsx - ALL FEATURES AUTH-PROTECTED WITH CONSISTENT UX
 import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
@@ -9,7 +9,7 @@ import { useTTS } from '../hooks/useTTS'
 import {
   ChevronLeft, ChevronRight, Bookmark, Highlighter,
   StickyNote, MessageSquare, ThumbsUp, Send, X, Check, Menu,
-  Volume2, Pause, Play
+  Volume2, Pause, Play, Lock
 } from 'lucide-react'
 import '../styles/epub-styles.css'
 
@@ -30,6 +30,57 @@ const buildChapterUrl = (bookSlug, chapterInfo) => {
   return `/buku/${bookSlug}/${parentSlug}/${slug}`
 }
 
+// Login Prompt Modal Component
+const LoginPromptModal = ({ icon: Icon, title, description, onClose, onLogin, onRegister }) => (
+  <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in zoom-in duration-200">
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Icon className="w-8 h-8 text-primary" />
+        </div>
+        <h3 className="text-xl font-bold mb-2">{title}</h3>
+        <p className="text-gray-600 dark:text-gray-400">{description}</p>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          onClick={onLogin}
+          className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+        >
+          <Icon className="w-5 h-5" />
+          Masuk untuk Menggunakan Fitur
+        </button>
+        
+        <button
+          onClick={onClose}
+          className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          Nanti Saja
+        </button>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+          Belum punya akun?{' '}
+          <button
+            onClick={onRegister}
+            className="text-primary hover:underline font-semibold"
+          >
+            Daftar gratis
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>
+)
+
 const ChapterContent = memo(({ htmlContent, fontSize }) => {
   return (
     <div
@@ -48,7 +99,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const isAuthenticated = !!localStorage.getItem('token')
 
-  // TTS Hook - All TTS logic is now in the hook
+  // TTS Hook - Only initialize if authenticated
   const tts = useTTS()
 
   const [chapter, setChapter] = useState(null)
@@ -73,38 +124,42 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   // Swipe gesture states
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
-  const [swipeDirection, setSwipeDirection] = useState(null) // 'left' | 'right' | null
+  const [swipeDirection, setSwipeDirection] = useState(null)
+
+  // Login Modal states
+  const [showTTSLoginPrompt, setShowTTSLoginPrompt] = useState(false)
+  const [showAnnotationLoginPrompt, setShowAnnotationLoginPrompt] = useState(false)
+  const [showBookmarkLoginPrompt, setShowBookmarkLoginPrompt] = useState(false)
 
   const fullChapterPath = chapterPath || ''
 
   // Stop TTS when chapter changes
   useEffect(() => {
     return () => {
-      tts.stop()
+      if (isAuthenticated) {
+        tts.stop()
+      }
     }
-  }, [fullChapterPath])
+  }, [fullChapterPath, isAuthenticated])
 
   // Keyboard shortcuts for navigation
   useEffect(() => {
     const handleKeyPress = (e) => {
-      // Ignore if user is typing in input/textarea
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
         return
       }
 
-      // Arrow Left or 'P' for Previous
       if ((e.key === 'ArrowLeft' || e.key.toLowerCase() === 'p') && chapter?.previousChapter) {
         e.preventDefault()
         handlePrevChapter()
       }
 
-      // Arrow Right or 'N' for Next
       if ((e.key === 'ArrowRight' || e.key.toLowerCase() === 'n') && chapter?.nextChapter) {
         e.preventDefault()
         handleNextChapter()
       }
 
-      // Space or 'K' for TTS toggle
+      // Space or 'K' for TTS toggle - only if authenticated
       if ((e.key === ' ' || e.key.toLowerCase() === 'k') && chapter?.htmlContent) {
         e.preventDefault()
         handleTTSToggle()
@@ -113,14 +168,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [chapter, tts.isPlaying])
+  }, [chapter, tts.isPlaying, isAuthenticated])
 
   // Swipe gesture for navigation
   useEffect(() => {
-    const minSwipeDistance = 50 // minimum distance for swipe (in pixels)
+    const minSwipeDistance = 50
 
     const handleTouchStart = (e) => {
-      // Ignore if touching interactive elements
       const target = e.target
       if (target.closest('button') || target.closest('a') || target.closest('input') ||
           target.closest('textarea') || target.closest('[role="button"]')) {
@@ -140,12 +194,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
       setTouchEnd(currentTouch)
 
-      // Show visual feedback during swipe
       if (Math.abs(distance) > 20) {
         if (distance > 0) {
-          setSwipeDirection('left') // Swiping left (next)
+          setSwipeDirection('left')
         } else {
-          setSwipeDirection('right') // Swiping right (previous)
+          setSwipeDirection('right')
         }
       }
     }
@@ -161,16 +214,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       const isRightSwipe = distance < -minSwipeDistance
 
       if (isLeftSwipe && chapter?.nextChapter) {
-        // Swipe left -> Next chapter
         handleNextChapter()
       }
 
       if (isRightSwipe && chapter?.previousChapter) {
-        // Swipe right -> Previous chapter
         handlePrevChapter()
       }
 
-      // Reset
       setTouchStart(null)
       setTouchEnd(null)
       setSwipeDirection(null)
@@ -326,7 +376,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const handleAddBookmark = async () => {
     if (!isAuthenticated) {
-      navigate('/masuk', { state: { from: location.pathname } })
+      setShowBookmarkLoginPrompt(true)
       return
     }
 
@@ -343,7 +393,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const handleAddHighlight = async () => {
     if (!isAuthenticated) {
-      navigate('/masuk', { state: { from: location.pathname } })
+      setShowAnnotationLoginPrompt(true)
+      clearSelection()
       return
     }
 
@@ -366,7 +417,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const handleAddNote = async () => {
     if (!isAuthenticated) {
-      navigate('/masuk', { state: { from: location.pathname } })
+      setShowAnnotationLoginPrompt(true)
+      clearSelection()
       return
     }
 
@@ -471,22 +523,24 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return breadcrumbs.map(b => b.slug).join('/')
   }
 
-  // Navigation using chapter info from response
   const handleNextChapter = () => {
     if (!chapter?.nextChapter) return
-    tts.stop() // Stop TTS when navigating
+    if (isAuthenticated) {
+      tts.stop()
+    }
     const nextUrl = buildChapterUrl(bookSlug, chapter.nextChapter)
     navigate(nextUrl)
   }
 
   const handlePrevChapter = () => {
     if (!chapter?.previousChapter) return
-    tts.stop() // Stop TTS when navigating
+    if (isAuthenticated) {
+      tts.stop()
+    }
     const prevUrl = buildChapterUrl(bookSlug, chapter.previousChapter)
     navigate(prevUrl)
   }
 
-  // Annotation navigation using chapter info
   const handleAnnotationClick = (e, annotation) => {
     e.preventDefault()
     e.stopPropagation()
@@ -494,12 +548,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     const position = parseInt(annotation.position) || 0
     setShowToolbar(false)
 
-    // Check if annotation is in current chapter
     if (annotation.page === parseInt(chapter?.chapterNumber)) {
-      // Same chapter - just scroll
       window.scrollTo({ top: position, behavior: 'smooth' })
     } else {
-      // Different chapter - navigate using chapter info
       if (annotation.chapter) {
         const targetUrl = buildChapterUrl(bookSlug, annotation.chapter)
         navigate(targetUrl, { state: { scrollTo: position } })
@@ -507,13 +558,20 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
-  // TTS Handlers
+  // TTS Handlers - WITH AUTH CHECK
   const handleTTSToggle = () => {
+    if (!isAuthenticated) {
+      setShowTTSLoginPrompt(true)
+      return
+    }
+    
     if (!chapter?.htmlContent) return
     tts.toggle(chapter.htmlContent)
   }
 
   const handleTTSApplySettings = () => {
+    if (!isAuthenticated) return
+    
     tts.applySettings({
       rate: tts.rate,
       pitch: tts.pitch,
@@ -526,7 +584,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return chapter.htmlContent
   }, [chapter?.htmlContent])
 
-  // Add target="_blank" to external links
   useEffect(() => {
     if (!contentRef.current) return
 
@@ -556,6 +613,40 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   return (
     <div className="relative pb-20">
+      {/* Login Prompt Modals */}
+      {showTTSLoginPrompt && (
+        <LoginPromptModal
+          icon={Volume2}
+          title="Fitur Text-to-Speech"
+          description="Text-to-Speech adalah fitur khusus untuk pengguna yang sudah login. Masuk sekarang untuk mendengarkan bab ini dibacakan!"
+          onClose={() => setShowTTSLoginPrompt(false)}
+          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+        />
+      )}
+
+      {showAnnotationLoginPrompt && (
+        <LoginPromptModal
+          icon={Highlighter}
+          title="Fitur Anotasi"
+          description="Highlight dan catatan adalah fitur khusus untuk pengguna yang sudah login. Masuk sekarang untuk menyimpan anotasi Anda!"
+          onClose={() => setShowAnnotationLoginPrompt(false)}
+          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+        />
+      )}
+
+      {showBookmarkLoginPrompt && (
+        <LoginPromptModal
+          icon={Bookmark}
+          title="Fitur Penanda Buku"
+          description="Penanda buku adalah fitur khusus untuk pengguna yang sudah login. Masuk sekarang untuk menyimpan penanda Anda!"
+          onClose={() => setShowBookmarkLoginPrompt(false)}
+          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+        />
+      )}
+
       {/* Swipe Indicator */}
       {swipeDirection && (
         <div className="fixed inset-0 pointer-events-none z-[60] flex items-center justify-center">
@@ -605,8 +696,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </nav>
       )}
 
-      {/* TTS Control Panel - Uses separated component */}
-      {tts.isEnabled && (
+      {/* TTS Control Panel - Only show if authenticated */}
+      {isAuthenticated && tts.isEnabled && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
           progress={tts.progress}
@@ -644,44 +735,72 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             title={chapter?.previousChapter ? 'Bab sebelumnya' : 'Tidak ada bab sebelumnya'}
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="text-[10px] sm:text-xs">Sebelum</span>
+            <span className="text-[10px] sm:text-xs">Sebelumnya</span>
           </button>
 
           {/* Center: Main Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* TTS Button - Show lock icon if not authenticated */}
             <button
               onClick={handleTTSToggle}
-              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all ${
-                tts.isPlaying
+              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all relative ${
+                isAuthenticated && tts.isPlaying
                   ? 'bg-primary text-white shadow-md scale-105'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
               }`}
-              title={tts.isPlaying ? 'Pause' : 'Dengar'}
+              title={isAuthenticated ? (tts.isPlaying ? 'Pause' : 'Dengar') : 'Login untuk menggunakan TTS'}
             >
-              {tts.isPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              <span className="text-[10px] sm:text-xs">{tts.isPlaying ? 'Pause' : 'Dengar'}</span>
+              {!isAuthenticated && (
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                  <Lock className="w-3 h-3" />
+                </div>
+              )}
+              {isAuthenticated && tts.isPlaying ? (
+                <Pause className="w-5 h-5" />
+              ) : (
+                <Volume2 className="w-5 h-5" />
+              )}
+              <span className="text-[10px] sm:text-xs">
+                {isAuthenticated && tts.isPlaying ? 'Pause' : 'Dengar'}
+              </span>
             </button>
 
-            {isAuthenticated && (
-              <button
-                onClick={() => setShowToolbar(!showToolbar)}
-                className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all ${
-                  showToolbar
-                    ? 'bg-primary/10 text-primary scale-105'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
-                }`}
-                title="Anotasi"
-              >
-                <Menu className="w-5 h-5" />
-                <span className="text-[10px] sm:text-xs">Anotasi</span>
-              </button>
-            )}
+            {/* Annotation Menu Button - Show lock if not authenticated */}
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  setShowAnnotationLoginPrompt(true)
+                  return
+                }
+                setShowToolbar(!showToolbar)
+              }}
+              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all relative ${
+                showToolbar && isAuthenticated
+                  ? 'bg-primary/10 text-primary scale-105'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+              }`}
+              title={isAuthenticated ? 'Anotasi' : 'Login untuk menggunakan anotasi'}
+            >
+              {!isAuthenticated && (
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                  <Lock className="w-3 h-3" />
+                </div>
+              )}
+              <Menu className="w-5 h-5" />
+              <span className="text-[10px] sm:text-xs">Anotasi</span>
+            </button>
 
+            {/* Bookmark Button - Show lock if not authenticated */}
             <button
               onClick={handleAddBookmark}
-              className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hover:scale-105"
-              title="Tambah penanda"
+              className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hover:scale-105 relative"
+              title={isAuthenticated ? 'Tambah penanda' : 'Login untuk menggunakan penanda'}
             >
+              {!isAuthenticated && (
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                  <Lock className="w-3 h-3" />
+                </div>
+              )}
               <Bookmark className="w-5 h-5" />
               <span className="text-[10px] sm:text-xs">Penanda</span>
             </button>
@@ -699,12 +818,12 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             title={chapter?.nextChapter ? 'Bab selanjutnya' : 'Tidak ada bab selanjutnya'}
           >
             <ChevronRight className="w-5 h-5" />
-            <span className="text-[10px] sm:text-xs">Selanjut</span>
+            <span className="text-[10px] sm:text-xs">Selanjutnya</span>
           </button>
         </div>
       </div>
 
-      {/* Text Selection Popup */}
+      {/* Text Selection Popup - WITH AUTH CHECK */}
       {selectedText && selectionCoords && (
         <div
           className="fixed z-[100] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-primary"
@@ -728,30 +847,51 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             <div className="mb-3 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs italic max-h-20 overflow-y-auto">
               "{selectedText.substring(0, 150)}{selectedText.length > 150 ? '...' : ''}"
             </div>
-            <div className="mb-3">
-              <label className="block text-xs font-medium mb-2">Warna Highlight</label>
-              <div className="flex gap-2 justify-center">
-                {['#FFEB3B', '#4CAF50', '#2196F3', '#FF9800', '#F44336'].map(color => (
-                  <button key={color} onClick={() => setHighlightColor(color)} className="w-8 h-8 rounded-full border-2"
-                    style={{ backgroundColor: color, borderColor: highlightColor === color ? '#000' : 'transparent' }} />
-                ))}
+
+            {isAuthenticated ? (
+              <>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-2">Warna Highlight</label>
+                  <div className="flex gap-2 justify-center">
+                    {['#FFEB3B', '#4CAF50', '#2196F3', '#FF9800', '#F44336'].map(color => (
+                      <button key={color} onClick={() => setHighlightColor(color)} className="w-8 h-8 rounded-full border-2"
+                        style={{ backgroundColor: color, borderColor: highlightColor === color ? '#000' : 'transparent' }} />
+                    ))}
+                  </div>
+                </div>
+                <button onClick={handleAddHighlight} className="w-full py-2 bg-primary text-white rounded-lg text-sm mb-3">
+                  <Highlighter className="w-4 h-4 inline mr-1" /> Highlight
+                </button>
+                <div className="pt-3 border-t">
+                  <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} onFocus={() => setIsInteractingWithPopup(true)}
+                    placeholder="Tambahkan catatan..." className="w-full p-2 border rounded text-sm mb-2 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600" rows="2" />
+                  <button onClick={handleAddNote} className="w-full py-2 bg-green-600 text-white rounded-lg text-sm">
+                    <Check className="w-4 h-4 inline mr-1" /> Simpan Catatan
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Login untuk menyimpan highlight dan catatan
+                </p>
+                <button
+                  onClick={() => {
+                    clearSelection()
+                    navigate('/masuk', { state: { from: location.pathname } })
+                  }}
+                  className="w-full py-2 bg-primary text-white rounded-lg text-sm"
+                >
+                  Masuk Sekarang
+                </button>
               </div>
-            </div>
-            <button onClick={handleAddHighlight} className="w-full py-2 bg-primary text-white rounded-lg text-sm mb-3">
-              <Highlighter className="w-4 h-4 inline mr-1" /> Highlight
-            </button>
-            <div className="pt-3 border-t">
-              <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} onFocus={() => setIsInteractingWithPopup(true)}
-                placeholder="Tambahkan catatan..." className="w-full p-2 border rounded text-sm mb-2 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600" rows="2" />
-              <button onClick={handleAddNote} className="w-full py-2 bg-green-600 text-white rounded-lg text-sm">
-                <Check className="w-4 h-4 inline mr-1" /> Simpan Catatan
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Annotation Panel - Collapsed for brevity, same as before */}
+      {/* Annotation Panel - Only show if authenticated */}
       {isAuthenticated && isMobile && showToolbar && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowToolbar(false)}>
           <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl z-50 max-h-[80vh] overflow-y-auto pb-24"
@@ -761,7 +901,121 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 <h3 className="text-xl font-bold">Anotasi Saya</h3>
                 <button onClick={() => setShowToolbar(false)}><X className="w-6 h-6" /></button>
               </div>
-              {/* ... Annotation lists ... */}
+
+              {/* Bookmarks Section */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Bookmark className="w-5 h-5" />
+                  Penanda Buku ({annotations.bookmarks.length})
+                </h4>
+                {annotations.bookmarks.length === 0 ? (
+                  <p className="text-sm text-gray-500">Belum ada penanda buku</p>
+                ) : (
+                  <div className="space-y-2">
+                    {annotations.bookmarks.map(bookmark => (
+                      <div key={bookmark.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <button
+                            onClick={(e) => handleAnnotationClick(e, bookmark)}
+                            className="flex-1 text-left text-sm hover:text-primary"
+                          >
+                            <div className="font-medium">
+                              {bookmark.chapter?.title || `Bab ${bookmark.page}`}
+                            </div>
+                            {bookmark.note && (
+                              <div className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+                                {bookmark.note}
+                              </div>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBookmark(bookmark.id)}
+                            className="text-red-500 hover:text-red-700 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Highlights Section */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Highlighter className="w-5 h-5" />
+                  Highlight ({currentChapterHighlights.length})
+                </h4>
+                {currentChapterHighlights.length === 0 ? (
+                  <p className="text-sm text-gray-500">Belum ada highlight di bab ini</p>
+                ) : (
+                  <div className="space-y-2">
+                    {currentChapterHighlights.map(highlight => (
+                      <div key={highlight.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div
+                              className="text-sm italic p-2 rounded"
+                              style={{ backgroundColor: highlight.color + '40' }}
+                            >
+                              "{highlight.selectedText}"
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteHighlight(highlight.id)}
+                            className="text-red-500 hover:text-red-700 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Notes Section */}
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <StickyNote className="w-5 h-5" />
+                  Catatan ({annotations.notes.length})
+                </h4>
+                {annotations.notes.length === 0 ? (
+                  <p className="text-sm text-gray-500">Belum ada catatan</p>
+                ) : (
+                  <div className="space-y-2">
+                    {annotations.notes.map(note => (
+                      <div key={note.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <button
+                            onClick={(e) => handleAnnotationClick(e, note)}
+                            className="flex-1 text-left"
+                          >
+                            <div className="text-sm font-medium mb-1">
+                              {note.chapter?.title || `Bab ${note.page}`}
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {note.content}
+                            </div>
+                            {note.selectedText && (
+                              <div className="text-xs text-gray-500 italic mt-1">
+                                "{note.selectedText.substring(0, 100)}..."
+                              </div>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="text-red-500 hover:text-red-700 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -769,16 +1023,86 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
       <article ref={contentRef}>
         <header className="mb-8 pb-8 border-b">
-          <div className="text-sm text-gray-500 mb-2">Bab {chapter.chapterNumber} dari {chapter.totalChapters}</div>
           <h1 className="text-2xl md:text-3xl font-bold mb-2">{chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}</h1>
           <p className="text-gray-600">{chapter.bookTitle}</p>
         </header>
 
         <ChapterContent htmlContent={memoizedContent} fontSize={fontSize} />
 
-        {/* Reviews section - Same as before */}
+        {/* Reviews section */}
         <div className="mt-12 pt-8 border-t">
-          {/* ... Reviews UI ... */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl md:text-2xl font-bold">Diskusi Bab Ini</h2>
+            <Button onClick={() => setShowReviewPanel(!showReviewPanel)}>
+              <MessageSquare className="w-5 h-5 mr-2" />
+              Tulis
+            </Button>
+          </div>
+          
+          {showReviewPanel && (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Rating</label>
+                <div className="flex gap-2">
+                  {[1,2,3,4,5].map(star => (
+                    <button 
+                      key={star} 
+                      type="button"
+                      onClick={() => setReviewRating(star)} 
+                      className={`text-3xl ${star <= reviewRating ? 'text-yellow-400' : 'text-gray-300'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <textarea 
+                value={reviewContent} 
+                onChange={(e) => setReviewContent(e.target.value)}
+                placeholder="Bagaimana pendapat Anda tentang bab ini?" 
+                className="w-full p-3 border rounded-lg mb-4 min-h-[100px] bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600" 
+              />
+              
+              <div className="flex gap-2">
+                <Button onClick={handleAddReview} disabled={!reviewContent.trim()}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Kirim
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    setShowReviewPanel(false)
+                    setReviewContent('')
+                    setReviewRating(5)
+                  }}
+                >
+                  Batal
+                </Button>
+              </div>
+            </div>
+          )}
+        
+          <div className="space-y-4">
+            {reviews.map(r => (
+              <div key={r.id} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="font-semibold">{r.userName}</div>
+                    <div className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString('id-ID')}</div>
+                  </div>
+                  <div className="flex text-yellow-400 text-sm">
+                    {[...Array(5)].map((_, i) => <span key={i}>{i < r.rating ? '★' : '☆'}</span>)}
+                  </div>
+                </div>
+                <p className="text-gray-700 dark:text-gray-300 mb-3">{r.content}</p>
+                <button onClick={() => handleLikeReview(r.id)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary">
+                  <ThumbsUp className="w-4 h-4" />{r.likeCount || 0} Suka
+                </button>
+              </div>
+            ))}
+            {reviews.length === 0 && <p className="text-center text-gray-500 py-8">Belum ada diskusi</p>}
+          </div>
         </div>
       </article>
     </div>

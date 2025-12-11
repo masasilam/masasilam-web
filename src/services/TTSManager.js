@@ -1,27 +1,21 @@
 // src/services/TTSManager.js
-import { isNormalInterruption } from '../utils/TTSErrorTypes'
-
 /**
  * Text-to-Speech Manager
- * Handles all TTS functionality including playback, pause/resume, and settings
- * 
- * Note: The Web Speech API may emit 'interrupted' or 'canceled' errors when:
- * - User pauses/stops playback
- * - Browser tab loses focus
- * - User navigates to another page
- * These are normal behaviors and not actual errors.
+ * Handles chunked reading for long content to avoid Chrome's character limit
  */
-
 class TTSManager {
   constructor() {
-    this.utterance = null
-    this.fullText = ''
-    this.currentCharIndex = 0
-    this.startTime = 0
-    this.startChar = 0
+    this.synth = window.speechSynthesis
+    this.utterances = []
+    this.currentUtteranceIndex = 0
     this.isPlaying = false
     this.isPaused = false
     this.isEnabled = false
+    this.currentCharIndex = 0
+    this.totalChars = 0
+    this.htmlContent = ''
+    this.textContent = ''
+    this.chunks = []
     
     // Settings
     this.rate = 1.0
@@ -34,340 +28,314 @@ class TTSManager {
     this.onProgressChange = null
     this.onError = null
     
-    this.initializeVoices()
+    // Chrome has ~4000 char limit, we use 3000 to be safe
+    this.MAX_CHUNK_SIZE = 3000
+    
+    this.initVoices()
   }
 
-  /**
-   * Initialize available voices
-   */
-  initializeVoices() {
+  initVoices() {
     const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices()
+      this.availableVoices = this.synth.getVoices()
+      
       // Prioritize Indonesian voices
-      const indonesianVoices = voices.filter(v => v.lang.startsWith('id'))
-      this.availableVoices = indonesianVoices.length > 0 ? indonesianVoices : voices
+      const indonesianVoices = this.availableVoices.filter(v => 
+        v.lang.startsWith('id') || v.lang.startsWith('ms')
+      )
+      
+      if (indonesianVoices.length > 0) {
+        this.availableVoices = [
+          ...indonesianVoices,
+          ...this.availableVoices.filter(v => 
+            !v.lang.startsWith('id') && !v.lang.startsWith('ms')
+          )
+        ]
+      }
     }
 
     loadVoices()
-    window.speechSynthesis.onvoiceschanged = loadVoices
-  }
-
-  /**
-   * Extract text content from HTML
-   */
-  extractTextFromHTML(html) {
-    const temp = document.createElement('div')
-    temp.innerHTML = html
-    return temp.textContent || temp.innerText || ''
-  }
-
-  /**
-   * Estimate character position based on time elapsed
-   * Average speaking rate: ~150 words per minute at rate 1.0
-   * Average word length: ~5 characters
-   * So roughly 12.5 chars per second at rate 1.0
-   */
-  estimateCharPosition(text, startChar, elapsedMs, rate) {
-    const charsPerSecond = 12.5 * rate
-    const elapsedSeconds = elapsedMs / 1000
-    const estimatedChars = Math.floor(elapsedSeconds * charsPerSecond)
-    return Math.min(startChar + estimatedChars, text.length)
-  }
-
-  /**
-   * Update internal state and notify listeners
-   */
-  updateState(updates) {
-    Object.assign(this, updates)
     
-    if (this.onStateChange) {
-      this.onStateChange({
-        isPlaying: this.isPlaying,
-        isPaused: this.isPaused,
-        isEnabled: this.isEnabled,
-        currentCharIndex: this.currentCharIndex,
-        fullText: this.fullText
-      })
+    if (this.synth.onvoiceschanged !== undefined) {
+      this.synth.onvoiceschanged = loadVoices
     }
   }
 
   /**
-   * Speak text from a specific character position
+   * Extract text from HTML and split into chunks
    */
-  speak(text, startFromChar = 0) {
-    if (!text) {
-      console.warn('TTSManager: No text to speak')
-      return
-    }
-
-    // Cancel any existing speech
-    window.speechSynthesis.cancel()
-
-    // Get text from the starting position
-    const textToSpeak = startFromChar > 0 ? text.substring(startFromChar) : text
+  extractAndChunkText(htmlContent) {
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = htmlContent
     
-    if (!textToSpeak.trim()) {
-      console.warn('TTSManager: No more text to speak')
-      this.updateState({ isPlaying: false, isEnabled: false })
-      return
-    }
-
-    console.log('🔊 TTSManager: Speaking from char:', startFromChar)
-
-    const utterance = new SpeechSynthesisUtterance(textToSpeak)
+    // Remove script and style tags
+    const scripts = tempDiv.querySelectorAll('script, style')
+    scripts.forEach(el => el.remove())
     
-    // Set voice
-    if (this.availableVoices.length > 0 && this.availableVoices[this.voiceIndex]) {
-      utterance.voice = this.availableVoices[this.voiceIndex]
-    }
+    const text = tempDiv.textContent || tempDiv.innerText || ''
+    const cleanText = text.replace(/\s+/g, ' ').trim()
     
-    utterance.rate = this.rate
-    utterance.pitch = this.pitch
-    utterance.lang = 'id-ID'
-
-    utterance.onstart = () => {
-      this.startTime = Date.now()
-      this.startChar = startFromChar
-      this.updateState({ isPlaying: true, isPaused: false, isEnabled: true })
-      console.log('▶️ TTSManager: Started at:', startFromChar)
-    }
-
-    utterance.onboundary = (event) => {
-      // Update actual position in full text
-      const actualPosition = startFromChar + event.charIndex
-      this.currentCharIndex = actualPosition
-      
-      if (this.onProgressChange) {
-        this.onProgressChange(actualPosition, text.length)
+    // Split into chunks
+    const chunks = []
+    let currentChunk = ''
+    
+    // Split by sentences first
+    const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText]
+    
+    for (const sentence of sentences) {
+      if ((currentChunk + sentence).length > this.MAX_CHUNK_SIZE) {
+        if (currentChunk) {
+          chunks.push(currentChunk.trim())
+          currentChunk = ''
+        }
+        
+        // If single sentence is too long, split by words
+        if (sentence.length > this.MAX_CHUNK_SIZE) {
+          const words = sentence.split(' ')
+          let wordChunk = ''
+          
+          for (const word of words) {
+            if ((wordChunk + ' ' + word).length > this.MAX_CHUNK_SIZE) {
+              if (wordChunk) chunks.push(wordChunk.trim())
+              wordChunk = word
+            } else {
+              wordChunk += (wordChunk ? ' ' : '') + word
+            }
+          }
+          
+          if (wordChunk) currentChunk = wordChunk
+        } else {
+          currentChunk = sentence
+        }
+      } else {
+        currentChunk += (currentChunk ? ' ' : '') + sentence
       }
     }
-
-    utterance.onpause = () => {
-      const elapsed = Date.now() - this.startTime
-      const estimatedPos = this.estimateCharPosition(text, this.startChar, elapsed, this.rate)
-      this.updateState({ currentCharIndex: estimatedPos, isPaused: true, isPlaying: false })
-      console.log('⏸️ TTSManager: Native paused at:', estimatedPos)
+    
+    if (currentChunk) {
+      chunks.push(currentChunk.trim())
     }
-
-    utterance.onresume = () => {
-      this.startTime = Date.now()
-      this.startChar = this.currentCharIndex
-      this.updateState({ isPlaying: true, isPaused: false })
-      console.log('▶️ TTSManager: Resumed from:', this.currentCharIndex)
-    }
-
-    utterance.onend = () => {
-      this.updateState({ 
-        isPlaying: false, 
-        isPaused: false, 
-        isEnabled: false, 
-        currentCharIndex: 0 
-      })
-      console.log('⏹️ TTSManager: Ended')
-    }
-
-    utterance.onerror = (event) => {
-      // 'interrupted' is a normal error when user pauses/stops or navigates away
-      // Don't treat it as an actual error
-      if (event.error === 'interrupted' || event.error === 'canceled') {
-        console.log('⏸️ TTSManager: Speech interrupted (normal)')
-        this.updateState({ isPlaying: false, isPaused: false })
-        return
-      }
-      
-      // Only log/report actual errors
-      console.error('❌ TTSManager: Error:', event.error)
-      this.updateState({ isPlaying: false, isPaused: false })
-      
-      if (this.onError) {
-        this.onError(event.error)
-      }
-    }
-
-    this.utterance = utterance
-    window.speechSynthesis.speak(utterance)
+    
+    return { text: cleanText, chunks }
   }
 
   /**
-   * Start TTS from the beginning
+   * Start TTS
    */
   start(htmlContent) {
     if (!htmlContent) {
-      console.warn('TTSManager: No content provided')
+      console.warn('No content provided for TTS')
       return
     }
 
-    const text = this.extractTextFromHTML(htmlContent)
+    this.stop() // Stop any existing playback
     
-    if (!text.trim()) {
-      console.warn('TTSManager: No text to speak')
-      return
-    }
-
-    this.fullText = text
+    this.htmlContent = htmlContent
+    const { text, chunks } = this.extractAndChunkText(htmlContent)
+    
+    this.textContent = text
+    this.chunks = chunks
+    this.totalChars = text.length
     this.currentCharIndex = 0
-    this.speak(text, 0)
+    this.currentUtteranceIndex = 0
+    this.utterances = []
+    
+    console.log(`TTS: Starting playback of ${chunks.length} chunks (${this.totalChars} chars)`)
+    
+    // Create utterances for each chunk
+    for (let i = 0; i < chunks.length; i++) {
+      const utterance = new SpeechSynthesisUtterance(chunks[i])
+      utterance.rate = this.rate
+      utterance.pitch = this.pitch
+      
+      if (this.availableVoices.length > 0) {
+        utterance.voice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
+      }
+      
+      // Track progress
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          // Calculate approximate character position
+          const chunkStart = this.getChunkStartPosition(i)
+          this.currentCharIndex = chunkStart + event.charIndex
+          
+          if (this.onProgressChange) {
+            this.onProgressChange(this.currentCharIndex, this.totalChars)
+          }
+        }
+      }
+      
+      utterance.onend = () => {
+        console.log(`TTS: Chunk ${i + 1}/${chunks.length} completed`)
+        
+        // Move to next chunk
+        if (i < chunks.length - 1) {
+          this.currentUtteranceIndex = i + 1
+          this.playCurrentChunk()
+        } else {
+          // All chunks completed
+          this.stop()
+          console.log('TTS: Playback completed')
+        }
+      }
+      
+      utterance.onerror = (event) => {
+        console.error(`TTS: Error in chunk ${i + 1}:`, event)
+        
+        if (this.onError) {
+          this.onError(event)
+        }
+        
+        // Try to continue to next chunk
+        if (i < chunks.length - 1) {
+          this.currentUtteranceIndex = i + 1
+          this.playCurrentChunk()
+        } else {
+          this.stop()
+        }
+      }
+      
+      this.utterances.push(utterance)
+    }
+    
+    this.isPlaying = true
+    this.isPaused = false
+    this.isEnabled = true
+    
+    this.emitStateChange()
+    this.playCurrentChunk()
   }
 
   /**
-   * Pause TTS playback
+   * Get character position where chunk starts
    */
-  pause() {
-    if (!window.speechSynthesis.speaking) return
-    
-    console.log('🛑 TTSManager: Pause requested')
-    
-    // Calculate current position before canceling
-    const elapsed = Date.now() - this.startTime
-    const estimatedPos = this.estimateCharPosition(
-      this.fullText, 
-      this.startChar, 
-      elapsed, 
-      this.rate
-    )
-    
-    // Update position BEFORE canceling
-    this.currentCharIndex = estimatedPos
-    
-    // Try native pause first
-    try {
-      window.speechSynthesis.pause()
-    } catch (e) {
-      console.log('⚠️ TTSManager: Native pause not supported')
+  getChunkStartPosition(chunkIndex) {
+    let position = 0
+    for (let i = 0; i < chunkIndex; i++) {
+      position += this.chunks[i].length + 1 // +1 for space between chunks
+    }
+    return position
+  }
+
+  /**
+   * Play current chunk
+   */
+  playCurrentChunk() {
+    if (this.currentUtteranceIndex >= this.utterances.length) {
+      return
     }
     
-    // Check if pause worked, if not cancel
+    const utterance = this.utterances[this.currentUtteranceIndex]
+    
+    // Cancel any existing speech
+    this.synth.cancel()
+    
+    // Small delay to ensure cancel completes
     setTimeout(() => {
-      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        // Native pause didn't work, need to cancel
-        // This will trigger 'interrupted' error, which is normal
-        window.speechSynthesis.cancel()
-        console.log('⏸️ TTSManager: Cancelled at position:', estimatedPos)
-      } else {
-        console.log('⏸️ TTSManager: Native pause at position:', estimatedPos)
-      }
-      this.updateState({ isPlaying: false, isPaused: true })
+      this.synth.speak(utterance)
+      console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
     }, 50)
   }
 
   /**
-   * Resume TTS playback
+   * Pause TTS
    */
-  resume() {
-    if (!this.fullText) {
-      console.warn('TTSManager: No text to resume')
-      return
-    }
+  pause() {
+    if (!this.isPlaying || this.isPaused) return
     
-    // Try native resume first
-    if (window.speechSynthesis.paused) {
-      try {
-        window.speechSynthesis.resume()
-        console.log('▶️ TTSManager: Native resume')
-        return
-      } catch (e) {
-        console.log('❌ TTSManager: Native resume failed:', e)
-      }
-    }
-    
-    // Fallback: restart from saved position
-    console.log('🔄 TTSManager: Restart from position:', this.currentCharIndex)
-    this.speak(this.fullText, this.currentCharIndex)
+    this.synth.pause()
+    this.isPaused = true
+    this.isPlaying = false
+    this.emitStateChange()
   }
 
   /**
-   * Stop TTS playback completely
+   * Resume TTS
+   */
+  resume() {
+    if (!this.isPaused) return
+    
+    this.synth.resume()
+    this.isPaused = false
+    this.isPlaying = true
+    this.emitStateChange()
+  }
+
+  /**
+   * Stop TTS
    */
   stop() {
-    // Cancel will trigger 'interrupted' error, which is normal
-    window.speechSynthesis.cancel()
-    this.updateState({
-      isPlaying: false,
-      isPaused: false,
-      isEnabled: false,
-      fullText: '',
-      currentCharIndex: 0
-    })
-    console.log('⏹️ TTSManager: Stopped')
+    this.synth.cancel()
+    this.isPlaying = false
+    this.isPaused = false
+    this.isEnabled = false
+    this.currentCharIndex = 0
+    this.currentUtteranceIndex = 0
+    this.utterances = []
+    this.chunks = []
+    this.emitStateChange()
   }
 
   /**
    * Toggle play/pause
    */
   toggle() {
-    if (!this.isEnabled && !this.isPaused) {
-      // Not started yet - need content to start
-      return false // Caller should provide content
-    } else if (this.isPlaying) {
+    if (this.isPlaying) {
       this.pause()
-    } else if (this.isPaused || this.isEnabled) {
+      return true
+    } else if (this.isPaused) {
       this.resume()
+      return true
     }
-    return true
+    return false
   }
 
   /**
-   * Update TTS settings
+   * Update settings without restarting
    */
   updateSettings({ rate, pitch, voiceIndex }) {
-    let changed = false
-    
-    if (rate !== undefined && rate !== this.rate) {
-      this.rate = rate
-      changed = true
-    }
-    
-    if (pitch !== undefined && pitch !== this.pitch) {
-      this.pitch = pitch
-      changed = true
-    }
-    
-    if (voiceIndex !== undefined && voiceIndex !== this.voiceIndex) {
-      this.voiceIndex = voiceIndex
-      changed = true
-    }
-    
-    return changed
+    if (rate !== undefined) this.rate = rate
+    if (pitch !== undefined) this.pitch = pitch
+    if (voiceIndex !== undefined) this.voiceIndex = voiceIndex
   }
 
   /**
-   * Apply new settings (restart if playing)
+   * Apply settings (restart if playing)
    */
   applySettings({ rate, pitch, voiceIndex }) {
-    const wasPlaying = this.isPlaying
-    const changed = this.updateSettings({ rate, pitch, voiceIndex })
+    this.updateSettings({ rate, pitch, voiceIndex })
     
-    if (changed && wasPlaying) {
-      this.stop()
-      setTimeout(() => {
-        this.speak(this.fullText, this.currentCharIndex)
-      }, 100)
+    if (this.isPlaying || this.isPaused) {
+      const wasPlaying = this.isPlaying
+      const currentProgress = this.currentCharIndex
+      
+      // Restart from current position
+      this.start(this.htmlContent)
+      
+      if (!wasPlaying) {
+        this.pause()
+      }
     }
   }
 
   /**
-   * Get current progress as percentage
+   * Get progress percentage
    */
   getProgress() {
-    if (!this.fullText) return 0
-    return Math.round((this.currentCharIndex / this.fullText.length) * 100)
+    if (this.totalChars === 0) return 0
+    return Math.round((this.currentCharIndex / this.totalChars) * 100)
   }
 
   /**
-   * Get current state
+   * Emit state change
    */
-  getState() {
-    return {
-      isPlaying: this.isPlaying,
-      isPaused: this.isPaused,
-      isEnabled: this.isEnabled,
-      currentCharIndex: this.currentCharIndex,
-      fullText: this.fullText,
-      rate: this.rate,
-      pitch: this.pitch,
-      voiceIndex: this.voiceIndex,
-      availableVoices: this.availableVoices,
-      progress: this.getProgress()
+  emitStateChange() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        isPlaying: this.isPlaying,
+        isPaused: this.isPaused,
+        isEnabled: this.isEnabled,
+        currentCharIndex: this.currentCharIndex
+      })
     }
   }
 
