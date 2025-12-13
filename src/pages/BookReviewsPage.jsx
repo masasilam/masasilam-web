@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/BookReviewsPage.jsx - FIXED VERSION
+// src/pages/BookReviewsPage.jsx - COMPLETE IMPLEMENTATION
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -10,7 +10,7 @@ import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 import Input from '../components/Common/Input'
 import Alert from '../components/Common/Alert'
-import { Star, ThumbsUp, MessageCircle, User, Edit2, Trash2 } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, MessageCircle, User, Edit2, Trash2, Send } from 'lucide-react'
 import { formatRelativeTime } from '../utils/helpers'
 
 const BookReviewsPage = () => {
@@ -20,37 +20,56 @@ const BookReviewsPage = () => {
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [sortBy, setSortBy] = useState('helpful') // helpful, recent
   const [showAddReview, setShowAddReview] = useState(false)
   const [reviewText, setReviewText] = useState('')
   const [reviewTitle, setReviewTitle] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // 🆕 State for editing
+  // State for editing
   const [isEditing, setIsEditing] = useState(false)
   const [existingReview, setExistingReview] = useState(null)
 
+  // State for replies
+  const [replyingTo, setReplyingTo] = useState(null)
+  const [replyText, setReplyText] = useState('')
+  const [replySubmitting, setReplySubmitting] = useState(false)
+
   useEffect(() => {
     fetchData()
-  }, [bookSlug, currentPage])
+  }, [bookSlug, currentPage, sortBy])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       const [bookResponse, reviewsResponse] = await Promise.all([
         bookService.getBookBySlug(bookSlug),
-        bookService.getReviews(bookSlug, currentPage, 10)
+        bookService.getReviews(bookSlug, currentPage, 10, sortBy)
       ])
 
       setBook(bookResponse.data || bookResponse)
-      const reviewsList = reviewsResponse.data?.data || reviewsResponse.data || []
-      setReviews(reviewsList)
+      
+      // Backend returns: { data: { page, limit, total, list } }
+      const reviewsData = reviewsResponse.data?.list || []
+      setReviews(reviewsData)
+      
+      const total = reviewsResponse.data?.total || 0
+      setTotalPages(Math.ceil(total / 10))
+      
+      console.log('📝 Reviews loaded:', reviewsData.length, 'Total:', total)
 
-      // 🆕 Check if current user already has a review
+      // Check if current user already has a review
       if (isAuthenticated && user) {
-        const userReview = reviewsList.find(r => r.userId === user.id || r.userName === user.username)
-        if (userReview) {
-          setExistingReview(userReview)
+        try {
+          const myReviewResponse = await bookService.getMyReview(bookSlug)
+          if (myReviewResponse.data) {
+            setExistingReview(myReviewResponse.data)
+          }
+        } catch (err) {
+          // No review found
+          setExistingReview(null)
         }
       }
     } catch (error) {
@@ -60,6 +79,10 @@ const BookReviewsPage = () => {
       setLoading(false)
     }
   }
+
+  // ============================================
+  // REVIEW OPERATIONS
+  // ============================================
 
   const handleSubmitReview = async () => {
     if (!reviewText.trim()) {
@@ -72,15 +95,13 @@ const BookReviewsPage = () => {
 
     try {
       if (isEditing && existingReview) {
-        // 🆕 Update existing review
         await bookService.updateReview(bookSlug, {
-          comment: reviewText,
+          content: reviewText,
           title: reviewTitle || null
         })
       } else {
-        // Add new review
         await bookService.addReview(bookSlug, {
-          comment: reviewText,
+          content: reviewText,
           title: reviewTitle || null
         })
       }
@@ -90,17 +111,15 @@ const BookReviewsPage = () => {
       setShowAddReview(false)
       setIsEditing(false)
       setExistingReview(null)
-      fetchData() // Refresh reviews
+      fetchData()
 
       alert(isEditing ? '✅ Ulasan berhasil diperbarui!' : '✅ Ulasan berhasil ditambahkan!')
     } catch (err) {
       console.error('Error submitting review:', err)
-      const errorMsg = err.response?.data?.message || err.message || 'Gagal menambahkan ulasan'
+      const errorMsg = err.response?.data?.detail || err.message || 'Gagal menambahkan ulasan'
 
-      // 🆕 Handle "already have review" error
       if (errorMsg.includes('already have a review')) {
         setError('Anda sudah memiliki ulasan untuk buku ini. Silakan edit ulasan yang ada.')
-        // Fetch data again to get the existing review
         fetchData()
       } else {
         setError(errorMsg)
@@ -110,17 +129,15 @@ const BookReviewsPage = () => {
     }
   }
 
-  // 🆕 Handle edit review
   const handleEditReview = (review) => {
-    setReviewText(review.comment)
+    setReviewText(review.content)
     setReviewTitle(review.title || '')
     setIsEditing(true)
     setShowAddReview(true)
     setError('')
   }
 
-  // 🆕 Handle delete review
-  const handleDeleteReview = async (reviewId) => {
+  const handleDeleteReview = async () => {
     if (!confirm('Apakah Anda yakin ingin menghapus ulasan ini?')) {
       return
     }
@@ -129,6 +146,7 @@ const BookReviewsPage = () => {
       await bookService.deleteReview(bookSlug)
       alert('✅ Ulasan berhasil dihapus!')
       setExistingReview(null)
+      setShowAddReview(false)
       fetchData()
     } catch (err) {
       console.error('Error deleting review:', err)
@@ -136,13 +154,88 @@ const BookReviewsPage = () => {
     }
   }
 
-  // 🆕 Handle cancel edit
   const handleCancelEdit = () => {
     setShowAddReview(false)
     setIsEditing(false)
     setReviewText('')
     setReviewTitle('')
     setError('')
+  }
+
+  // ============================================
+  // FEEDBACK OPERATIONS (HELPFUL/NOT HELPFUL)
+  // ============================================
+
+  const handleFeedback = async (reviewId, isHelpful, currentFeedback) => {
+    if (!isAuthenticated) {
+      alert('Silakan login terlebih dahulu')
+      return
+    }
+
+    try {
+      // If clicking the same feedback, remove it
+      if (currentFeedback === isHelpful) {
+        await bookService.deleteFeedback(bookSlug, reviewId)
+      } else {
+        // Add or update feedback
+        await bookService.addFeedback(bookSlug, reviewId, { isHelpful })
+      }
+      
+      fetchData() // Refresh to update counts
+    } catch (err) {
+      console.error('Error handling feedback:', err)
+      alert('❌ Gagal memberikan feedback')
+    }
+  }
+
+  // ============================================
+  // REPLY OPERATIONS
+  // ============================================
+
+  const handleSubmitReply = async (reviewId) => {
+    if (!replyText.trim()) {
+      alert('Balasan tidak boleh kosong')
+      return
+    }
+
+    setReplySubmitting(true)
+
+    try {
+      await bookService.addReply(bookSlug, reviewId, {
+        content: replyText
+      })
+
+      setReplyText('')
+      setReplyingTo(null)
+      fetchData()
+      alert('✅ Balasan berhasil ditambahkan!')
+    } catch (err) {
+      console.error('Error submitting reply:', err)
+      const errorMsg = err.response?.data?.detail || err.message
+      
+      if (errorMsg?.includes('Cannot reply to your own review')) {
+        alert('❌ Anda tidak bisa membalas ulasan sendiri')
+      } else {
+        alert('❌ Gagal menambahkan balasan')
+      }
+    } finally {
+      setReplySubmitting(false)
+    }
+  }
+
+  const handleDeleteReply = async (replyId) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus balasan ini?')) {
+      return
+    }
+
+    try {
+      await bookService.deleteReply(bookSlug, replyId)
+      alert('✅ Balasan berhasil dihapus!')
+      fetchData()
+    } catch (err) {
+      console.error('Error deleting reply:', err)
+      alert('❌ Gagal menghapus balasan')
+    }
   }
 
   if (loading && !book) {
@@ -163,6 +256,22 @@ const BookReviewsPage = () => {
           </p>
         </div>
 
+        {/* Sort Options */}
+        <div className="mb-6 flex gap-3">
+          <Button
+            variant={sortBy === 'helpful' ? 'primary' : 'secondary'}
+            onClick={() => setSortBy('helpful')}
+          >
+            Terbanyak Membantu
+          </Button>
+          <Button
+            variant={sortBy === 'recent' ? 'primary' : 'secondary'}
+            onClick={() => setSortBy('recent')}
+          >
+            Terbaru
+          </Button>
+        </div>
+
         {/* Add/Edit Review Section */}
         {isAuthenticated && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
@@ -173,10 +282,16 @@ const BookReviewsPage = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Anda sudah memberikan ulasan untuk buku ini
                     </p>
-                    <Button onClick={() => handleEditReview(existingReview)} fullWidth>
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Edit Ulasan Anda
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button onClick={() => handleEditReview(existingReview)} fullWidth>
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Edit Ulasan Anda
+                      </Button>
+                      <Button variant="outline" onClick={handleDeleteReview}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Hapus
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <Button onClick={() => setShowAddReview(true)} fullWidth>
@@ -223,10 +338,7 @@ const BookReviewsPage = () => {
                   <Button onClick={handleSubmitReview} loading={submitting}>
                     {isEditing ? 'Perbarui Ulasan' : 'Kirim Ulasan'}
                   </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleCancelEdit}
-                  >
+                  <Button variant="secondary" onClick={handleCancelEdit}>
                     Batal
                   </Button>
                 </div>
@@ -247,7 +359,8 @@ const BookReviewsPage = () => {
             </div>
           ) : (
             reviews.map((review) => {
-              const isOwnReview = isAuthenticated && user && (review.userId === user.id || review.userName === user.username)
+              const isOwnReview = review.isOwner || (isAuthenticated && user && review.userId === user.id)
+              const currentUserFeedback = review.currentUserFeedback
 
               return (
                 <div key={review.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -255,7 +368,11 @@ const BookReviewsPage = () => {
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-primary" />
+                        {review.userPhotoUrl ? (
+                          <img src={review.userPhotoUrl} alt={review.userName} className="w-10 h-10 rounded-full" />
+                        ) : (
+                          <User className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -272,7 +389,7 @@ const BookReviewsPage = () => {
                       </div>
                     </div>
 
-                    {/* 🆕 Edit/Delete buttons for own review */}
+                    {/* Edit/Delete buttons for own review */}
                     {isOwnReview && (
                       <div className="flex gap-2">
                         <button
@@ -283,7 +400,7 @@ const BookReviewsPage = () => {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteReview(review.id)}
+                          onClick={handleDeleteReview}
                           className="p-2 text-gray-500 hover:text-red-500 transition-colors"
                           title="Hapus ulasan"
                         >
@@ -298,22 +415,130 @@ const BookReviewsPage = () => {
                     <h3 className="font-semibold text-lg mb-2">{review.title}</h3>
                   )}
                   <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">
-                    {review.comment}
+                    {review.content}
                   </p>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <button className="flex items-center gap-1 hover:text-primary transition-colors">
+                  {/* Feedback Actions */}
+                  <div className="flex items-center gap-4 text-sm mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => handleFeedback(review.id, true, currentUserFeedback)}
+                      className={`flex items-center gap-1 transition-colors ${
+                        currentUserFeedback === true
+                          ? 'text-green-600 font-medium'
+                          : 'text-gray-500 hover:text-green-600'
+                      }`}
+                      disabled={!isAuthenticated}
+                    >
                       <ThumbsUp className="w-4 h-4" />
-                      <span>{review.likeCount || 0}</span>
+                      <span>Membantu ({review.helpfulCount || 0})</span>
                     </button>
-                    {review.replyCount > 0 && (
-                      <span className="flex items-center gap-1">
+                    
+                    <button
+                      onClick={() => handleFeedback(review.id, false, currentUserFeedback)}
+                      className={`flex items-center gap-1 transition-colors ${
+                        currentUserFeedback === false
+                          ? 'text-red-600 font-medium'
+                          : 'text-gray-500 hover:text-red-600'
+                      }`}
+                      disabled={!isAuthenticated}
+                    >
+                      <ThumbsDown className="w-4 h-4" />
+                      <span>Tidak Membantu ({review.notHelpfulCount || 0})</span>
+                    </button>
+
+                    {!isOwnReview && isAuthenticated && (
+                      <button
+                        onClick={() => setReplyingTo(replyingTo === review.id ? null : review.id)}
+                        className="flex items-center gap-1 text-gray-500 hover:text-primary transition-colors ml-auto"
+                      >
                         <MessageCircle className="w-4 h-4" />
-                        <span>{review.replyCount} balasan</span>
-                      </span>
+                        <span>Balas</span>
+                      </button>
                     )}
                   </div>
+
+                  {/* Reply Form */}
+                  {replyingTo === review.id && (
+                    <div className="mb-4 pl-14">
+                      <div className="flex gap-2">
+                        <textarea
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Tulis balasan Anda..."
+                          rows="3"
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSubmitReply(review.id)}
+                          loading={replySubmitting}
+                          disabled={replySubmitting || !replyText.trim()}
+                        >
+                          <Send className="w-3 h-3 mr-1" />
+                          Kirim
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setReplyingTo(null)
+                            setReplyText('')
+                          }}
+                        >
+                          Batal
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Replies */}
+                  {review.replies && review.replies.length > 0 && (
+                    <div className="space-y-4 pl-14">
+                      {review.replies.map((reply) => (
+                        <div key={reply.id} className="relative">
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700 -ml-7" />
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                              {reply.userPhotoUrl ? (
+                                <img src={reply.userPhotoUrl} alt={reply.userName} className="w-8 h-8 rounded-full" />
+                              ) : (
+                                <User className="w-4 h-4 text-primary" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{reply.userName}</span>
+                                  {reply.isOwner && (
+                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                      Anda
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-gray-500">
+                                    {formatRelativeTime(reply.createdAt)}
+                                  </span>
+                                </div>
+                                {reply.isOwner && (
+                                  <button
+                                    onClick={() => handleDeleteReply(reply.id)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors"
+                                    title="Hapus balasan"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-700 dark:text-gray-300">
+                                {reply.content}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })
@@ -321,19 +546,24 @@ const BookReviewsPage = () => {
         </div>
 
         {/* Pagination */}
-        {reviews.length >= 10 && (
+        {totalPages > 1 && (
           <div className="mt-8 flex justify-center gap-2">
             <Button
               variant="secondary"
-              onClick={() => setCurrentPage(prev => prev - 1)}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1 || loading}
             >
               Sebelumnya
             </Button>
+            <div className="flex items-center gap-2 px-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Halaman {currentPage} dari {totalPages}
+              </span>
+            </div>
             <Button
               variant="secondary"
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              disabled={loading}
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || loading}
             >
               Selanjutnya
             </Button>

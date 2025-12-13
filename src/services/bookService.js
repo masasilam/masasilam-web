@@ -1,4 +1,6 @@
-// src/services/bookService.js
+// ============================================
+// src/services/bookService.js - COMPLETE IMPLEMENTATION
+// ============================================
 import api from './api';
 
 export const bookService = {
@@ -26,8 +28,6 @@ export const bookService = {
       const currentPage = responseData.page || 1;
       const limit = responseData.limit || params.limit || 12;
       const totalPages = Math.ceil(totalItems / limit);
-
-      console.log('Processed books:', bookList.length, 'Total:', totalItems);
 
       return {
         data: {
@@ -60,14 +60,9 @@ export const bookService = {
     }
   },
 
-  /**
-   * Get Table of Contents (hierarchical chapter structure)
-   */
   getTableOfContents: async (slug) => {
     try {
       const response = await api.get(`/books/${slug}/chapters`);
-      console.log('📚 TOC Response:', response.data);
-
       const data = response.data?.data || response.data;
 
       if (Array.isArray(data)) {
@@ -101,7 +96,7 @@ export const bookService = {
   // ============ RATING OPERATIONS ============
 
   /**
-   * 🆕 Add or update book rating (0.5 - 5 stars)
+   * Add or update book rating (0.5 - 5 stars)
    * Backend: POST /api/books/{slug}/rating
    */
   addRating: async (slug, ratingData) => {
@@ -117,23 +112,35 @@ export const bookService = {
   },
 
   /**
-   * 🆕 Update existing rating
-   * Backend: POST /api/books/{slug}/rating (same endpoint, auto-detects update)
+   * Get book rating statistics
+   * Backend: GET /api/books/{slug}/rating
    */
-  updateRating: async (slug, ratingData) => {
+  getRatingStats: async (slug) => {
     try {
-      const response = await api.post(`/books/${slug}/rating`, {
-        rating: ratingData.rating
-      });
+      const response = await api.get(`/books/${slug}/rating`);
       return response.data;
     } catch (error) {
-      console.error('❌ Error updating rating:', error);
+      console.error('❌ Error fetching rating stats:', error);
       throw error;
     }
   },
 
   /**
-   * 🆕 Delete user's rating
+   * Get current user's rating for a book
+   * Backend: GET /api/books/{slug}/rating/me
+   */
+  getMyRating: async (slug) => {
+    try {
+      const response = await api.get(`/books/${slug}/rating/me`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching my rating:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete user's rating
    * Backend: DELETE /api/books/{slug}/rating
    */
   deleteRating: async (slug) => {
@@ -149,30 +156,55 @@ export const bookService = {
   // ============ REVIEW/COMMENT OPERATIONS ============
 
   /**
-   * Get book reviews with pagination
+   * Get book reviews with pagination and sorting
    * Backend: GET /api/books/{slug}/reviews
+   * Returns: { data: { page, limit, total, list: [...] } }
+   * @param {string} sortBy - "helpful", "recent"
    */
-  getReviews: async (slug, page = 1, limit = 10) => {
+  getReviews: async (slug, page = 1, limit = 10, sortBy = 'helpful') => {
     try {
       const response = await api.get(`/books/${slug}/reviews`, {
-        params: { page, limit }
+        params: { page, limit, sortBy }
       });
+      
+      // Response structure: { result, detail, code, data: { page, limit, total, list } }
       return response.data;
     } catch (error) {
       console.error('Error fetching reviews:', error);
-      return { data: { data: [], total: 0 } };
+      return { 
+        data: { 
+          page: 1, 
+          limit: limit, 
+          total: 0, 
+          list: [] 
+        } 
+      };
     }
   },
 
   /**
-   * 🆕 Add review to book
+   * Get current user's review for a book
+   * Backend: GET /api/books/{slug}/reviews/me
+   */
+  getMyReview: async (slug) => {
+    try {
+      const response = await api.get(`/books/${slug}/reviews/me`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching my review:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Add review to book
    * Backend: POST /api/books/{slug}/reviews
    */
   addReview: async (slug, reviewData) => {
     try {
       const response = await api.post(`/books/${slug}/reviews`, {
         title: reviewData.title || null,
-        comment: reviewData.comment
+        content: reviewData.content || reviewData.comment
       });
       return response.data;
     } catch (error) {
@@ -182,14 +214,14 @@ export const bookService = {
   },
 
   /**
-   * 🆕 Update own review
+   * Update own review
    * Backend: PUT /api/books/{slug}/reviews
    */
   updateReview: async (slug, reviewData) => {
     try {
       const response = await api.put(`/books/${slug}/reviews`, {
         title: reviewData.title || null,
-        comment: reviewData.comment
+        content: reviewData.content || reviewData.comment
       });
       return response.data;
     } catch (error) {
@@ -199,7 +231,7 @@ export const bookService = {
   },
 
   /**
-   * 🆕 Delete own review
+   * Delete own review
    * Backend: DELETE /api/books/{slug}/reviews
    */
   deleteReview: async (slug) => {
@@ -215,15 +247,15 @@ export const bookService = {
   // ============ REPLY OPERATIONS ============
 
   /**
-   * 🆕 Add reply to a review/comment
-   * Backend: POST /api/books/{slug}/reviews/{parentId}/replies
+   * Add reply to a review/comment
+   * Backend: POST /api/books/{slug}/reviews/{reviewId}/replies
    */
-  addReply: async (slug, parentId, replyData) => {
+  addReply: async (slug, reviewId, replyData) => {
     try {
       const response = await api.post(
-        `/books/${slug}/reviews/${parentId}/replies`,
+        `/books/${slug}/reviews/${reviewId}/replies`,
         {
-          comment: replyData.comment
+          content: replyData.content
         }
       );
       return response.data;
@@ -234,7 +266,7 @@ export const bookService = {
   },
 
   /**
-   * 🆕 Update own reply
+   * Update own reply
    * Backend: PUT /api/books/{slug}/reviews/replies/{replyId}
    */
   updateReply: async (slug, replyId, replyData) => {
@@ -242,7 +274,7 @@ export const bookService = {
       const response = await api.put(
         `/books/${slug}/reviews/replies/${replyId}`,
         {
-          comment: replyData.comment
+          content: replyData.content
         }
       );
       return response.data;
@@ -253,7 +285,7 @@ export const bookService = {
   },
 
   /**
-   * 🆕 Delete own reply
+   * Delete own reply
    * Backend: DELETE /api/books/{slug}/reviews/replies/{replyId}
    */
   deleteReply: async (slug, replyId) => {
@@ -271,16 +303,16 @@ export const bookService = {
   // ============ FEEDBACK OPERATIONS (HELPFUL/NOT_HELPFUL) ============
 
   /**
-   * 🆕 Add or update feedback on a review
+   * Add or update feedback on a review
    * Backend: POST /api/books/{slug}/reviews/{reviewId}/feedback
-   * @param {string} type - "HELPFUL" or "NOT_HELPFUL"
+   * @param {boolean} isHelpful - true for helpful, false for not helpful
    */
   addFeedback: async (slug, reviewId, feedbackData) => {
     try {
       const response = await api.post(
         `/books/${slug}/reviews/${reviewId}/feedback`,
         {
-          type: feedbackData.type // "HELPFUL" or "NOT_HELPFUL"
+          isHelpful: feedbackData.isHelpful
         }
       );
       return response.data;
@@ -291,26 +323,7 @@ export const bookService = {
   },
 
   /**
-   * 🆕 Update existing feedback
-   * Backend: POST /api/books/{slug}/reviews/{reviewId}/feedback (same endpoint)
-   */
-  updateFeedback: async (slug, reviewId, feedbackData) => {
-    try {
-      const response = await api.post(
-        `/books/${slug}/reviews/${reviewId}/feedback`,
-        {
-          type: feedbackData.type
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error updating feedback:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * 🆕 Delete feedback
+   * Delete feedback
    * Backend: DELETE /api/books/{slug}/reviews/{reviewId}/feedback
    */
   deleteFeedback: async (slug, reviewId) => {
@@ -328,7 +341,7 @@ export const bookService = {
   // ============ ANNOTATIONS OPERATIONS ============
 
   /**
-   * 🆕 Get all user's annotations across ALL chapters in this book
+   * Get all user's annotations across ALL chapters in this book
    * Returns: bookmarks, highlights, notes from entire book
    * Backend: GET /api/books/{slug}/my-annotations
    */
@@ -338,6 +351,56 @@ export const bookService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching annotations:', error);
+      throw error;
+    }
+  },
+
+  // ============ METADATA OPERATIONS ============
+
+  /**
+   * Get all genres with book count
+   * Backend: GET /api/books/genres
+   */
+  getGenres: async (includeBookCount = true) => {
+    try {
+      const response = await api.get('/books/genres', {
+        params: { includeBookCount }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching genres:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all authors with pagination
+   * Backend: GET /api/books/authors
+   */
+  getAuthors: async (page = 1, limit = 20, search = '', sortBy = 'name') => {
+    try {
+      const response = await api.get('/books/authors', {
+        params: { page, limit, search, sortBy }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching authors:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all contributors with pagination
+   * Backend: GET /api/books/contributors
+   */
+  getContributors: async (page = 1, limit = 20, role = '', search = '') => {
+    try {
+      const response = await api.get('/books/contributors', {
+        params: { page, limit, role, search }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching contributors:', error);
       throw error;
     }
   }

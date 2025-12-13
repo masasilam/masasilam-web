@@ -1,4 +1,4 @@
-// src/App.jsx - FIXED ROUTE ORDER
+// src/App.jsx - FIXED ROUTES WITH GENRE, AUTHORS
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
@@ -17,8 +17,13 @@ import BooksPage from './pages/BooksPage'
 import BookDetailPage from './pages/BookDetailPage'
 import TableOfContentsPage from './pages/TableOfContentsPage'
 import BookReviewsPage from './pages/BookReviewsPage'
+
+// Metadata Pages (NEW)
+import GenresPage from './pages/GenresPage'
 import CategoryPage from './pages/CategoryPage'
-import AuthorPage from './pages/AuthorPage'
+import AuthorsPage from './pages/AuthorsPage'
+import AuthorDetailPage from './pages/AuthorDetailPage'
+
 import SearchResultsPage from './pages/SearchResultsPage'
 import PopularBooksPage from './pages/PopularBooksPage'
 import NewBooksPage from './pages/NewBooksPage'
@@ -74,10 +79,15 @@ function App() {
         <Route path="/buku/terbaru" element={<PublicLayout><NewBooksPage /></PublicLayout>} />
         <Route path="/buku/rekomendasi" element={<PublicLayout><RecommendedBooksPage /></PublicLayout>} />
         <Route path="/cari" element={<PublicLayout><SearchResultsPage /></PublicLayout>} />
-        <Route path="/kategori" element={<PublicLayout><CategoryPage /></PublicLayout>} />
+        
+        {/* ============ METADATA ROUTES (NEW) ============ */}
+        {/* Genre/Category Routes */}
+        <Route path="/kategori" element={<PublicLayout><GenresPage /></PublicLayout>} />
         <Route path="/kategori/:genreSlug" element={<PublicLayout><CategoryPage /></PublicLayout>} />
-        <Route path="/penulis" element={<PublicLayout><AuthorPage /></PublicLayout>} />
-        <Route path="/penulis/:authorSlug" element={<PublicLayout><AuthorPage /></PublicLayout>} />
+        
+        {/* Author Routes */}
+        <Route path="/penulis" element={<PublicLayout><AuthorsPage /></PublicLayout>} />
+        <Route path="/penulis/:authorSlug" element={<PublicLayout><AuthorDetailPage /></PublicLayout>} />
         
         {/* ============ BOOK ROUTES (ORDER MATTERS!) ============ */}
         {/* ✅ IMPORTANT: Specific routes MUST come before wildcard */}
@@ -85,6 +95,9 @@ function App() {
         {/* Book meta pages - must be exact matches before wildcard */}
         <Route path="/buku/:bookSlug/daftar-isi" element={<PublicLayout><TableOfContentsPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
+        
+        {/* Book detail - must come before chapter wildcard */}
+        <Route path="/buku/:bookSlug" element={<PublicLayout><BookDetailPage /></PublicLayout>} />
         
         {/* Chapter reading - hierarchical path (CLEAN URLs) */}
         <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />

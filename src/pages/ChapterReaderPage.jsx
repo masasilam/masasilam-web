@@ -1,4 +1,4 @@
-// src/pages/ChapterReaderPage.jsx - ALL FEATURES AUTH-PROTECTED WITH CONSISTENT UX
+// src/pages/ChapterReaderPage.jsx - ALL FEATURES AUTH-PROTECTED WITH FOOTNOTE POPUP (CROSS-CHAPTER SUPPORT)
 import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
@@ -9,7 +9,7 @@ import { useTTS } from '../hooks/useTTS'
 import {
   ChevronLeft, ChevronRight, Bookmark, Highlighter,
   StickyNote, MessageSquare, ThumbsUp, Send, X, Check, Menu,
-  Volume2, Pause, Play, Lock
+  Volume2, Pause, Play, Lock, ExternalLink
 } from 'lucide-react'
 import '../styles/epub-styles.css'
 
@@ -81,6 +81,36 @@ const LoginPromptModal = ({ icon: Icon, title, description, onClose, onLogin, on
   </div>
 )
 
+// Footnote Popup Component with Cross-Chapter Support
+const FootnotePopup = ({ content, onClose, onGoToFootnote, isLocal, sourceChapter }) => (
+  <div className="footnote-popup">
+    <button onClick={onClose} className="footnote-popup-close">
+      <X className="w-5 h-5" />
+    </button>
+    
+    {sourceChapter && (
+      <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+            <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
+          </svg>
+          Dari bab: {sourceChapter}
+        </p>
+      </div>
+    )}
+    
+    <div className="footnote-popup-content" dangerouslySetInnerHTML={{ __html: content }} />
+    
+    {isLocal && (
+      <button onClick={onGoToFootnote} className="footnote-popup-goto flex items-center gap-2">
+        <ExternalLink className="w-4 h-4" />
+        Lihat Catatan Lengkap di Halaman
+      </button>
+    )}
+  </div>
+)
+
 const ChapterContent = memo(({ htmlContent, fontSize }) => {
   return (
     <div
@@ -120,6 +150,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [reviewContent, setReviewContent] = useState('')
   const [reviewRating, setReviewRating] = useState(5)
   const [isMobile, setIsMobile] = useState(true)
+
+  // Footnote popup state
+  const [footnotePopup, setFootnotePopup] = useState(null)
 
   // Swipe gesture states
   const [touchStart, setTouchStart] = useState(null)
@@ -164,11 +197,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         e.preventDefault()
         handleTTSToggle()
       }
+
+      // Escape to close footnote popup
+      if (e.key === 'Escape' && footnotePopup) {
+        setFootnotePopup(null)
+      }
     }
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [chapter, tts.isPlaying, isAuthenticated])
+  }, [chapter, tts.isPlaying, isAuthenticated, footnotePopup])
 
   // Swipe gesture for navigation
   useEffect(() => {
@@ -337,6 +375,115 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       document.removeEventListener('touchend', handleSelection)
     }
   }, [isInteractingWithPopup])
+
+  // Footnote click handler with cross-chapter support
+  useEffect(() => {
+    if (!contentRef.current) return
+
+    const handleFootnoteClick = async (e) => {
+      const target = e.target.closest('a[href*="#"]')
+      if (!target) return
+
+      const href = target.getAttribute('href')
+      const hashMatch = href.match(/#(.+)$/)
+      if (!hashMatch) return
+
+      e.preventDefault()
+      const footnoteId = hashMatch[1]
+      
+      // Try to find the footnote element in the current page first
+      let footnoteElement = contentRef.current.querySelector(`#${footnoteId}`)
+      
+      if (footnoteElement) {
+        const content = footnoteElement.innerHTML
+        setFootnotePopup({ id: footnoteId, content, isLocal: true })
+        return
+      }
+
+      // If not found locally, try to fetch from common reference chapters
+      try {
+        setFootnotePopup({ 
+          id: footnoteId, 
+          content: `<div class="text-center py-4">
+            <svg class="animate-spin h-5 w-5 mx-auto mb-2 text-primary" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+              <circle class="opacity-75" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" stroke-dasharray="32"></circle>
+            </svg>
+            <p class="text-gray-500 text-sm">Memuat catatan...</p>
+          </div>`,
+          isLocal: false
+        })
+
+        // Try common footnote/reference chapters in order of likelihood
+        const possibleChapters = [
+          'muka', 
+          'kolofon', 
+          'catatan-kaki',
+          'catatan',
+          'keterangan', 
+          'pendahuluan',
+          'prakata',
+          'kata-pengantar',
+          'daftar-pustaka',
+          'lampiran'
+        ]
+        
+        for (const slug of possibleChapters) {
+          try {
+            const chapterData = await chapterService.readChapterByPath(bookSlug, slug)
+            const tempDiv = document.createElement('div')
+            tempDiv.innerHTML = chapterData.htmlContent
+            footnoteElement = tempDiv.querySelector(`#${footnoteId}`)
+            
+            if (footnoteElement) {
+              const content = footnoteElement.innerHTML
+              setFootnotePopup({ 
+                id: footnoteId, 
+                content,
+                isLocal: false,
+                sourceChapter: chapterData.chapterTitle,
+                sourceSlug: slug
+              })
+              return
+            }
+          } catch (err) {
+            // Chapter doesn't exist or other error, continue to next
+            continue
+          }
+        }
+
+        // If still not found after trying all common chapters
+        setFootnotePopup({ 
+          id: footnoteId, 
+          content: `<div class="text-center py-6 px-4">
+            <div class="text-5xl mb-3">📚</div>
+            <p class="text-amber-600 font-semibold mb-2">Catatan referensi tidak ditemukan</p>
+            <p class="text-sm text-gray-600 mb-4">Catatan ini mungkin ada di bab lain seperti "MUKA", "KETERANGAN", atau "CATATAN KAKI".</p>
+            <p class="text-xs text-gray-500">ID: <code class="bg-gray-100 px-2 py-1 rounded">${footnoteId}</code></p>
+          </div>`,
+          isLocal: false
+        })
+      } catch (error) {
+        console.error('Error fetching footnote:', error)
+        setFootnotePopup({ 
+          id: footnoteId, 
+          content: `<div class="text-center py-6 px-4">
+            <div class="text-5xl mb-3">❌</div>
+            <p class="text-red-500 font-semibold mb-2">Gagal memuat catatan</p>
+            <p class="text-sm text-gray-600">Terjadi kesalahan saat mengambil data catatan.</p>
+          </div>`,
+          isLocal: false
+        })
+      }
+    }
+
+    const contentElement = contentRef.current
+    contentElement.addEventListener('click', handleFootnoteClick)
+
+    return () => {
+      contentElement.removeEventListener('click', handleFootnoteClick)
+    }
+  }, [chapter, bookSlug])
 
   const fetchChapter = async () => {
     try {
@@ -558,6 +705,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
+  const handleGoToFootnote = () => {
+    if (footnotePopup?.id) {
+      const element = document.getElementById(footnotePopup.id)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setFootnotePopup(null)
+      }
+    }
+  }
+
   // TTS Handlers - WITH AUTH CHECK
   const handleTTSToggle = () => {
     if (!isAuthenticated) {
@@ -644,6 +801,15 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           onClose={() => setShowBookmarkLoginPrompt(false)}
           onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
           onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+        />
+      )}
+
+      {/* Footnote Popup */}
+      {footnotePopup && (
+        <FootnotePopup
+          content={footnotePopup.content}
+          onClose={() => setFootnotePopup(null)}
+          onGoToFootnote={handleGoToFootnote}
         />
       )}
 
