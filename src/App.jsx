@@ -57,6 +57,13 @@ import { HighlightsPage } from './pages/dashboard/HighlightsPage'
 import { NotesPage } from './pages/dashboard/NotesPage'
 import { MyReviewsPage } from './pages/dashboard/MyReviewsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
+import AnnotationsPage from './pages/dashboard/AnnotationsPage'
+import StatisticsPage from './pages/dashboard/StatisticsPage'
+
+// Tambahkan komponen yang belum diimpor
+import CalendarPage from './pages/dashboard/CalendarPage'
+import AchievementsPage from './pages/dashboard/AchievementsPage'
+import GoalsPage from './pages/dashboard/GoalsPage'
 
 // Error Pages
 import NotFoundPage from './pages/NotFoundPage'
@@ -90,8 +97,6 @@ function App() {
         <Route path="/penulis/:authorSlug" element={<PublicLayout><AuthorDetailPage /></PublicLayout>} />
         
         {/* ============ BOOK ROUTES (ORDER MATTERS!) ============ */}
-        {/* ✅ IMPORTANT: Specific routes MUST come before wildcard */}
-        
         {/* Book meta pages - must be exact matches before wildcard */}
         <Route path="/buku/:bookSlug/daftar-isi" element={<PublicLayout><TableOfContentsPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
@@ -116,17 +121,28 @@ function App() {
         <Route path="/lupa-kata-sandi" element={<AuthLayout><ForgotPasswordPage /></AuthLayout>} />
         <Route path="/reset-kata-sandi" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/verifikasi-email" element={<AuthLayout><VerifyEmailPage /></AuthLayout>} />
-        
-        {/* Dashboard */}
-        <Route path="/dasbor" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+
+        {/* Protected Dashboard Routes - FIXED SYNTAX */}
+        <Route path="/dasbor" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }>
           <Route index element={<DashboardOverview />} />
           <Route path="perpustakaan" element={<MyLibraryPage />} />
           <Route path="riwayat" element={<ReadingHistoryPage />} />
+          <Route path="anotasi" element={<AnnotationsPage />} />
+          <Route path="statistik" element={<StatisticsPage />} />
+          <Route path="kalender" element={<CalendarPage />} />
+          <Route path="pencapaian" element={<AchievementsPage />} />
+          <Route path="target" element={<GoalsPage />} />
+          <Route path="pengaturan" element={<SettingsPage />} />
+          
+          {/* Tambahkan route untuk dashboard yang sudah diimpor */}
           <Route path="penanda" element={<BookmarksPage />} />
           <Route path="sorotan" element={<HighlightsPage />} />
           <Route path="catatan" element={<NotesPage />} />
-          <Route path="ulasan" element={<MyReviewsPage />} />
-          <Route path="pengaturan" element={<SettingsPage />} />
+          <Route path="ulasan-saya" element={<MyReviewsPage />} />
         </Route>
         
         {/* Error Pages */}

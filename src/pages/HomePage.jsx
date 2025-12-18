@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, ArrowRight, Star } from 'lucide-react'
+import { BookOpen, ArrowRight, Star, TrendingUp, Sparkles } from 'lucide-react'
 import bookService from '../services/bookService' 
 import LoadingSpinner from './../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
@@ -8,6 +8,7 @@ import Button from '../components/Common/Button'
 const HomePage = () => {
   const [popularBooks, setPopularBooks] = useState([])
   const [newBooks, setNewBooks] = useState([])
+  const [recommendedBooks, setRecommendedBooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentDate] = useState(new Date().toLocaleDateString('id-ID', { 
     day: 'numeric',
@@ -23,9 +24,10 @@ const HomePage = () => {
     try {
       setLoading(true)
       
-      const [popular, newest] = await Promise.all([
-        bookService.getBooks({ page: 1, limit: 12, sortField: 'viewCount', sortOrder: 'DESC' }),
+      const [popular, newest, recommended] = await Promise.all([
+        bookService.getBooks({ page: 1, limit: 16, sortField: 'viewCount', sortOrder: 'DESC' }),
         bookService.getBooks({ page: 1, limit: 12, sortField: 'updateAt', sortOrder: 'DESC' }),
+        bookService.getBooks({ page: 1, limit: 8, sortField: 'averageRating', sortOrder: 'DESC' }),
       ])
       
       const mapBookData = (response) => {
@@ -38,6 +40,7 @@ const HomePage = () => {
       
       setPopularBooks(mapBookData(popular))
       setNewBooks(mapBookData(newest))
+      setRecommendedBooks(mapBookData(recommended))
     } catch (error) {
       console.error('Error fetching home data:', error)
     } finally {
@@ -210,12 +213,13 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Recent Books */}
+      {/* Recent Books - FIXED SPACING */}
       <section className="bg-white dark:bg-gray-800 py-8 sm:py-12 md:py-16 lg:py-20">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-6 sm:mb-8 lg:mb-10 pb-4 sm:pb-6 border-b-2 border-primary gap-3 sm:gap-4">
-            <div>
-              <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-gray-900 dark:text-white mb-1 sm:mb-2 md:mb-3">
+          {/* FIXED: Added more padding/margin to prevent overlap */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 sm:mb-10 lg:mb-12 pb-6 sm:pb-8 border-b-2 border-primary gap-4 sm:gap-6">
+            <div className="flex-1">
+              <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-gray-900 dark:text-white mb-2 sm:mb-3">
                 Buku Terbaru
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm md:text-base lg:text-lg">
@@ -224,7 +228,7 @@ const HomePage = () => {
             </div>
             <Button 
               onClick={() => window.location.href = '/buku/terbaru'}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto flex-shrink-0"
             >
               Lihat Semua
               <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-2" />
@@ -259,6 +263,148 @@ const HomePage = () => {
                 </p>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ NEW: RECOMMENDED BOOKS SECTION ============ */}
+      <section className="bg-gray-50 dark:bg-gray-900 py-8 sm:py-12 md:py-16 lg:py-20">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 sm:mb-10 lg:mb-12 pb-6 sm:pb-8 border-b-2 border-yellow-500 gap-4 sm:gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
+                <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-gray-900 dark:text-white">
+                  Buku Rekomendasi
+                </h2>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm md:text-base lg:text-lg">
+                Buku pilihan dengan rating terbaik dari pembaca
+              </p>
+            </div>
+            <Button 
+              onClick={() => window.location.href = '/buku/rekomendasi'}
+              className="w-full sm:w-auto flex-shrink-0 bg-yellow-600 hover:bg-yellow-700"
+            >
+              Lihat Semua
+              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-2" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            {recommendedBooks.slice(0, 8).map((book, idx) => (
+              <Link 
+                key={idx}
+                to={`/buku/${book.slug || book.id}`}
+                className="group"
+              >
+                <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 border-2 border-yellow-300 dark:border-yellow-600 overflow-hidden mb-3 sm:mb-4 hover:shadow-2xl hover:border-yellow-500 transition-all duration-300 rounded-lg relative">
+                  {/* Rating Badge */}
+                  <div className="absolute top-2 right-2 z-10 bg-yellow-500 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg">
+                    <Star className="w-3 h-3 fill-current" />
+                    {book.averageRating?.toFixed(1) || '5.0'}
+                  </div>
+                  
+                  {book.cover_image ? (
+                    <img 
+                      src={book.cover_image} 
+                      alt={book.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800">
+                      <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                  )}
+                </div>
+                <h3 className="text-xs sm:text-sm md:text-base font-semibold text-gray-900 dark:text-white line-clamp-2 leading-tight mb-1 sm:mb-2 group-hover:text-yellow-600 transition-colors">
+                  {book.title}
+                </h3>
+                <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 line-clamp-1 font-medium mb-2">
+                  {book.authorNames || book.author || 'Anonim'}
+                </p>
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 dark:text-gray-500">
+                  <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                  <span className="font-medium">{book.averageRating?.toFixed(1) || '5.0'}</span>
+                  <span className="text-gray-400">•</span>
+                  <span>{book.ratingCount || 0} rating</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Links Section */}
+      <section className="bg-white dark:bg-gray-800 py-8 sm:py-12 md:py-16">
+        <div className="container mx-auto px-4 sm:px-6">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-light text-center text-gray-900 dark:text-white mb-8 sm:mb-10 md:mb-12">
+            Jelajahi Koleksi Kami
+          </h2>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto">
+            {/* Terpopuler */}
+            <Link 
+              to="/buku/terpopuler"
+              className="group bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-6 sm:p-8 rounded-2xl border-2 border-orange-200 dark:border-orange-700 hover:border-orange-400 hover:shadow-2xl transition-all duration-300"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-orange-500 text-white rounded-xl group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  Terpopuler
+                </h3>
+              </div>
+              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
+                Buku paling banyak dibaca oleh pengguna
+              </p>
+              <div className="flex items-center text-orange-600 dark:text-orange-400 font-semibold text-sm group-hover:gap-3 transition-all">
+                Lihat Koleksi <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Terbaru */}
+            <Link 
+              to="/buku/terbaru"
+              className="group bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-6 sm:p-8 rounded-2xl border-2 border-blue-200 dark:border-blue-700 hover:border-blue-400 hover:shadow-2xl transition-all duration-300"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-blue-500 text-white rounded-xl group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-6 h-6 sm:w-8 sm:h-8" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  Terbaru
+                </h3>
+              </div>
+              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
+                Buku yang baru ditambahkan ke perpustakaan
+              </p>
+              <div className="flex items-center text-blue-600 dark:text-blue-400 font-semibold text-sm group-hover:gap-3 transition-all">
+                Lihat Koleksi <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Rekomendasi */}
+            <Link 
+              to="/buku/rekomendasi"
+              className="group bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-6 sm:p-8 rounded-2xl border-2 border-yellow-200 dark:border-yellow-700 hover:border-yellow-400 hover:shadow-2xl transition-all duration-300"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-yellow-500 text-white rounded-xl group-hover:scale-110 transition-transform">
+                  <Star className="w-6 h-6 sm:w-8 sm:h-8" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  Rekomendasi
+                </h3>
+              </div>
+              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
+                Buku pilihan dengan rating terbaik
+              </p>
+              <div className="flex items-center text-yellow-600 dark:text-yellow-400 font-semibold text-sm group-hover:gap-3 transition-all">
+                Lihat Koleksi <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
           </div>
         </div>
       </section>

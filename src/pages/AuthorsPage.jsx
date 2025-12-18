@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/AuthorsPage.jsx
+// src/pages/AuthorsPage.jsx - FIXED: Use totalBooks instead of bookCount
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -129,9 +129,10 @@ const AuthorsPage = () => {
                         {author.biography}
                       </p>
                     )}
+                    {/* ✅ FIXED: Use totalBooks instead of bookCount */}
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <BookOpen className="w-4 h-4" />
-                      <span>{author.bookCount || 0} buku</span>
+                      <span>{author.totalBooks || 0} buku</span>
                     </div>
                   </div>
                 </Link>

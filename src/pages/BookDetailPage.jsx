@@ -1,12 +1,12 @@
 // ============================================
-// src/pages/BookDetailPage.jsx - COMPLETE FINAL VERSION
+// src/pages/BookDetailPage.jsx - COMPLETE FIXED VERSION
 // ============================================
 
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import {
   Book, BookOpen, Calendar, Clock, Download,
-  Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp
+  Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp, ArrowLeft
 } from 'lucide-react'
 import bookService from '../services/bookService'
 import { useAuth } from '../hooks/useAuth'
@@ -178,6 +178,7 @@ const BookDetailPage = () => {
   const [recentReviews, setRecentReviews] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [showRatingStats, setShowRatingStats] = useState(false)
+  const [showBookDetails, setShowBookDetails] = useState(false)
 
   useEffect(() => {
     fetchBookDetail()
@@ -385,6 +386,36 @@ const BookDetailPage = () => {
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
+        {/* ✅ Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 text-sm mb-4 overflow-x-auto">
+          <Link
+            to="/"
+            className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors whitespace-nowrap"
+          >
+            Beranda
+          </Link>
+          <span className="text-gray-400">/</span>
+          <Link
+            to="/buku"
+            className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors whitespace-nowrap"
+          >
+            Koleksi Buku
+          </Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-900 dark:text-white font-medium truncate">
+            {book.title}
+          </span>
+        </nav>
+
+        {/* ✅ NEW: Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors mb-6 group"
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-medium">Kembali</span>
+        </button>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Book Cover */}
           <div className="lg:col-span-1">
@@ -448,7 +479,7 @@ const BookDetailPage = () => {
                   >
                     <Star className={`w-5 h-5 mb-1 ${userRating ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                     <span className="text-xs">
-                      {userRating ? `${userRating.rating}⭐` : 'Rating'}
+                      {book.averageRating > 0 ? `${book.averageRating.toFixed(1)}⭐` : 'Beri Rating'}
                     </span>
                   </Button>
 
@@ -524,12 +555,61 @@ const BookDetailPage = () => {
                   </div>
                 )}
 
+                {book.updatedAt && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <div className="text-gray-500 text-xs">Edisi Terakhir</div>
+                      <div className="font-medium">
+                        {new Date(book.updatedAt).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {book.createdAt && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <div className="text-gray-500 text-xs">Ditambahkan</div>
+                      <div className="font-medium">
+                        {new Date(book.createdAt).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {book.copyrightStatus && (
                   <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-gray-500 text-xs">Status Hak Cipta</div>
                     <div className="font-medium text-green-600 dark:text-green-400">
                       {book.copyrightStatus}
                     </div>
+                  </div>
+                )}
+
+                {book.source && (
+                  <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-gray-500 text-xs mb-1">Sumber Digital</div>
+                    <a
+                      href={book.source}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm break-all flex items-center gap-1"
+                    >
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      <span className="truncate">{book.source}</span>
+                    </a>
                   </div>
                 )}
               </div>
@@ -545,6 +625,22 @@ const BookDetailPage = () => {
                 {book.subtitle}
               </p>
             )}
+
+            {/* Featured & Status Badges */}
+            <div className="flex items-center gap-2 mb-4">
+              {book.isFeatured && (
+                <span className="inline-flex items-center px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-sm font-medium">
+                  <Star className="w-4 h-4 mr-1 fill-current" />
+                  Featured
+                </span>
+              )}
+              
+              {book.isActive === false && (
+                <span className="inline-flex items-center px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-sm font-medium">
+                  Tidak Aktif
+                </span>
+              )}
+            </div>
 
             {book.authorNames && (
               <div className="flex items-center gap-2 mb-6">
@@ -648,6 +744,135 @@ const BookDetailPage = () => {
               </p>
             </div>
 
+            {/* Detailed Book Information (Collapsible) */}
+            <div className="mb-8">
+              <button
+                onClick={() => setShowBookDetails(!showBookDetails)}
+                className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-gray-500" />
+                  <span className="font-semibold">Detail Buku Lengkap</span>
+                </div>
+                <svg
+                  className={`w-5 h-5 transition-transform ${showBookDetails ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showBookDetails && (
+                <div className="mt-3 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left Column */}
+                    <div className="space-y-3">
+                      {book.fileFormat && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Format File</div>
+                          <div className="font-medium">{book.fileFormat.toUpperCase()}</div>
+                        </div>
+                      )}
+
+                      {book.fileSize && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Ukuran File</div>
+                          <div className="font-medium">
+                            {(book.fileSize / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        </div>
+                      )}
+
+                      {book.totalPages && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Total Halaman</div>
+                          <div className="font-medium">{book.totalPages} halaman</div>
+                        </div>
+                      )}
+
+                      {book.totalWord && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Total Kata</div>
+                          <div className="font-medium">{book.totalWord.toLocaleString()} kata</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-3">
+                      {book.publicationYear && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Tahun Terbit</div>
+                          <div className="font-medium">{book.publicationYear}</div>
+                        </div>
+                      )}
+
+                      {book.publishedAt && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Tanggal Terbit</div>
+                          <div className="font-medium">
+                            {new Date(book.publishedAt).toLocaleDateString('id-ID', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {book.createdAt && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Ditambahkan ke Perpustakaan</div>
+                          <div className="font-medium">
+                            {new Date(book.createdAt).toLocaleDateString('id-ID', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {book.updatedAt && (
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Edisi Terakhir Diperbarui</div>
+                          <div className="font-medium">
+                            {new Date(book.updatedAt).toLocaleDateString('id-ID', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Source Link */}
+                  {book.source && (
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="text-xs text-gray-500 uppercase mb-2">Sumber Digital</div>
+                      <a
+                        href={book.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline break-all flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        {book.source}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Rating Statistics - Collapsible */}
             {ratingStats && ratingStats.totalRatings > 0 && (
               <div className="mb-8">
@@ -677,18 +902,32 @@ const BookDetailPage = () => {
 
                 {showRatingStats && (
                   <div className="mt-3 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="space-y-3">
-                      {[5, 4, 3, 2, 1].map((star) => {
-                        const count = ratingStats[`rating${star}Count`] || 0
+                    <div className="space-y-2">
+                      {/* ✅ FIXED: Match backend field names (rating50Count, rating45Count, etc.) */}
+                      {[
+                        { value: 5.0, label: '5.0', count: ratingStats.rating50Count },
+                        { value: 4.5, label: '4.5', count: ratingStats.rating45Count },
+                        { value: 4.0, label: '4.0', count: ratingStats.rating40Count },
+                        { value: 3.5, label: '3.5', count: ratingStats.rating35Count },
+                        { value: 3.0, label: '3.0', count: ratingStats.rating30Count },
+                        { value: 2.5, label: '2.5', count: ratingStats.rating25Count },
+                        { value: 2.0, label: '2.0', count: ratingStats.rating20Count },
+                        { value: 1.5, label: '1.5', count: ratingStats.rating15Count },
+                        { value: 1.0, label: '1.0', count: ratingStats.rating10Count },
+                        { value: 0.5, label: '0.5', count: ratingStats.rating05Count },
+                      ].map(({ value, label, count }) => {
                         const percentage = ratingStats.totalRatings > 0 
-                          ? (count / ratingStats.totalRatings * 100).toFixed(1)
+                          ? ((count || 0) / ratingStats.totalRatings * 100).toFixed(1)
                           : 0
 
+                        // Skip if count is 0 (optional - for cleaner UI)
+                        if (count === 0) return null
+
                         return (
-                          <div key={star} className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 w-16">
-                              <span className="text-sm font-medium">{star}</span>
-                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <div key={value} className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 w-20">
+                              <span className="text-sm font-medium">{label}</span>
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                             </div>
                             <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div
@@ -696,13 +935,31 @@ const BookDetailPage = () => {
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>
-                            <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
+                            <span className="text-sm text-gray-600 dark:text-gray-400 w-24 text-right">
                               {count} ({percentage}%)
                             </span>
                           </div>
                         )
                       })}
                     </div>
+
+                    {/* Show message if all ratings are 0 */}
+                    {[
+                      ratingStats.rating50Count,
+                      ratingStats.rating45Count,
+                      ratingStats.rating40Count,
+                      ratingStats.rating35Count,
+                      ratingStats.rating30Count,
+                      ratingStats.rating25Count,
+                      ratingStats.rating20Count,
+                      ratingStats.rating15Count,
+                      ratingStats.rating10Count,
+                      ratingStats.rating05Count,
+                    ].every(count => count === 0) && (
+                      <p className="text-center text-gray-500 dark:text-gray-400">
+                        Belum ada distribusi rating
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
