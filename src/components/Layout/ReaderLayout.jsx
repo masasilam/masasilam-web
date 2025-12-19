@@ -1,7 +1,7 @@
-// src/components/Layout/ReaderLayout.jsx - CLEANED VERSION
+// src/components/Layout/ReaderLayout.jsx - WITH DASHBOARD LINK
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play } from 'lucide-react'
+import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { chapterService } from '../../services/chapterService'
 import logoSvg from '/masasilam-logo.svg'
@@ -24,6 +24,8 @@ const ReaderLayout = ({
   const [tocOpen, setTocOpen] = useState(false)
   const [chapters, setChapters] = useState([])
   const [fontFamily, setFontFamily] = useState(localStorage.getItem('reader-font-family') || 'serif')
+
+  const isAuthenticated = !!localStorage.getItem('token')
 
   // Save font family preference
   useEffect(() => {
@@ -104,6 +106,18 @@ const ReaderLayout = ({
 
             {/* Right Actions */}
             <div className="flex items-center gap-2">
+              {/* Dashboard Link - Only for authenticated users */}
+              {isAuthenticated && (
+                <Link
+                  to="/dasbor"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Dashboard"
+                  title="Dashboard"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                </Link>
+              )}
+
               {/* TTS Control Button */}
               {onTTSToggle && ttsState && (
                 <button

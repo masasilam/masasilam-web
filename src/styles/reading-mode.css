@@ -1,0 +1,120 @@
+/* src/styles/reading-mode.css - Additional styles for reading mode */
+
+/* ================================================================
+   READING MODE - GAMBAR ADJUSTMENTS
+   ================================================================ */
+
+/* Normal mode - dark theme: invert images */
+.dark .chapter-content img {
+  filter: invert(1);
+}
+
+/* Normal mode - dark theme: don't invert photos/illustrations */
+.dark .chapter-content img.photo,
+.dark .chapter-content img.illustration,
+.dark .chapter-content img.colored,
+.dark .chapter-content .chapter img.no-invert {
+  filter: none;
+  opacity: 0.9;
+}
+
+/* Reading mode active (cream background) - NEVER invert */
+.reading-mode-active img {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Dark mode + Reading mode: Keep images normal (no invert) */
+.dark .reading-mode-active img {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* ================================================================
+   READING MODE - TEXT ADJUSTMENTS
+   ================================================================ */
+
+/* Reading mode text colors */
+.reading-mode-active {
+  color: #2d2d2d !important;
+}
+
+.reading-mode-active h1,
+.reading-mode-active h2,
+.reading-mode-active h3,
+.reading-mode-active h4,
+.reading-mode-active h5,
+.reading-mode-active h6 {
+  color: #1a1a1a !important;
+}
+
+.reading-mode-active p,
+.reading-mode-active span,
+.reading-mode-active div {
+  color: #2d2d2d !important;
+}
+
+.reading-mode-active a {
+  color: #0066cc !important;
+}
+
+.reading-mode-active blockquote {
+  color: #444 !important;
+  border-left-color: #999 !important;
+}
+
+.reading-mode-active .note {
+  color: #555 !important;
+}
+
+.reading-mode-active .note::before {
+  border-top-color: #999 !important;
+}
+
+/* ================================================================
+   READING MODE - INFO BOX
+   ================================================================ */
+
+.reading-mode-active .info-box {
+  background-color: #f5f0e8 !important;
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+}
+
+/* ================================================================
+   READING MODE - LETTER FORMAT
+   ================================================================ */
+
+.reading-mode-active .letter {
+  background-color: #f9f6f0 !important;
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+}
+
+/* ================================================================
+   READING MODE - CODE & PRE
+   ================================================================ */
+
+.reading-mode-active pre,
+.reading-mode-active code {
+  background-color: #f5f0e8 !important;
+  color: #2d2d2d !important;
+}
+
+/* ================================================================
+   READING MODE - TABLE
+   ================================================================ */
+
+.reading-mode-active table {
+  color: #2d2d2d !important;
+}
+
+.reading-mode-active th {
+  background-color: #f5f0e8 !important;
+  color: #1a1a1a !important;
+}
+
+.reading-mode-active td,
+.reading-mode-active th {
+  border-color: #d4c5b0 !important;
+}

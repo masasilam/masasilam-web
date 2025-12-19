@@ -52,15 +52,9 @@ import DashboardLayout from './pages/dashboard/DashboardLayout'
 import DashboardOverview from './pages/dashboard/DashboardOverview'
 import MyLibraryPage from './pages/dashboard/MyLibraryPage'
 import ReadingHistoryPage from './pages/dashboard/ReadingHistoryPage'
-import { BookmarksPage } from './pages/dashboard/BookmarksPage'
-import { HighlightsPage } from './pages/dashboard/HighlightsPage'
-import { NotesPage } from './pages/dashboard/NotesPage'
-import { MyReviewsPage } from './pages/dashboard/MyReviewsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
 import AnnotationsPage from './pages/dashboard/AnnotationsPage'
 import StatisticsPage from './pages/dashboard/StatisticsPage'
-
-// Tambahkan komponen yang belum diimpor
 import CalendarPage from './pages/dashboard/CalendarPage'
 import AchievementsPage from './pages/dashboard/AchievementsPage'
 import GoalsPage from './pages/dashboard/GoalsPage'
@@ -137,12 +131,6 @@ function App() {
           <Route path="pencapaian" element={<AchievementsPage />} />
           <Route path="target" element={<GoalsPage />} />
           <Route path="pengaturan" element={<SettingsPage />} />
-          
-          {/* Tambahkan route untuk dashboard yang sudah diimpor */}
-          <Route path="penanda" element={<BookmarksPage />} />
-          <Route path="sorotan" element={<HighlightsPage />} />
-          <Route path="catatan" element={<NotesPage />} />
-          <Route path="ulasan-saya" element={<MyReviewsPage />} />
         </Route>
         
         {/* Error Pages */}

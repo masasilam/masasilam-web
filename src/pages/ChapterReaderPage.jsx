@@ -1,32 +1,29 @@
-// src/pages/ChapterReaderPage.jsx - ALL FEATURES AUTH-PROTECTED WITH FOOTNOTE POPUP (CROSS-CHAPTER SUPPORT)
+// src/pages/ChapterReaderPage.jsx - COMPLETE WITH ALL FEATURES
 import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 import TTSControlPanel from '../components/Reader/TTSControlPanel'
+import ChapterRating from '../components/Reader/ChapterRating'
+import SearchInBook from '../components/Reader/SearchInBook'
+import ExportAnnotations from '../components/Reader/ExportAnnotations'
 import { useTTS } from '../hooks/useTTS'
+import { useReadingTracker } from '../hooks/useReadingTracker'
 import {
   ChevronLeft, ChevronRight, Bookmark, Highlighter,
   StickyNote, MessageSquare, ThumbsUp, Send, X, Check, Menu,
-  Volume2, Pause, Play, Lock, ExternalLink
+  Volume2, Pause, Play, Lock, ExternalLink, Search, Download,
+  Star, TrendingUp, Clock, BarChart3
 } from 'lucide-react'
 import '../styles/epub-styles.css'
 
 // Helper: Build chapter URL from chapter navigation info
 const buildChapterUrl = (bookSlug, chapterInfo) => {
   if (!chapterInfo) return ''
-
   const { slug, chapterLevel, parentSlug } = chapterInfo
-
-  if (chapterLevel === 1) {
-    return `/buku/${bookSlug}/${slug}`
-  }
-
-  if (!parentSlug) {
-    return `/buku/${bookSlug}/${slug}`
-  }
-
+  if (chapterLevel === 1) return `/buku/${bookSlug}/${slug}`
+  if (!parentSlug) return `/buku/${bookSlug}/${slug}`
   return `/buku/${bookSlug}/${parentSlug}/${slug}`
 }
 
@@ -34,13 +31,9 @@ const buildChapterUrl = (bookSlug, chapterInfo) => {
 const LoginPromptModal = ({ icon: Icon, title, description, onClose, onLogin, onRegister }) => (
   <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in zoom-in duration-200">
-      <button 
-        onClick={onClose}
-        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-      >
+      <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <X className="w-5 h-5" />
       </button>
-      
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon className="w-8 h-8 text-primary" />
@@ -48,31 +41,19 @@ const LoginPromptModal = ({ icon: Icon, title, description, onClose, onLogin, on
         <h3 className="text-xl font-bold mb-2">{title}</h3>
         <p className="text-gray-600 dark:text-gray-400">{description}</p>
       </div>
-
       <div className="space-y-3">
-        <button
-          onClick={onLogin}
-          className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-        >
+        <button onClick={onLogin} className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
           <Icon className="w-5 h-5" />
           Masuk untuk Menggunakan Fitur
         </button>
-        
-        <button
-          onClick={onClose}
-          className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
+        <button onClick={onClose} className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           Nanti Saja
         </button>
       </div>
-
       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-center text-gray-500 dark:text-gray-400">
           Belum punya akun?{' '}
-          <button
-            onClick={onRegister}
-            className="text-primary hover:underline font-semibold"
-          >
+          <button onClick={onRegister} className="text-primary hover:underline font-semibold">
             Daftar gratis
           </button>
         </p>
@@ -81,13 +62,12 @@ const LoginPromptModal = ({ icon: Icon, title, description, onClose, onLogin, on
   </div>
 )
 
-// Footnote Popup Component with Cross-Chapter Support
+// Footnote Popup Component
 const FootnotePopup = ({ content, onClose, onGoToFootnote, isLocal, sourceChapter }) => (
   <div className="footnote-popup">
     <button onClick={onClose} className="footnote-popup-close">
       <X className="w-5 h-5" />
     </button>
-    
     {sourceChapter && (
       <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
         <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
@@ -99,9 +79,7 @@ const FootnotePopup = ({ content, onClose, onGoToFootnote, isLocal, sourceChapte
         </p>
       </div>
     )}
-    
     <div className="footnote-popup-content" dangerouslySetInnerHTML={{ __html: content }} />
-    
     {isLocal && (
       <button onClick={onGoToFootnote} className="footnote-popup-goto flex items-center gap-2">
         <ExternalLink className="w-4 h-4" />
@@ -111,11 +89,67 @@ const FootnotePopup = ({ content, onClose, onGoToFootnote, isLocal, sourceChapte
   </div>
 )
 
-const ChapterContent = memo(({ htmlContent, fontSize }) => {
+// Chapter Stats Widget
+const ChapterStatsWidget = ({ bookSlug, chapterNumber }) => {
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await chapterService.getChapterStats(bookSlug, chapterNumber)
+        setStats(data)
+      } catch (error) {
+        console.error('Error fetching stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [bookSlug, chapterNumber])
+
+  if (loading || !stats) return null
+
+  return (
+    <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 rounded-lg p-6 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart3 className="w-5 h-5 text-primary" />
+        <h3 className="font-semibold">Statistik Bab</h3>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-primary">{stats.readerCount || 0}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Pembaca</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600">{stats.completionRate?.toFixed(0) || 0}%</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Selesai</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">{stats.highlightCount || 0}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Highlight</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-purple-600">{stats.commentCount || 0}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Komentar</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const ChapterContent = memo(({ htmlContent, fontSize, readingMode }) => {
   return (
     <div
-      className="chapter-content prose dark:prose-invert max-w-none mb-12"
-      style={{ fontSize: `${fontSize}px`, lineHeight: '1.8', userSelect: 'text' }}
+      className={`chapter-content prose dark:prose-invert max-w-none ${
+        readingMode ? 'reading-mode-active' : ''
+      }`}
+      style={{ 
+        fontSize: `${fontSize}px`, 
+        lineHeight: '1.8', 
+        userSelect: 'text',
+        color: readingMode ? '#2d2d2d' : undefined
+      }}
       dangerouslySetInnerHTML={{ __html: htmlContent }}
     />
   )
@@ -128,9 +162,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const contentRef = useRef(null)
 
   const isAuthenticated = !!localStorage.getItem('token')
-
-  // TTS Hook - Only initialize if authenticated
   const tts = useTTS()
+
+  // Reading tracker - automatically tracks reading sessions
+  const { isTracking } = useReadingTracker(bookSlug, chapterPath?.split('/').pop(), isAuthenticated)
 
   const [chapter, setChapter] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -140,6 +175,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showToolbar, setShowToolbar] = useState(false)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
   const [showReviewPanel, setShowReviewPanel] = useState(false)
+  const [showSearchModal, setShowSearchModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  
   const [selectedText, setSelectedText] = useState('')
   const [selectionRange, setSelectionRange] = useState(null)
   const [selectionCoords, setSelectionCoords] = useState(null)
@@ -148,23 +186,69 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [highlightColor, setHighlightColor] = useState('#FFEB3B')
   const [noteContent, setNoteContent] = useState('')
   const [reviewContent, setReviewContent] = useState('')
-  const [reviewRating, setReviewRating] = useState(5)
   const [isMobile, setIsMobile] = useState(true)
 
-  // Footnote popup state
   const [footnotePopup, setFootnotePopup] = useState(null)
-
-  // Swipe gesture states
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
   const [swipeDirection, setSwipeDirection] = useState(null)
 
-  // Login Modal states
   const [showTTSLoginPrompt, setShowTTSLoginPrompt] = useState(false)
   const [showAnnotationLoginPrompt, setShowAnnotationLoginPrompt] = useState(false)
   const [showBookmarkLoginPrompt, setShowBookmarkLoginPrompt] = useState(false)
 
+  // Reading mode - cream background
+  const [readingMode, setReadingMode] = useState(() => {
+    return localStorage.getItem('readingMode') === 'true'
+  })
+
+  // Progress tracking
+  const [progressData, setProgressData] = useState({
+    position: 0,
+    readingTimeSeconds: 0,
+    startTime: Date.now()
+  })
+
+  // Save reading mode preference
+  useEffect(() => {
+    localStorage.setItem('readingMode', readingMode)
+  }, [readingMode])
+
   const fullChapterPath = chapterPath || ''
+
+  // Auto-save progress every 30 seconds
+  useEffect(() => {
+    if (!isAuthenticated || !chapter?.chapterNumber) return
+
+    const interval = setInterval(() => {
+      const currentTime = Date.now()
+      const elapsedSeconds = Math.floor((currentTime - progressData.startTime) / 1000)
+      
+      const contentHeight = document.documentElement.scrollHeight
+      const viewportHeight = window.innerHeight
+      const scrollableHeight = contentHeight - viewportHeight
+      const scrollProgress = scrollableHeight > 0 
+        ? Math.min(100, Math.round((window.scrollY / scrollableHeight) * 100))
+        : 100
+
+      const isCompleted = scrollProgress >= 90
+
+      chapterService.saveProgress(bookSlug, parseInt(chapter.chapterNumber), {
+        position: window.scrollY,
+        readingTimeSeconds: elapsedSeconds,
+        isCompleted
+      }).catch(error => console.error('Error saving progress:', error))
+
+      // Reset timer
+      setProgressData(prev => ({
+        ...prev,
+        startTime: currentTime,
+        readingTimeSeconds: 0
+      }))
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [isAuthenticated, chapter, bookSlug, progressData.startTime])
 
   // Stop TTS when chapter changes
   useEffect(() => {
@@ -175,40 +259,50 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }, [fullChapterPath, isAuthenticated])
 
-  // Keyboard shortcuts for navigation
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
         return
       }
 
+      // Navigation
       if ((e.key === 'ArrowLeft' || e.key.toLowerCase() === 'p') && chapter?.previousChapter) {
         e.preventDefault()
         handlePrevChapter()
       }
-
       if ((e.key === 'ArrowRight' || e.key.toLowerCase() === 'n') && chapter?.nextChapter) {
         e.preventDefault()
         handleNextChapter()
       }
 
-      // Space or 'K' for TTS toggle - only if authenticated
+      // TTS
       if ((e.key === ' ' || e.key.toLowerCase() === 'k') && chapter?.htmlContent) {
         e.preventDefault()
         handleTTSToggle()
       }
 
-      // Escape to close footnote popup
-      if (e.key === 'Escape' && footnotePopup) {
-        setFootnotePopup(null)
+      // Search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        if (isAuthenticated) {
+          setShowSearchModal(true)
+        }
+      }
+
+      // Close modals
+      if (e.key === 'Escape') {
+        if (footnotePopup) setFootnotePopup(null)
+        if (showSearchModal) setShowSearchModal(false)
+        if (showExportModal) setShowExportModal(false)
       }
     }
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [chapter, tts.isPlaying, isAuthenticated, footnotePopup])
+  }, [chapter, tts.isPlaying, isAuthenticated, footnotePopup, showSearchModal, showExportModal])
 
-  // Swipe gesture for navigation
+  // Swipe gestures
   useEffect(() => {
     const minSwipeDistance = 50
 
@@ -218,7 +312,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           target.closest('textarea') || target.closest('[role="button"]')) {
         return
       }
-
       setTouchEnd(null)
       setTouchStart(e.targetTouches[0].clientX)
       setSwipeDirection(null)
@@ -226,18 +319,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
     const handleTouchMove = (e) => {
       if (touchStart === null) return
-
       const currentTouch = e.targetTouches[0].clientX
       const distance = touchStart - currentTouch
-
       setTouchEnd(currentTouch)
-
       if (Math.abs(distance) > 20) {
-        if (distance > 0) {
-          setSwipeDirection('left')
-        } else {
-          setSwipeDirection('right')
-        }
+        setSwipeDirection(distance > 0 ? 'left' : 'right')
       }
     }
 
@@ -246,18 +332,12 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         setSwipeDirection(null)
         return
       }
-
       const distance = touchStart - touchEnd
       const isLeftSwipe = distance > minSwipeDistance
       const isRightSwipe = distance < -minSwipeDistance
 
-      if (isLeftSwipe && chapter?.nextChapter) {
-        handleNextChapter()
-      }
-
-      if (isRightSwipe && chapter?.previousChapter) {
-        handlePrevChapter()
-      }
+      if (isLeftSwipe && chapter?.nextChapter) handleNextChapter()
+      if (isRightSwipe && chapter?.previousChapter) handlePrevChapter()
 
       setTouchStart(null)
       setTouchEnd(null)
@@ -269,7 +349,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       contentElement.addEventListener('touchstart', handleTouchStart, { passive: true })
       contentElement.addEventListener('touchmove', handleTouchMove, { passive: true })
       contentElement.addEventListener('touchend', handleTouchEnd)
-
       return () => {
         contentElement.removeEventListener('touchstart', handleTouchStart)
         contentElement.removeEventListener('touchmove', handleTouchMove)
@@ -281,14 +360,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   useEffect(() => {
     const initializeChapterData = async () => {
       if (!fullChapterPath) return
-
       await fetchChapter()
-
       if (isAuthenticated) {
         fetchAnnotations()
       }
     }
-
     initializeChapterData()
   }, [bookSlug, fullChapterPath, isAuthenticated])
 
@@ -298,6 +374,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       localStorage.setItem(`lastChapter_${bookSlug}`, fullChapterPath)
     }
   }, [chapter, fullChapterPath, bookSlug])
+
+  // Debug: Log reviews when they change
+  useEffect(() => {
+    console.log('Current reviews state:', reviews)
+  }, [reviews])
 
   useEffect(() => {
     if (location.state?.scrollTo !== undefined && !loading) {
@@ -318,27 +399,22 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0
       setReadingProgress(Math.min(100, Math.max(0, progress)))
     }
-
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
-
     return () => window.removeEventListener('scroll', handleScroll)
   }, [chapter, setReadingProgress])
 
   useEffect(() => {
     const handleSelection = () => {
       if (isInteractingWithPopup) return
-
       const selection = window.getSelection()
       const text = selection.toString().trim()
-
       const target = selection.anchorNode
       if (!target) return
 
       const isInForm = target.nodeType === Node.TEXT_NODE
         ? (target.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
         : (target.closest?.('textarea, input, [contenteditable="true"]') !== null)
-
       if (isInForm) return
 
       const chapterContentDiv = contentRef.current?.querySelector('.chapter-content')
@@ -349,19 +425,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         const range = selection.getRangeAt(0).cloneRange()
         setSelectionRange(range)
         const rect = range.getBoundingClientRect()
-
         const popupHeight = 400
         const spaceBelow = window.innerHeight - rect.bottom
         const spaceAbove = rect.top
-
         const showAbove = spaceAbove > spaceBelow || spaceBelow < popupHeight
-
         const top = showAbove
           ? rect.top + window.scrollY - popupHeight - 10
           : rect.bottom + window.scrollY + 10
-
         const left = rect.left + (rect.width / 2)
-
         setSelectionCoords({ top, left })
         setShowAnnotationPanel(true)
       } else if (!isInteractingWithPopup && !isInForm) {
@@ -376,7 +447,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }, [isInteractingWithPopup])
 
-  // Footnote click handler with cross-chapter support
+  // Footnote handler
   useEffect(() => {
     if (!contentRef.current) return
 
@@ -391,7 +462,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       e.preventDefault()
       const footnoteId = hashMatch[1]
       
-      // Try to find the footnote element in the current page first
       let footnoteElement = contentRef.current.querySelector(`#${footnoteId}`)
       
       if (footnoteElement) {
@@ -400,7 +470,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         return
       }
 
-      // If not found locally, try to fetch from common reference chapters
       try {
         setFootnotePopup({ 
           id: footnoteId, 
@@ -414,19 +483,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           isLocal: false
         })
 
-        // Try common footnote/reference chapters in order of likelihood
-        const possibleChapters = [
-          'muka', 
-          'kolofon', 
-          'catatan-kaki',
-          'catatan',
-          'keterangan', 
-          'pendahuluan',
-          'prakata',
-          'kata-pengantar',
-          'daftar-pustaka',
-          'lampiran'
-        ]
+        const possibleChapters = ['muka', 'kolofon', 'catatan-kaki', 'catatan', 'keterangan', 'pendahuluan', 'prakata', 'kata-pengantar', 'daftar-pustaka', 'lampiran']
         
         for (const slug of possibleChapters) {
           try {
@@ -447,18 +504,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               return
             }
           } catch (err) {
-            // Chapter doesn't exist or other error, continue to next
             continue
           }
         }
 
-        // If still not found after trying all common chapters
         setFootnotePopup({ 
           id: footnoteId, 
           content: `<div class="text-center py-6 px-4">
             <div class="text-5xl mb-3">📚</div>
             <p class="text-amber-600 font-semibold mb-2">Catatan referensi tidak ditemukan</p>
-            <p class="text-sm text-gray-600 mb-4">Catatan ini mungkin ada di bab lain seperti "MUKA", "KETERANGAN", atau "CATATAN KAKI".</p>
+            <p class="text-sm text-gray-600 mb-4">Catatan ini mungkin ada di bab lain.</p>
             <p class="text-xs text-gray-500">ID: <code class="bg-gray-100 px-2 py-1 rounded">${footnoteId}</code></p>
           </div>`,
           isLocal: false
@@ -479,7 +534,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
     const contentElement = contentRef.current
     contentElement.addEventListener('click', handleFootnoteClick)
-
     return () => {
       contentElement.removeEventListener('click', handleFootnoteClick)
     }
@@ -515,9 +569,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     if (!chapter?.chapterNumber) return
     try {
       const response = await chapterService.getChapterReviews(bookSlug, parseInt(chapter.chapterNumber))
-      setReviews(response.data?.data || [])
+      console.log('Reviews response:', response) // Debug log
+      
+      // Handle different response structures
+      const reviewsData = response.data?.data || response.data || []
+      setReviews(reviewsData)
+      
+      console.log('Reviews set:', reviewsData) // Debug log
     } catch (error) {
       console.error('Error fetching reviews:', error)
+      setReviews([])
     }
   }
 
@@ -526,7 +587,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       setShowBookmarkLoginPrompt(true)
       return
     }
-
     try {
       await chapterService.addBookmark(bookSlug, parseInt(chapter.chapterNumber), { position: window.scrollY, note: '' })
       setShowToolbar(false)
@@ -544,9 +604,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       clearSelection()
       return
     }
-
     if (!selectedText || !selectionRange) return
-
     try {
       await chapterService.addHighlight(bookSlug, parseInt(chapter.chapterNumber), {
         selectedText, color: highlightColor,
@@ -568,9 +626,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       clearSelection()
       return
     }
-
     if (!noteContent.trim()) return
-
     try {
       await chapterService.addNote(bookSlug, parseInt(chapter.chapterNumber), {
         content: noteContent, selectedText: selectedText || '', position: window.scrollY
@@ -624,20 +680,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       navigate('/masuk', { state: { from: location.pathname } })
       return
     }
-
     if (!reviewContent.trim()) {
       alert('⚠️ Silakan tulis review terlebih dahulu')
       return
     }
-
     try {
       await chapterService.addChapterReview(bookSlug, parseInt(chapter.chapterNumber), {
-        content: reviewContent,
-        rating: reviewRating
+        comment: reviewContent,
+        isSpoiler: false
       })
-
       setReviewContent('')
-      setReviewRating(5)
       setShowReviewPanel(false)
       fetchReviews()
       alert('✓ Review ditambahkan!')
@@ -672,18 +724,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const handleNextChapter = () => {
     if (!chapter?.nextChapter) return
-    if (isAuthenticated) {
-      tts.stop()
-    }
+    if (isAuthenticated) tts.stop()
     const nextUrl = buildChapterUrl(bookSlug, chapter.nextChapter)
     navigate(nextUrl)
   }
 
   const handlePrevChapter = () => {
     if (!chapter?.previousChapter) return
-    if (isAuthenticated) {
-      tts.stop()
-    }
+    if (isAuthenticated) tts.stop()
     const prevUrl = buildChapterUrl(bookSlug, chapter.previousChapter)
     navigate(prevUrl)
   }
@@ -691,10 +739,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const handleAnnotationClick = (e, annotation) => {
     e.preventDefault()
     e.stopPropagation()
-
     const position = parseInt(annotation.position) || 0
     setShowToolbar(false)
-
     if (annotation.page === parseInt(chapter?.chapterNumber)) {
       window.scrollTo({ top: position, behavior: 'smooth' })
     } else {
@@ -715,20 +761,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
-  // TTS Handlers - WITH AUTH CHECK
   const handleTTSToggle = () => {
     if (!isAuthenticated) {
       setShowTTSLoginPrompt(true)
       return
     }
-    
     if (!chapter?.htmlContent) return
     tts.toggle(chapter.htmlContent)
   }
 
   const handleTTSApplySettings = () => {
     if (!isAuthenticated) return
-    
     tts.applySettings({
       rate: tts.rate,
       pitch: tts.pitch,
@@ -743,7 +786,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   useEffect(() => {
     if (!contentRef.current) return
-
     const links = contentRef.current.querySelectorAll('.chapter-content a')
     links.forEach(link => {
       const href = link.getAttribute('href')
@@ -770,7 +812,15 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   return (
     <div className="relative pb-20">
-      {/* Login Prompt Modals */}
+      {/* Tracking Indicator */}
+      {isTracking && isAuthenticated && (
+        <div className="fixed top-16 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2 z-50 shadow-lg">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          Tracking
+        </div>
+      )}
+
+      {/* Login Modals */}
       {showTTSLoginPrompt && (
         <LoginPromptModal
           icon={Volume2}
@@ -804,12 +854,30 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
+      {/* Search Modal */}
+      {showSearchModal && (
+        <SearchInBook
+          bookSlug={bookSlug}
+          onClose={() => setShowSearchModal(false)}
+        />
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportAnnotations
+          bookSlug={bookSlug}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
+
       {/* Footnote Popup */}
       {footnotePopup && (
         <FootnotePopup
           content={footnotePopup.content}
           onClose={() => setFootnotePopup(null)}
           onGoToFootnote={handleGoToFootnote}
+          isLocal={footnotePopup.isLocal}
+          sourceChapter={footnotePopup.sourceChapter}
         />
       )}
 
@@ -834,7 +902,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </div>
       )}
 
-      {/* Breadcrumbs Navigation */}
+      {/* Breadcrumbs */}
       {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
         <nav className="mb-6 text-sm">
           <ol className="flex items-center gap-2 flex-wrap">
@@ -862,7 +930,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </nav>
       )}
 
-      {/* TTS Control Panel - Only show if authenticated */}
+      {/* TTS Control Panel */}
       {isAuthenticated && tts.isEnabled && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
@@ -886,10 +954,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Bottom Toolbar */}
+      {/* Bottom Toolbar - Always with its own background */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 shadow-lg">
         <div className="flex items-center justify-between py-3 px-3 sm:px-4 max-w-4xl mx-auto gap-1 sm:gap-2">
-          {/* Left: Previous Chapter */}
           <button
             onClick={handlePrevChapter}
             disabled={!chapter?.previousChapter}
@@ -898,15 +965,30 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 ? 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
                 : 'opacity-30 cursor-not-allowed'
             }`}
-            title={chapter?.previousChapter ? 'Bab sebelumnya' : 'Tidak ada bab sebelumnya'}
           >
             <ChevronLeft className="w-5 h-5" />
             <span className="text-[10px] sm:text-xs">Sebelumnya</span>
           </button>
 
-          {/* Center: Main Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* TTS Button - Show lock icon if not authenticated */}
+            {/* Reading Mode Toggle */}
+            <button
+              onClick={() => setReadingMode(!readingMode)}
+              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+                readingMode
+                  ? 'bg-[#8B7355] text-white shadow-md scale-105'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+              }`}
+              title={readingMode ? 'Mode Normal' : 'Mode Baca'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span className="text-[10px] sm:text-xs">
+                {readingMode ? 'Normal' : 'Baca'}
+              </span>
+            </button>
+
             <button
               onClick={handleTTSToggle}
               className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all relative ${
@@ -914,24 +996,26 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                   ? 'bg-primary text-white shadow-md scale-105'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
               }`}
-              title={isAuthenticated ? (tts.isPlaying ? 'Pause' : 'Dengar') : 'Login untuk menggunakan TTS'}
             >
               {!isAuthenticated && (
                 <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
                   <Lock className="w-3 h-3" />
                 </div>
               )}
-              {isAuthenticated && tts.isPlaying ? (
-                <Pause className="w-5 h-5" />
-              ) : (
-                <Volume2 className="w-5 h-5" />
-              )}
-              <span className="text-[10px] sm:text-xs">
-                {isAuthenticated && tts.isPlaying ? 'Pause' : 'Dengar'}
-              </span>
+              {isAuthenticated && tts.isPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              <span className="text-[10px] sm:text-xs">{isAuthenticated && tts.isPlaying ? 'Pause' : 'Dengar'}</span>
             </button>
 
-            {/* Annotation Menu Button - Show lock if not authenticated */}
+            {isAuthenticated && (
+              <button
+                onClick={() => setShowSearchModal(true)}
+                className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <Search className="w-5 h-5" />
+                <span className="text-[10px] sm:text-xs">Cari</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 if (!isAuthenticated) {
@@ -945,7 +1029,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                   ? 'bg-primary/10 text-primary scale-105'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
               }`}
-              title={isAuthenticated ? 'Anotasi' : 'Login untuk menggunakan anotasi'}
             >
               {!isAuthenticated && (
                 <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
@@ -956,11 +1039,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               <span className="text-[10px] sm:text-xs">Anotasi</span>
             </button>
 
-            {/* Bookmark Button - Show lock if not authenticated */}
             <button
               onClick={handleAddBookmark}
-              className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hover:scale-105 relative"
-              title={isAuthenticated ? 'Tambah penanda' : 'Login untuk menggunakan penanda'}
+              className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 relative hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {!isAuthenticated && (
                 <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
@@ -970,9 +1051,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               <Bookmark className="w-5 h-5" />
               <span className="text-[10px] sm:text-xs">Penanda</span>
             </button>
+
+            {isAuthenticated && (
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <Download className="w-5 h-5" />
+                <span className="text-[10px] sm:text-xs">Ekspor</span>
+              </button>
+            )}
           </div>
 
-          {/* Right: Next Chapter */}
           <button
             onClick={handleNextChapter}
             disabled={!chapter?.nextChapter}
@@ -981,7 +1071,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 ? 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
                 : 'opacity-30 cursor-not-allowed'
             }`}
-            title={chapter?.nextChapter ? 'Bab selanjutnya' : 'Tidak ada bab selanjutnya'}
           >
             <ChevronRight className="w-5 h-5" />
             <span className="text-[10px] sm:text-xs">Selanjutnya</span>
@@ -989,7 +1078,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </div>
       </div>
 
-      {/* Text Selection Popup - WITH AUTH CHECK */}
+      {/* Text Selection Popup */}
       {selectedText && selectionCoords && (
         <div
           className="fixed z-[100] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-primary"
@@ -1057,7 +1146,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </div>
       )}
 
-      {/* Annotation Panel - Only show if authenticated */}
+      {/* Annotation Panel */}
       {isAuthenticated && isMobile && showToolbar && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowToolbar(false)}>
           <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl z-50 max-h-[80vh] overflow-y-auto pb-24"
@@ -1068,7 +1157,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 <button onClick={() => setShowToolbar(false)}><X className="w-6 h-6" /></button>
               </div>
 
-              {/* Bookmarks Section */}
               <div className="mb-6">
                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                   <Bookmark className="w-5 h-5" />
@@ -1107,7 +1195,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 )}
               </div>
 
-              {/* Highlights Section */}
               <div className="mb-6">
                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                   <Highlighter className="w-5 h-5" />
@@ -1141,7 +1228,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                 )}
               </div>
 
-              {/* Notes Section */}
               <div>
                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                   <StickyNote className="w-5 h-5" />
@@ -1188,15 +1274,41 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       )}
 
       <article ref={contentRef}>
-        <header className="mb-8 pb-8 border-b">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}</h1>
-          <p className="text-gray-600">{chapter.bookTitle}</p>
+        {/* Header - Outside reading area */}
+        <header className="mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">
+            {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
         </header>
 
-        <ChapterContent htmlContent={memoizedContent} fontSize={fontSize} />
+        {/* Chapter Stats Widget - Outside reading area */}
+        {isAuthenticated && (
+          <ChapterStatsWidget
+            bookSlug={bookSlug}
+            chapterNumber={parseInt(chapter.chapterNumber)}
+          />
+        )}
 
-        {/* Reviews section */}
-        <div className="mt-12 pt-8 border-t">
+        {/* READING AREA WITH BORDER - Only this gets cream background */}
+        <div className={`transition-colors duration-300 rounded-lg my-8 ${
+          readingMode ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300' : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
+        }`}>
+          <ChapterContent htmlContent={memoizedContent} fontSize={fontSize} readingMode={readingMode} />
+        </div>
+
+        {/* Chapter Rating - VISIBLE FOR ALL USERS */}
+        <div className="my-8">
+          <ChapterRating
+            bookSlug={bookSlug}
+            chapterNumber={parseInt(chapter.chapterNumber)}
+            chapterTitle={chapter.chapterTitle}
+            isAuthenticated={isAuthenticated}
+          />
+        </div>
+
+        {/* Reviews section - Outside reading area */}
+        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl md:text-2xl font-bold">Diskusi Bab Ini</h2>
             <Button onClick={() => setShowReviewPanel(!showReviewPanel)}>
@@ -1207,29 +1319,12 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           
           {showReviewPanel && (
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Rating</label>
-                <div className="flex gap-2">
-                  {[1,2,3,4,5].map(star => (
-                    <button 
-                      key={star} 
-                      type="button"
-                      onClick={() => setReviewRating(star)} 
-                      className={`text-3xl ${star <= reviewRating ? 'text-yellow-400' : 'text-gray-300'}`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
               <textarea 
                 value={reviewContent} 
                 onChange={(e) => setReviewContent(e.target.value)}
                 placeholder="Bagaimana pendapat Anda tentang bab ini?" 
                 className="w-full p-3 border rounded-lg mb-4 min-h-[100px] bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600" 
               />
-              
               <div className="flex gap-2">
                 <Button onClick={handleAddReview} disabled={!reviewContent.trim()}>
                   <Send className="w-4 h-4 mr-2" />
@@ -1240,7 +1335,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                   onClick={() => {
                     setShowReviewPanel(false)
                     setReviewContent('')
-                    setReviewRating(5)
                   }}
                 >
                   Batal
@@ -1250,24 +1344,103 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           )}
         
           <div className="space-y-4">
-            {reviews.map(r => (
-              <div key={r.id} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <div className="font-semibold">{r.userName}</div>
-                    <div className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString('id-ID')}</div>
+            {reviews && reviews.length > 0 ? (
+              reviews.map(r => (
+                <div key={r.id} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-start gap-3">
+                      {r.userProfilePicture ? (
+                        <img 
+                          src={r.userProfilePicture} 
+                          alt={r.userName}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-semibold">
+                            {r.userName?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold">{r.userName || 'Anonymous'}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(r.createdAt).toLocaleDateString('id-ID', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    {r.isSpoiler && (
+                      <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded">
+                        Spoiler
+                      </span>
+                    )}
                   </div>
-                  <div className="flex text-yellow-400 text-sm">
-                    {[...Array(5)].map((_, i) => <span key={i}>{i < r.rating ? '★' : '☆'}</span>)}
+                  <p className="text-gray-700 dark:text-gray-300 mb-3 whitespace-pre-wrap">
+                    {r.comment}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => handleLikeReview(r.id)} 
+                      className={`flex items-center gap-2 text-sm transition-colors ${
+                        r.isLikedByMe 
+                          ? 'text-primary font-semibold' 
+                          : 'text-gray-500 hover:text-primary'
+                      }`}
+                    >
+                      <ThumbsUp className={`w-4 h-4 ${r.isLikedByMe ? 'fill-current' : ''}`} />
+                      {r.likeCount || 0} Suka
+                    </button>
+                    {r.replies && r.replies.length > 0 && (
+                      <span className="text-sm text-gray-500">
+                        {r.replies.length} balasan
+                      </span>
+                    )}
                   </div>
+                  
+                  {/* Replies */}
+                  {r.replies && r.replies.length > 0 && (
+                    <div className="mt-4 ml-12 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                      {r.replies.map(reply => (
+                        <div key={reply.id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                          <div className="flex items-start gap-2 mb-2">
+                            {reply.userProfilePicture ? (
+                              <img 
+                                src={reply.userProfilePicture} 
+                                alt={reply.userName}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-primary text-sm font-semibold">
+                                  {reply.userName?.charAt(0).toUpperCase() || 'U'}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-semibold text-sm">{reply.userName}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {new Date(reply.createdAt).toLocaleDateString('id-ID')}
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {reply.comment}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 mb-3">{r.content}</p>
-                <button onClick={() => handleLikeReview(r.id)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary">
-                  <ThumbsUp className="w-4 h-4" />{r.likeCount || 0} Suka
-                </button>
-              </div>
-            ))}
-            {reviews.length === 0 && <p className="text-center text-gray-500 py-8">Belum ada diskusi</p>}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8">Belum ada diskusi</p>
+            )}
           </div>
         </div>
       </article>
