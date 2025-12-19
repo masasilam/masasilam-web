@@ -478,7 +478,7 @@ const HomePage = () => {
               onClick={() => window.location.href = '/buku'}
               className="w-full sm:w-auto"
             >
-              Jelajahi Katalog
+              Buku
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-2" />
             </Button>
 

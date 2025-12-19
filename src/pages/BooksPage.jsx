@@ -125,7 +125,7 @@ const BooksPage = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Katalog Buku</h1>
+          <h1 className="text-4xl font-bold mb-4">Buku</h1>
           <p className="text-gray-600 dark:text-gray-400">
             Jelajahi koleksi lengkap buku kami
           </p>

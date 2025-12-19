@@ -27,7 +27,7 @@ const HowToReadPage = () => {
                 Cari Buku Favorit
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Gunakan fitur pencarian atau jelajahi katalog untuk menemukan buku yang Anda inginkan. 
+                Gunakan fitur pencarian atau jelajahi buku yang Anda inginkan.
                 Anda bisa filter berdasarkan kategori, penulis, atau popularitas.
               </p>
             </div>

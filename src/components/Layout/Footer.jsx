@@ -26,7 +26,7 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Jelajahi</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/buku" className="footer-link">Katalog Buku</Link></li>
+              <li><Link to="/buku" className="footer-link">Buku</Link></li>
               <li><Link to="/kategori" className="footer-link">Kategori</Link></li>
               <li><Link to="/penulis" className="footer-link">Penulis</Link></li>
               <li><Link to="/buku/terpopuler" className="footer-link">Terpopuler</Link></li>
@@ -74,7 +74,7 @@ const Footer = () => {
             <div>
               <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-sm">Jelajahi</h3>
               <ul className="space-y-2 text-xs">
-                <li><Link to="/buku" className="footer-link">Katalog Buku</Link></li>
+                <li><Link to="/buku" className="footer-link">Buku</Link></li>
                 <li><Link to="/kategori" className="footer-link">Kategori</Link></li>
                 <li><Link to="/penulis" className="footer-link">Penulis</Link></li>
                 <li><Link to="/buku/terpopuler" className="footer-link">Terpopuler</Link></li>
