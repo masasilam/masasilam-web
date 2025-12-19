@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://lentera-pustaka.up.railway.app',
+  baseURL: import.meta.env.VITE_API_URL || 'https://lentera-pustaka.up.railway.app/api',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',

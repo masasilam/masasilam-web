@@ -2,7 +2,7 @@
 // src/utils/constants.js
 // ============================================
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://lentera-pustaka.up.railway.app'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://lentera-pustaka.up.railway.app/api'
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'MasasilaM'
 export const APP_DESCRIPTION = import.meta.env.VITE_APP_DESCRIPTION || 'Platform Perpustakaan Digital'
 
