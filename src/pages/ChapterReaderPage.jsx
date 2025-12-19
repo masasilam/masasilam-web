@@ -1,4 +1,4 @@
-// src/pages/ChapterReaderPage.jsx - COMPLETE WITH ALL FEATURES
+// src/pages/ChapterReaderPage.jsx - COMPLETE WITH ALL FEATURES (FIXED)
 import { useState, useEffect, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
@@ -17,6 +17,16 @@ import {
   Star, TrendingUp, Clock, BarChart3
 } from 'lucide-react'
 import '../styles/epub-styles.css'
+
+// Custom CSS for hiding scrollbar
+const hideScrollbarStyle = `
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }`
 
 // Helper: Build chapter URL from chapter navigation info
 const buildChapterUrl = (bookSlug, chapterInfo) => {
@@ -144,9 +154,9 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode }) => {
       className={`chapter-content prose dark:prose-invert max-w-none ${
         readingMode ? 'reading-mode-active' : ''
       }`}
-      style={{ 
-        fontSize: `${fontSize}px`, 
-        lineHeight: '1.8', 
+      style={{
+        fontSize: `${fontSize}px`,
+        lineHeight: '1.8',
         userSelect: 'text',
         color: readingMode ? '#2d2d2d' : undefined
       }}
@@ -177,7 +187,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showReviewPanel, setShowReviewPanel] = useState(false)
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
-  
+
   const [selectedText, setSelectedText] = useState('')
   const [selectionRange, setSelectionRange] = useState(null)
   const [selectionCoords, setSelectionCoords] = useState(null)
@@ -186,6 +196,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [highlightColor, setHighlightColor] = useState('#FFEB3B')
   const [noteContent, setNoteContent] = useState('')
   const [reviewContent, setReviewContent] = useState('')
+  const [replyingTo, setReplyingTo] = useState(null)
+  const [replyContent, setReplyContent] = useState('')
   const [isMobile, setIsMobile] = useState(true)
 
   const [footnotePopup, setFootnotePopup] = useState(null)
@@ -223,11 +235,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     const interval = setInterval(() => {
       const currentTime = Date.now()
       const elapsedSeconds = Math.floor((currentTime - progressData.startTime) / 1000)
-      
+
       const contentHeight = document.documentElement.scrollHeight
       const viewportHeight = window.innerHeight
       const scrollableHeight = contentHeight - viewportHeight
-      const scrollProgress = scrollableHeight > 0 
+      const scrollProgress = scrollableHeight > 0
         ? Math.min(100, Math.round((window.scrollY / scrollableHeight) * 100))
         : 100
 
@@ -461,9 +473,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
       e.preventDefault()
       const footnoteId = hashMatch[1]
-      
+
       let footnoteElement = contentRef.current.querySelector(`#${footnoteId}`)
-      
+
       if (footnoteElement) {
         const content = footnoteElement.innerHTML
         setFootnotePopup({ id: footnoteId, content, isLocal: true })
@@ -471,8 +483,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       }
 
       try {
-        setFootnotePopup({ 
-          id: footnoteId, 
+        setFootnotePopup({
+          id: footnoteId,
           content: `<div class="text-center py-4">
             <svg class="animate-spin h-5 w-5 mx-auto mb-2 text-primary" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
@@ -484,18 +496,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         })
 
         const possibleChapters = ['muka', 'kolofon', 'catatan-kaki', 'catatan', 'keterangan', 'pendahuluan', 'prakata', 'kata-pengantar', 'daftar-pustaka', 'lampiran']
-        
+
         for (const slug of possibleChapters) {
           try {
             const chapterData = await chapterService.readChapterByPath(bookSlug, slug)
             const tempDiv = document.createElement('div')
             tempDiv.innerHTML = chapterData.htmlContent
             footnoteElement = tempDiv.querySelector(`#${footnoteId}`)
-            
+
             if (footnoteElement) {
               const content = footnoteElement.innerHTML
-              setFootnotePopup({ 
-                id: footnoteId, 
+              setFootnotePopup({
+                id: footnoteId,
                 content,
                 isLocal: false,
                 sourceChapter: chapterData.chapterTitle,
@@ -508,8 +520,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           }
         }
 
-        setFootnotePopup({ 
-          id: footnoteId, 
+        setFootnotePopup({
+          id: footnoteId,
           content: `<div class="text-center py-6 px-4">
             <div class="text-5xl mb-3">📚</div>
             <p class="text-amber-600 font-semibold mb-2">Catatan referensi tidak ditemukan</p>
@@ -520,8 +532,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         })
       } catch (error) {
         console.error('Error fetching footnote:', error)
-        setFootnotePopup({ 
-          id: footnoteId, 
+        setFootnotePopup({
+          id: footnoteId,
           content: `<div class="text-center py-6 px-4">
             <div class="text-5xl mb-3">❌</div>
             <p class="text-red-500 font-semibold mb-2">Gagal memuat catatan</p>
@@ -570,11 +582,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     try {
       const response = await chapterService.getChapterReviews(bookSlug, parseInt(chapter.chapterNumber))
       console.log('Reviews response:', response) // Debug log
-      
+
       // Handle different response structures
       const reviewsData = response.data?.data || response.data || []
       setReviews(reviewsData)
-      
+
       console.log('Reviews set:', reviewsData) // Debug log
     } catch (error) {
       console.error('Error fetching reviews:', error)
@@ -699,12 +711,42 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
-  const handleLikeReview = async (reviewId) => {
+  const handleLikeReview = async (reviewId, isLiked) => {
+    if (!isAuthenticated) {
+      navigate('/masuk', { state: { from: location.pathname } })
+      return
+    }
     try {
-      await chapterService.likeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
+      if (isLiked) {
+        await chapterService.unlikeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
+      } else {
+        await chapterService.likeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
+      }
       fetchReviews()
     } catch (error) {
-      console.error('Error liking review:', error)
+      console.error('Error toggling like:', error)
+      alert('Gagal memproses like')
+    }
+  }
+
+  const handleReplyToReview = async (reviewId, replyContent) => {
+    if (!isAuthenticated) {
+      navigate('/masuk', { state: { from: location.pathname } })
+      return
+    }
+    if (!replyContent.trim()) {
+      alert('⚠️ Silakan tulis balasan terlebih dahulu')
+      return
+    }
+    try {
+      await chapterService.replyToChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId, {
+        comment: replyContent
+      })
+      fetchReviews()
+      alert('✓ Balasan ditambahkan!')
+    } catch (error) {
+      console.error('Error adding reply:', error)
+      alert('✗ Gagal menambahkan balasan: ' + (error.response?.data?.message || error.message))
     }
   }
 
@@ -812,6 +854,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   return (
     <div className="relative pb-20">
+      {/* Add custom CSS for hiding scrollbar */}
+      <style>{hideScrollbarStyle}</style>
+
       {/* Tracking Indicator */}
       {isTracking && isAuthenticated && (
         <div className="fixed top-16 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2 z-50 shadow-lg">
@@ -956,124 +1001,129 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
       {/* Bottom Toolbar - Always with its own background */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 shadow-lg">
-        <div className="flex items-center justify-between py-3 px-3 sm:px-4 max-w-4xl mx-auto gap-1 sm:gap-2">
+        <div className="flex items-center py-3 px-2 sm:px-4 max-w-4xl mx-auto gap-1">
+          {/* Fixed Left: Previous Button */}
           <button
             onClick={handlePrevChapter}
             disabled={!chapter?.previousChapter}
-            className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all min-w-[60px] sm:min-w-[70px] ${
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all min-w-[50px] flex-shrink-0 ${
               chapter?.previousChapter
                 ? 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
                 : 'opacity-30 cursor-not-allowed'
             }`}
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="text-[10px] sm:text-xs">Sebelumnya</span>
+            <span className="text-[9px] sm:text-xs">Prev</span>
           </button>
-
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Reading Mode Toggle */}
-            <button
-              onClick={() => setReadingMode(!readingMode)}
-              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all ${
-                readingMode
-                  ? 'bg-[#8B7355] text-white shadow-md scale-105'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
-              }`}
-              title={readingMode ? 'Mode Normal' : 'Mode Baca'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              <span className="text-[10px] sm:text-xs">
-                {readingMode ? 'Normal' : 'Baca'}
-              </span>
-            </button>
-
-            <button
-              onClick={handleTTSToggle}
-              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all relative ${
-                isAuthenticated && tts.isPlaying
-                  ? 'bg-primary text-white shadow-md scale-105'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
-              }`}
-            >
-              {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
-                  <Lock className="w-3 h-3" />
-                </div>
-              )}
-              {isAuthenticated && tts.isPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              <span className="text-[10px] sm:text-xs">{isAuthenticated && tts.isPlaying ? 'Pause' : 'Dengar'}</span>
-            </button>
-
-            {isAuthenticated && (
+          
+          {/* Scrollable Middle: Action Buttons */}
+          <div className="flex-1 overflow-x-auto hide-scrollbar">
+            <div className="flex items-center gap-1 sm:gap-2 px-1">
+              {/* Reading Mode Toggle */}
               <button
-                onClick={() => setShowSearchModal(true)}
-                className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={() => setReadingMode(!readingMode)}
+                className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all flex-shrink-0 ${
+                  readingMode
+                    ? 'bg-[#8B7355] text-white shadow-md scale-105'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+                }`}
+                title={readingMode ? 'Mode Normal' : 'Mode Baca'}
               >
-                <Search className="w-5 h-5" />
-                <span className="text-[10px] sm:text-xs">Cari</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span className="text-[9px] sm:text-xs whitespace-nowrap">
+                  {readingMode ? 'Normal' : 'Baca'}
+                </span>
               </button>
-            )}
 
-            <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  setShowAnnotationLoginPrompt(true)
-                  return
-                }
-                setShowToolbar(!showToolbar)
-              }}
-              className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all relative ${
-                showToolbar && isAuthenticated
-                  ? 'bg-primary/10 text-primary scale-105'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
-              }`}
-            >
-              {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
-                  <Lock className="w-3 h-3" />
-                </div>
-              )}
-              <Menu className="w-5 h-5" />
-              <span className="text-[10px] sm:text-xs">Anotasi</span>
-            </button>
-
-            <button
-              onClick={handleAddBookmark}
-              className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 relative hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
-                  <Lock className="w-3 h-3" />
-                </div>
-              )}
-              <Bookmark className="w-5 h-5" />
-              <span className="text-[10px] sm:text-xs">Penanda</span>
-            </button>
-
-            {isAuthenticated && (
               <button
-                onClick={() => setShowExportModal(true)}
-                className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={handleTTSToggle}
+                className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative flex-shrink-0 ${
+                  isAuthenticated && tts.isPlaying
+                    ? 'bg-primary text-white shadow-md scale-105'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+                }`}
               >
-                <Download className="w-5 h-5" />
-                <span className="text-[10px] sm:text-xs">Ekspor</span>
+                {!isAuthenticated && (
+                  <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                    <Lock className="w-3 h-3" />
+                  </div>
+                )}
+                {isAuthenticated && tts.isPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                <span className="text-[9px] sm:text-xs whitespace-nowrap">{isAuthenticated && tts.isPlaying ? 'Pause' : 'Dengar'}</span>
               </button>
-            )}
+
+              {isAuthenticated && (
+                <button
+                  onClick={() => setShowSearchModal(true)}
+                  className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+                >
+                  <Search className="w-5 h-5" />
+                  <span className="text-[9px] sm:text-xs whitespace-nowrap">Cari</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setShowAnnotationLoginPrompt(true)
+                    return
+                  }
+                  setShowToolbar(!showToolbar)
+                }}
+                className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative flex-shrink-0 ${
+                  showToolbar && isAuthenticated
+                    ? 'bg-primary/10 text-primary scale-105'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
+                }`}
+              >
+                {!isAuthenticated && (
+                  <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                    <Lock className="w-3 h-3" />
+                  </div>
+                )}
+                <Menu className="w-5 h-5" />
+                <span className="text-[9px] sm:text-xs whitespace-nowrap">Anotasi</span>
+              </button>
+
+              <button
+                onClick={handleAddBookmark}
+                className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 relative hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+              >
+                {!isAuthenticated && (
+                  <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                    <Lock className="w-3 h-3" />
+                  </div>
+                )}
+                <Bookmark className="w-5 h-5" />
+                <span className="text-[9px] sm:text-xs whitespace-nowrap">Penanda</span>
+              </button>
+
+              {isAuthenticated && (
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="text-[9px] sm:text-xs whitespace-nowrap">Ekspor</span>
+                </button>
+              )}
+            </div>
           </div>
 
+          {/* Fixed Right: Next Button */}
           <button
             onClick={handleNextChapter}
             disabled={!chapter?.nextChapter}
-            className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all min-w-[60px] sm:min-w-[70px] ${
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all min-w-[50px] flex-shrink-0 ${
               chapter?.nextChapter
                 ? 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
                 : 'opacity-30 cursor-not-allowed'
             }`}
           >
             <ChevronRight className="w-5 h-5" />
-            <span className="text-[10px] sm:text-xs">Selanjutnya</span>
+            <span className="text-[9px] sm:text-xs">Next</span>
           </button>
         </div>
       </div>
@@ -1316,22 +1366,22 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               Tulis
             </Button>
           </div>
-          
+
           {showReviewPanel && (
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6">
-              <textarea 
-                value={reviewContent} 
+              <textarea
+                value={reviewContent}
                 onChange={(e) => setReviewContent(e.target.value)}
-                placeholder="Bagaimana pendapat Anda tentang bab ini?" 
-                className="w-full p-3 border rounded-lg mb-4 min-h-[100px] bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600" 
+                placeholder="Bagaimana pendapat Anda tentang bab ini?"
+                className="w-full p-3 border rounded-lg mb-4 min-h-[100px] bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
               />
               <div className="flex gap-2">
                 <Button onClick={handleAddReview} disabled={!reviewContent.trim()}>
                   <Send className="w-4 h-4 mr-2" />
                   Kirim
                 </Button>
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setShowReviewPanel(false)
                     setReviewContent('')
@@ -1342,7 +1392,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               </div>
             </div>
           )}
-        
+
           <div className="space-y-4">
             {reviews && reviews.length > 0 ? (
               reviews.map(r => (
@@ -1350,8 +1400,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-start gap-3">
                       {r.userProfilePicture ? (
-                        <img 
-                          src={r.userProfilePicture} 
+                        <img
+                          src={r.userProfilePicture}
                           alt={r.userName}
                           className="w-10 h-10 rounded-full object-cover"
                         />
@@ -1385,16 +1435,34 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                     {r.comment}
                   </p>
                   <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => handleLikeReview(r.id)} 
+                    <button
+                      onClick={() => handleLikeReview(r.id, r.isLikedByMe)}
+                      disabled={!isAuthenticated}
                       className={`flex items-center gap-2 text-sm transition-colors ${
-                        r.isLikedByMe 
-                          ? 'text-primary font-semibold' 
-                          : 'text-gray-500 hover:text-primary'
+                        !isAuthenticated
+                          ? 'cursor-not-allowed opacity-50'
+                          : r.isLikedByMe
+                            ? 'text-primary font-semibold'
+                            : 'text-gray-500 hover:text-primary'
                       }`}
+                      title={!isAuthenticated ? 'Login untuk menyukai' : r.isLikedByMe ? 'Unlike' : 'Like'}
                     >
                       <ThumbsUp className={`w-4 h-4 ${r.isLikedByMe ? 'fill-current' : ''}`} />
                       {r.likeCount || 0} Suka
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          navigate('/masuk', { state: { from: location.pathname } })
+                          return
+                        }
+                        setReplyingTo(replyingTo === r.id ? null : r.id)
+                        setReplyContent('')
+                      }}
+                      className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Balas
                     </button>
                     {r.replies && r.replies.length > 0 && (
                       <span className="text-sm text-gray-500">
@@ -1402,7 +1470,43 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                       </span>
                     )}
                   </div>
-                  
+
+                  {/* Reply Form */}
+                  {replyingTo === r.id && isAuthenticated && (
+                    <div className="mt-4 ml-12 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder={`Balas ke ${r.userName}...`}
+                        className="w-full p-3 border rounded-lg mb-3 min-h-[80px] bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600 text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            handleReplyToReview(r.id, replyContent)
+                            setReplyingTo(null)
+                            setReplyContent('')
+                          }}
+                          disabled={!replyContent.trim()}
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Kirim Balasan
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setReplyingTo(null)
+                            setReplyContent('')
+                          }}
+                        >
+                          Batal
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Replies */}
                   {r.replies && r.replies.length > 0 && (
                     <div className="mt-4 ml-12 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
@@ -1410,8 +1514,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                         <div key={reply.id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                           <div className="flex items-start gap-2 mb-2">
                             {reply.userProfilePicture ? (
-                              <img 
-                                src={reply.userProfilePicture} 
+                              <img
+                                src={reply.userProfilePicture}
                                 alt={reply.userName}
                                 className="w-8 h-8 rounded-full object-cover"
                               />
@@ -1422,16 +1526,23 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                                 </span>
                               </div>
                             )}
-                            <div>
-                              <div className="font-semibold text-sm">{reply.userName}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {new Date(reply.createdAt).toLocaleDateString('id-ID')}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold text-sm">{reply.userName}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {new Date(reply.createdAt).toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
                               </div>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">
+                                {reply.comment}
+                              </p>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                            {reply.comment}
-                          </p>
                         </div>
                       ))}
                     </div>

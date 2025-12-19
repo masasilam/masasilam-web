@@ -1,4 +1,4 @@
-// src/components/Layout/ReaderLayout.jsx - WITH DASHBOARD LINK
+// src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard } from 'lucide-react'
@@ -27,12 +27,10 @@ const ReaderLayout = ({
 
   const isAuthenticated = !!localStorage.getItem('token')
 
-  // Save font family preference
   useEffect(() => {
     localStorage.setItem('reader-font-family', fontFamily)
   }, [fontFamily])
 
-  // Apply font family to chapter content
   useEffect(() => {
     const chapterContent = document.querySelector('.chapter-content')
     if (!chapterContent) return
@@ -48,7 +46,6 @@ const ReaderLayout = ({
     chapterContent.style.fontFamily = fontFamilyMap[fontFamily]
   }, [fontFamily])
 
-  // Fetch chapters for TOC
   useEffect(() => {
     const fetchChapters = async () => {
       try {
@@ -78,7 +75,6 @@ const ReaderLayout = ({
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
-      {/* Progress Bar */}
       {readingProgress !== undefined && (
         <div 
           className="fixed top-0 left-0 h-1 bg-primary z-50 transition-all duration-150"
@@ -86,11 +82,9 @@ const ReaderLayout = ({
         />
       )}
 
-      {/* Minimal Reader Header */}
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14">
-            {/* Back Button */}
             <button
               onClick={() => navigate(`/buku/${bookSlug}`)}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -99,14 +93,11 @@ const ReaderLayout = ({
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* Logo */}
             <Link to="/" className="flex items-center">
               <img src={logoSvg} alt="MasaSilam" className="h-10 w-auto dark:invert" />
             </Link>
 
-            {/* Right Actions */}
             <div className="flex items-center gap-2">
-              {/* Dashboard Link - Only for authenticated users */}
               {isAuthenticated && (
                 <Link
                   to="/dasbor"
@@ -118,7 +109,6 @@ const ReaderLayout = ({
                 </Link>
               )}
 
-              {/* TTS Control Button */}
               {onTTSToggle && ttsState && (
                 <button
                   onClick={onTTSToggle}
@@ -138,7 +128,6 @@ const ReaderLayout = ({
                 </button>
               )}
 
-              {/* Table of Contents */}
               <div className="relative">
                 <button
                   onClick={() => setTocOpen(!tocOpen)}
@@ -151,19 +140,23 @@ const ReaderLayout = ({
 
                 {tocOpen && (
                   <>
-                    {/* Backdrop */}
-                    <div className="fixed inset-0 z-30" onClick={() => setTocOpen(false)} />
+                    <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setTocOpen(false)} />
                     
-                    {/* TOC Panel */}
-                    <div className="absolute right-0 top-12 w-80 max-h-[70vh] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-y-auto z-40">
-                      <div className="p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
+                    {/* RESPONSIVE TOC */}
+                    <div className="fixed md:absolute right-0 top-0 md:top-12 bottom-0 md:bottom-auto w-full md:w-80 max-w-[85vw] md:max-w-none md:max-h-[70vh] bg-white dark:bg-gray-800 border-l md:border border-gray-200 dark:border-gray-700 md:rounded-lg shadow-xl overflow-y-auto z-40">
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between">
                         <h3 className="font-semibold">Daftar Isi</h3>
+                        <button 
+                          onClick={() => setTocOpen(false)}
+                          className="md:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
                       </div>
                       
                       <div className="divide-y divide-gray-200 dark:divide-gray-700">
                         {chapters.filter(ch => ch.parentChapterId === null).map((chapter) => (
                           <div key={chapter.id}>
-                            {/* Parent Chapter Link */}
                             <Link
                               to={`/buku/${bookSlug}/${chapter.slug}`}
                               onClick={() => setTocOpen(false)}
@@ -191,7 +184,6 @@ const ReaderLayout = ({
                               </div>
                             </Link>
                             
-                            {/* Sub-chapters - OUTSIDE parent Link */}
                             {chapter.subChapters?.length > 0 && (
                               <div className="ml-11 pb-2 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
                                 {chapter.subChapters.map((sub) => (
@@ -214,7 +206,6 @@ const ReaderLayout = ({
                 )}
               </div>
 
-              {/* Theme Toggle */}
               <button 
                 onClick={toggleTheme} 
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" 
@@ -224,7 +215,6 @@ const ReaderLayout = ({
                 {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </button>
               
-              {/* Settings */}
               <button 
                 onClick={() => setMenuOpen(!menuOpen)} 
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" 
@@ -238,14 +228,12 @@ const ReaderLayout = ({
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="relative">
         <div className={`mx-auto px-4 py-8 ${widthClasses[contentWidth || 'normal']}`}>
           {children}
         </div>
       </main>
 
-      {/* Settings Panel */}
       {menuOpen && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setMenuOpen(false)}>
           <div 
@@ -264,7 +252,6 @@ const ReaderLayout = ({
               </div>
               
               <div className="space-y-6">
-                {/* Font Size */}
                 {fontSize !== undefined && setFontSize && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -289,7 +276,6 @@ const ReaderLayout = ({
                   </div>
                 )}
 
-                {/* Font Family */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Type className="w-4 h-4" />
@@ -317,7 +303,6 @@ const ReaderLayout = ({
                   </div>
                 </div>
 
-                {/* Content Width */}
                 {contentWidth !== undefined && setContentWidth && (
                   <div>
                     <label className="block text-sm font-medium mb-2">Lebar Konten</label>
