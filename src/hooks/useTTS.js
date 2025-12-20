@@ -23,19 +23,21 @@ export const useTTS = () => {
     if (isInitializedRef.current) return
     isInitializedRef.current = true
 
+    console.log('🎬 useTTS: Initializing...')
     const ttsManager = new TTSManager()
     ttsManagerRef.current = ttsManager
 
     ttsManager.onStateChange = (newState) => {
+      console.log('📊 useTTS: State change received:', newState)
       setState(prev => {
-        // ✅ Kembalikan kondisi untuk mencegah loop
+        // Prevent unnecessary updates
         if (
           prev.isPlaying === newState.isPlaying &&
           prev.isPaused === newState.isPaused &&
           prev.isEnabled === newState.isEnabled &&
           prev.currentCharIndex === newState.currentCharIndex
         ) {
-          return prev // Tidak ada perubahan, skip update
+          return prev
         }
 
         return {
@@ -60,12 +62,14 @@ export const useTTS = () => {
 
     ttsManager.onError = (error) => {
       if (!isNormalInterruption(error)) {
-        console.warn('TTS Warning:', getTTSErrorMessage(error))
+        console.warn('⚠️ TTS Warning:', getTTSErrorMessage(error))
       }
     }
 
+    // Check for voices periodically
     const checkVoices = setInterval(() => {
       if (ttsManager.availableVoices.length > 0) {
+        console.log('✅ useTTS: Voices available:', ttsManager.availableVoices.length)
         setState(prev => ({
           ...prev,
           availableVoices: ttsManager.availableVoices
@@ -75,6 +79,7 @@ export const useTTS = () => {
     }, 100)
 
     return () => {
+      console.log('🗑️ useTTS: Cleanup')
       clearInterval(checkVoices)
       if (ttsManagerRef.current) {
         ttsManagerRef.current.destroy()
@@ -85,26 +90,34 @@ export const useTTS = () => {
   }, [])
 
   const start = useCallback((htmlContent) => {
-    if (!ttsManagerRef.current) return
+    console.log('▶️ useTTS: start() called')
+    if (!ttsManagerRef.current) {
+      console.error('❌ useTTS: Manager not initialized')
+      return
+    }
     ttsManagerRef.current.start(htmlContent)
   }, [])
 
   const pause = useCallback(() => {
+    console.log('⏸️ useTTS: pause() called')
     if (!ttsManagerRef.current) return
     ttsManagerRef.current.pause()
   }, [])
 
   const resume = useCallback(() => {
+    console.log('▶️ useTTS: resume() called')
     if (!ttsManagerRef.current) return
     ttsManagerRef.current.resume()
   }, [])
 
   const stop = useCallback(() => {
+    console.log('⏹️ useTTS: stop() called')
     if (!ttsManagerRef.current) return
     ttsManagerRef.current.stop()
   }, [])
 
   const toggle = useCallback((htmlContent) => {
+    console.log('🔄 useTTS: toggle() called')
     if (!ttsManagerRef.current) return
     const handled = ttsManagerRef.current.toggle()
     if (!handled && htmlContent) {

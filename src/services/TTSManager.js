@@ -16,6 +16,7 @@ class TTSManager {
     this.textContent = ''
     this.chunks = []
     this.isStopping = false
+    this.isInitialized = false
     
     // Settings
     this.rate = 1.0
@@ -36,20 +37,26 @@ class TTSManager {
 
   initVoices() {
     const loadVoices = () => {
-      this.availableVoices = this.synth.getVoices()
-      
-      // Prioritize Indonesian voices
-      const indonesianVoices = this.availableVoices.filter(v => 
-        v.lang.startsWith('id') || v.lang.startsWith('ms')
-      )
-      
-      if (indonesianVoices.length > 0) {
-        this.availableVoices = [
-          ...indonesianVoices,
-          ...this.availableVoices.filter(v => 
-            !v.lang.startsWith('id') && !v.lang.startsWith('ms')
-          )
-        ]
+      const voices = this.synth.getVoices()
+      if (voices.length > 0) {
+        this.availableVoices = voices
+        
+        // Prioritize Indonesian voices
+        const indonesianVoices = voices.filter(v => 
+          v.lang.startsWith('id') || v.lang.startsWith('ms')
+        )
+        
+        if (indonesianVoices.length > 0) {
+          this.availableVoices = [
+            ...indonesianVoices,
+            ...voices.filter(v => 
+              !v.lang.startsWith('id') && !v.lang.startsWith('ms')
+            )
+          ]
+        }
+        
+        this.isInitialized = true
+        console.log('✅ TTS: Voices loaded:', this.availableVoices.length)
       }
     }
 
@@ -58,6 +65,13 @@ class TTSManager {
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = loadVoices
     }
+    
+    // Force load after delay if not loaded
+    setTimeout(() => {
+      if (this.availableVoices.length === 0) {
+        loadVoices()
+      }
+    }, 100)
   }
 
   /**
@@ -119,20 +133,30 @@ class TTSManager {
   }
 
   /**
-   * Start TTS
+   * Start TTS - FIXED VERSION
    */
   start(htmlContent) {
     if (!htmlContent) {
-      console.warn('No content provided for TTS')
+      console.warn('❌ TTS: No content provided')
       return
     }
 
-    // Cancel any existing speech first
-    if (this.synth.speaking) {
-      this.synth.cancel()
-    }
+    console.log('🎬 TTS: Starting playback...')
     
-    // Reset flags
+    // CRITICAL: Cancel any existing speech FIRST
+    this.synth.cancel()
+    
+    // Wait for cancel to complete before starting new playback
+    setTimeout(() => {
+      this._startPlayback(htmlContent)
+    }, 100)
+  }
+
+  /**
+   * Internal method to start playback after cleanup
+   */
+  _startPlayback(htmlContent) {
+    // Reset all flags
     this.isStopping = false
     this.isPlaying = false
     this.isPaused = false
@@ -147,23 +171,12 @@ class TTSManager {
     this.currentUtteranceIndex = 0
     this.utterances = []
     
-    console.log(`TTS: Starting playback of ${chunks.length} chunks (${this.totalChars} chars)`)
+    console.log(`📝 TTS: Processing ${chunks.length} chunks (${this.totalChars} chars)`)
     
-    // SET STATE FIRST
-    this.isPlaying = true
-    this.isPaused = false
-    this.isEnabled = true
-    
-    console.log('TTS: State set:', {
-      isPlaying: this.isPlaying,
-      isPaused: this.isPaused,
-      isEnabled: this.isEnabled,
-      isStopping: this.isStopping
-    })
-    
-    // Force load voices if not loaded
+    // Ensure voices are loaded
     if (this.availableVoices.length === 0) {
       this.availableVoices = this.synth.getVoices()
+      console.log('🔄 TTS: Force loaded voices:', this.availableVoices.length)
     }
     
     // Create utterances for each chunk
@@ -172,8 +185,11 @@ class TTSManager {
       utterance.rate = this.rate
       utterance.pitch = this.pitch
       
+      // Set voice if available
       if (this.availableVoices.length > 0) {
-        utterance.voice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
+        const selectedVoice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
+        utterance.voice = selectedVoice
+        console.log(`🎤 TTS: Using voice: ${selectedVoice.name} (${selectedVoice.lang})`)
       }
       
       // Track progress
@@ -188,36 +204,48 @@ class TTSManager {
         }
       }
       
+      // Chunk completion handler
       utterance.onend = () => {
-        if (this.isStopping) return
+        if (this.isStopping) {
+          console.log('⏹️ TTS: Stopping, skip transition')
+          return
+        }
         
-        console.log(`TTS: Chunk ${i + 1}/${chunks.length} completed`)
+        console.log(`✅ TTS: Chunk ${i + 1}/${chunks.length} completed`)
         
         // Move to next chunk
         if (i < chunks.length - 1) {
           this.currentUtteranceIndex = i + 1
-          this.playCurrentChunk()
+          
+          // CRITICAL: Add delay between chunks to prevent race conditions
+          setTimeout(() => {
+            if (!this.isStopping) {
+              this.playCurrentChunk()
+            }
+          }, 50)
         } else {
           // All chunks completed
+          console.log('🎉 TTS: All chunks completed')
           this.stop()
-          console.log('TTS: Playback completed')
         }
       }
       
+      // Error handler
       utterance.onerror = (event) => {
         // Ignore interrupted errors when stopping intentionally
         if (this.isStopping && event.error === 'interrupted') {
+          console.log('⚠️ TTS: Interrupted (intentional)')
           return
         }
         
         // Ignore interrupted errors during chunk transitions
         if (event.error === 'interrupted') {
-          console.log(`TTS: Chunk ${i + 1} interrupted (normal during transitions)`)
+          console.log('⚠️ TTS: Interrupted (transition)')
           return
         }
         
         // Log other errors
-        console.error(`TTS: Error in chunk ${i + 1}:`, event)
+        console.error(`❌ TTS: Error in chunk ${i + 1}:`, event.error)
         
         if (this.onError) {
           this.onError(event)
@@ -237,10 +265,21 @@ class TTSManager {
       this.utterances.push(utterance)
     }
     
-    // EMIT STATE CHANGE
+    // Set state BEFORE playing
+    this.isPlaying = true
+    this.isPaused = false
+    this.isEnabled = true
+    
+    console.log('📊 TTS: State set:', {
+      isPlaying: this.isPlaying,
+      isPaused: this.isPaused,
+      isEnabled: this.isEnabled
+    })
+    
+    // Emit state change
     this.emitStateChange()
     
-    // PLAY immediately
+    // Start playing immediately
     this.playCurrentChunk()
   }
 
@@ -260,38 +299,43 @@ class TTSManager {
    */
   playCurrentChunk() {
     if (this.isStopping) {
-      console.log('TTS: Stopping, skip playback')
+      console.log('⏹️ TTS: Stopping flag set, skip playback')
       return
     }
     
     if (this.currentUtteranceIndex >= this.utterances.length) {
-      console.log('TTS: No more chunks')
+      console.log('⚠️ TTS: No more chunks to play')
       return
     }
     
     const utterance = this.utterances[this.currentUtteranceIndex]
     
-    console.log('TTS: Playing chunk', {
+    console.log('▶️ TTS: Playing chunk', {
       index: this.currentUtteranceIndex + 1,
       total: this.utterances.length,
-      text: utterance.text.substring(0, 50) + '...',
-      voice: utterance.voice?.name || 'default',
-      isPlaying: this.isPlaying,
-      isStopping: this.isStopping
+      preview: utterance.text.substring(0, 50) + '...',
+      voice: utterance.voice?.name || 'default'
     })
     
-    // ✅ LANGSUNG SPEAK - tidak pakai cancel, tidak pakai setTimeout
-    this.synth.speak(utterance)
-    
-    console.log('TTS: synth.speak() called')
+    // CRITICAL: Direct speak without any cancel or delays
+    try {
+      this.synth.speak(utterance)
+      console.log('✅ TTS: synth.speak() called successfully')
+    } catch (error) {
+      console.error('❌ TTS: Error calling speak():', error)
+    }
   }
 
   /**
    * Pause TTS
    */
   pause() {
-    if (!this.isPlaying || this.isPaused) return
+    if (!this.isPlaying || this.isPaused) {
+      console.log('⚠️ TTS: Cannot pause - not playing or already paused')
+      return
+    }
     
+    console.log('⏸️ TTS: Pausing...')
     this.synth.pause()
     this.isPaused = true
     this.isPlaying = false
@@ -302,8 +346,12 @@ class TTSManager {
    * Resume TTS
    */
   resume() {
-    if (!this.isPaused) return
+    if (!this.isPaused) {
+      console.log('⚠️ TTS: Cannot resume - not paused')
+      return
+    }
     
+    console.log('▶️ TTS: Resuming...')
     this.isStopping = false
     this.synth.resume()
     this.isPaused = false
@@ -317,8 +365,11 @@ class TTSManager {
   stop() {
     // Guard: Don't emit if already stopped
     if (!this.isPlaying && !this.isPaused && !this.isEnabled) {
+      console.log('⚠️ TTS: Already stopped')
       return
     }
+    
+    console.log('⏹️ TTS: Stopping...')
     
     this.isStopping = true
     this.synth.cancel()
@@ -335,6 +386,7 @@ class TTSManager {
     
     setTimeout(() => {
       this.isStopping = false
+      console.log('✅ TTS: Stop complete')
     }, 200)
   }
 
@@ -359,6 +411,7 @@ class TTSManager {
     if (rate !== undefined) this.rate = rate
     if (pitch !== undefined) this.pitch = pitch
     if (voiceIndex !== undefined) this.voiceIndex = voiceIndex
+    console.log('⚙️ TTS: Settings updated:', { rate: this.rate, pitch: this.pitch, voiceIndex: this.voiceIndex })
   }
 
   /**
@@ -368,11 +421,12 @@ class TTSManager {
     this.updateSettings({ rate, pitch, voiceIndex })
     
     if (this.isPlaying || this.isPaused) {
+      console.log('🔄 TTS: Restarting with new settings...')
       const wasPlaying = this.isPlaying
       this.start(this.htmlContent)
       
       if (!wasPlaying) {
-        this.pause()
+        setTimeout(() => this.pause(), 100)
       }
     }
   }
@@ -403,6 +457,7 @@ class TTSManager {
    * Cleanup
    */
   destroy() {
+    console.log('🗑️ TTS: Destroying manager...')
     this.stop()
     this.onStateChange = null
     this.onProgressChange = null

@@ -1,18 +1,16 @@
 // ============================================
-// FILE 15: src/pages/ChapterReaderPage.jsx - MAIN FILE (REFACTORED)
+// FILE: src/pages/ChapterReaderPage.jsx - TTS FIXED
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
 import { useTTS } from '../hooks/useTTS'
 import { useReadingTracker } from '../hooks/useReadingTracker'
-// ✅ FIX: Default imports (no curly braces)
 import useChapterNavigation from '../hooks/useChapterNavigation'
 import useSwipeGesture from '../hooks/useSwipeGesture'
 import useFootnoteHandler from '../hooks/useFootnoteHandler'
 import useTextSelection from '../hooks/useTextSelection'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
-// ✅ Named import untuk helper function
 import { buildChapterUrl } from '../hooks/useChapterNavigation'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import TTSControlPanel from '../components/Reader/TTSControlPanel'
@@ -77,11 +75,19 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const fullChapterPath = chapterPath || ''
 
+  // ✅ FIX: Gunakan useRef untuk menyimpan stopOnUnmount flag
+  const stopTTSOnUnmount = useRef(true)
+
   // Custom hooks
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(
     bookSlug, 
     chapter, 
-    () => { if (isAuthenticated) tts.stop() }
+    () => { 
+      if (isAuthenticated) {
+        stopTTSOnUnmount.current = true
+        tts.stop() 
+      }
+    }
   )
 
   const { swipeDirection } = useSwipeGesture(
@@ -110,6 +116,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     if (!chapter?.htmlContent) return
+    
+    console.log('🎯 handleTTSToggle called, current state:', {
+      isPlaying: tts.isPlaying,
+      isPaused: tts.isPaused,
+      isEnabled: tts.isEnabled
+    })
+    
+    // ✅ FIX: Set flag to prevent auto-stop
+    stopTTSOnUnmount.current = false
+    
     tts.toggle(chapter.htmlContent)
   }
 
@@ -167,10 +183,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return () => clearInterval(interval)
   }, [isAuthenticated, chapter, bookSlug, progressData.startTime])
 
-  // Stop TTS on chapter change
+  // ✅ FIX: Stop TTS hanya saat chapter berubah atau unmount dengan flag
   useEffect(() => {
     return () => {
-      if (isAuthenticated) {
+      if (isAuthenticated && stopTTSOnUnmount.current) {
+        console.log('🗑️ Cleanup: Stopping TTS on unmount')
         tts.stop()
       }
     }
@@ -480,10 +497,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     )
   }
 
-  console.log('TTS Debug:', {
+  console.log('🎯 TTS Debug:', {
     isAuthenticated,
     isEnabled: tts.isEnabled,
     isPlaying: tts.isPlaying,
+    isPaused: tts.isPaused,
     shouldShowPanel: isAuthenticated && tts.isEnabled
   })
 
@@ -591,7 +609,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </nav>
       )}
 
-      {/* TTS Control Panel */}
+      {/* ✅ TTS Control Panel - FIXED CONDITION */}
       {isAuthenticated && tts.isEnabled && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
@@ -602,7 +620,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           availableVoices={tts.availableVoices}
           showSettings={tts.showSettings}
           onTogglePlay={handleTTSToggle}
-          onStop={tts.stop}
+          onStop={() => {
+            stopTTSOnUnmount.current = true
+            tts.stop()
+          }}
           onPrevChapter={handlePrevChapter}
           onNextChapter={handleNextChapter}
           onToggleSettings={tts.toggleSettings}

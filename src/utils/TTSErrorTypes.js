@@ -1,85 +1,58 @@
 /**
- * Check if error is a normal interruption (not a real error)
+ * TTS Error Type Utilities
+ * Helper functions to handle Speech Synthesis errors
  */
+
 export const isNormalInterruption = (error) => {
   if (!error) return false
+  const errorStr = error.error || error.type || String(error)
+  return errorStr === 'interrupted' || errorStr === 'canceled'
+}
+
+export const getTTSErrorMessage = (error) => {
+  if (!error) return 'Unknown error'
+  const errorStr = error.error || error.type || String(error)
   
-  const errorType = error.error || error.type || ''
+  const messages = {
+    'interrupted': 'Playback was interrupted',
+    'canceled': 'Playback was canceled',
+    'network': 'Network error occurred',
+    'synthesis-failed': 'Speech synthesis failed',
+    'synthesis-unavailable': 'Speech synthesis not available',
+    'not-allowed': 'Speech synthesis not allowed',
+    'audio-busy': 'Audio device is busy',
+    'audio-hardware': 'Audio hardware error',
+    'language-unavailable': 'Selected language not available',
+    'voice-unavailable': 'Selected voice not available',
+    'text-too-long': 'Text is too long',
+    'invalid-argument': 'Invalid argument provided'
+  }
   
-  // These are normal interruptions, not errors
-  const normalInterruptions = [
+  return messages[errorStr] || `TTS Error: ${errorStr}`
+}
+
+export const isRecoverableError = (error) => {
+  if (!error) return false
+  const errorStr = error.error || error.type || String(error)
+  
+  const recoverableErrors = [
     'interrupted',
     'canceled',
-    'cancelled'
+    'audio-busy'
   ]
   
-  return normalInterruptions.includes(errorType.toLowerCase())
+  return recoverableErrors.includes(errorStr)
 }
 
-/**
- * Get user-friendly error message
- */
-export const getTTSErrorMessage = (error) => {
-  if (!error) return 'Terjadi kesalahan tidak diketahui'
+export const isCriticalError = (error) => {
+  if (!error) return false
+  const errorStr = error.error || error.type || String(error)
   
-  const errorType = error.error || error.type || ''
+  const criticalErrors = [
+    'synthesis-unavailable',
+    'not-allowed',
+    'audio-hardware'
+  ]
   
-  switch (errorType.toLowerCase()) {
-    case 'interrupted':
-    case 'canceled':
-    case 'cancelled':
-      return 'TTS dihentikan'
-    
-    case 'audio-busy':
-      return 'Audio sedang digunakan oleh aplikasi lain'
-    
-    case 'audio-hardware':
-      return 'Masalah dengan perangkat audio'
-    
-    case 'network':
-      return 'Masalah koneksi jaringan'
-    
-    case 'synthesis-unavailable':
-      return 'Layanan TTS tidak tersedia'
-    
-    case 'synthesis-failed':
-      return 'Gagal mensintesis audio'
-    
-    case 'language-unavailable':
-      return 'Bahasa tidak didukung'
-    
-    case 'voice-unavailable':
-      return 'Suara tidak tersedia'
-    
-    case 'text-too-long':
-      return 'Teks terlalu panjang'
-    
-    case 'invalid-argument':
-      return 'Parameter tidak valid'
-    
-    default:
-      return 'Terjadi kesalahan pada TTS'
-  }
-}
-
-/**
- * Log TTS error for debugging
- */
-export const logTTSError = (error, context = '') => {
-  if (isNormalInterruption(error)) {
-    console.log(`TTS: ${context} - Normal interruption:`, error.error)
-  } else {
-    console.error(`TTS Error ${context}:`, {
-      error: error.error,
-      message: getTTSErrorMessage(error),
-      charIndex: error.charIndex,
-      elapsedTime: error.elapsedTime
-    })
-  }
-}
-
-export default {
-  isNormalInterruption,
-  getTTSErrorMessage,
-  logTTSError
+  return criticalErrors.includes(errorStr)
 }
