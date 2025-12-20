@@ -417,28 +417,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   }, [chapter, setReadingProgress])
 
   useEffect(() => {
-    const handleSelection = (e) => {
+    const handleSelection = () => {
       if (isInteractingWithPopup) return
-      
-      // Ignore if clicking on buttons, links, or interactive elements
-      const target = e.target
-      if (target.closest('button') || 
-          target.closest('a') || 
-          target.closest('input') ||
-          target.closest('textarea') || 
-          target.closest('[role="button"]') ||
-          target.closest('.fixed')) { // Ignore fixed elements like toolbar
-        return
-      }
-
       const selection = window.getSelection()
       const text = selection.toString().trim()
-      const selectionTarget = selection.anchorNode
-      if (!selectionTarget) return
+      const target = selection.anchorNode
+      if (!target) return
 
-      const isInForm = selectionTarget.nodeType === Node.TEXT_NODE
-        ? (selectionTarget.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
-        : (selectionTarget.closest?.('textarea, input, [contenteditable="true"]') !== null)
+      const isInForm = target.nodeType === Node.TEXT_NODE
+        ? (target.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
+        : (target.closest?.('textarea, input, [contenteditable="true"]') !== null)
       if (isInForm) return
 
       const chapterContentDiv = contentRef.current?.querySelector('.chapter-content')
