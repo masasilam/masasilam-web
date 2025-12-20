@@ -14,6 +14,7 @@ import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
 import { buildChapterUrl } from '../hooks/useChapterNavigation'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import TTSControlPanel from '../components/Reader/TTSControlPanel'
+import TTSVoiceSetupBanner from '../components/Reader/TTSVoiceSetupBanner'
 import ChapterRating from '../components/Reader/ChapterRating'
 import SearchInBook from '../components/Reader/SearchInBook'
 import ExportAnnotations from '../components/Reader/ExportAnnotations'
@@ -80,26 +81,26 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   // Custom hooks
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(
-    bookSlug, 
-    chapter, 
-    () => { 
+    bookSlug,
+    chapter,
+    () => {
       if (isAuthenticated) {
         stopTTSOnUnmount.current = true
-        tts.stop() 
+        tts.stop()
       }
     }
   )
 
   const { swipeDirection } = useSwipeGesture(
-    contentRef, 
-    chapter, 
-    handleNextChapter, 
+    contentRef,
+    chapter,
+    handleNextChapter,
     handlePrevChapter
   )
 
   const { footnotePopup, setFootnotePopup, handleGoToFootnote } = useFootnoteHandler(
-    contentRef, 
-    chapter, 
+    contentRef,
+    chapter,
     bookSlug
   )
 
@@ -116,16 +117,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     if (!chapter?.htmlContent) return
-    
+
     console.log('🎯 handleTTSToggle called, current state:', {
       isPlaying: tts.isPlaying,
       isPaused: tts.isPaused,
       isEnabled: tts.isEnabled
     })
-    
+
     // ✅ FIX: Set flag to prevent auto-stop
     stopTTSOnUnmount.current = false
-    
+
     tts.toggle(chapter.htmlContent)
   }
 
@@ -297,9 +298,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     try {
-      await chapterService.addBookmark(bookSlug, parseInt(chapter.chapterNumber), { 
-        position: window.scrollY, 
-        note: '' 
+      await chapterService.addBookmark(bookSlug, parseInt(chapter.chapterNumber), {
+        position: window.scrollY,
+        note: ''
       })
       setShowToolbar(false)
       fetchAnnotations()
@@ -319,7 +320,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     if (!selectedText || !selectionRange) return
     try {
       await chapterService.addHighlight(bookSlug, parseInt(chapter.chapterNumber), {
-        selectedText, 
+        selectedText,
         color,
         startOffset: selectionRange.startOffset,
         endOffset: selectionRange.endOffset
@@ -342,8 +343,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     if (!noteContent.trim()) return
     try {
       await chapterService.addNote(bookSlug, parseInt(chapter.chapterNumber), {
-        content: noteContent, 
-        selectedText: selectedText || '', 
+        content: noteContent,
+        selectedText: selectedText || '',
         position: window.scrollY
       })
       clearSelection()
@@ -607,6 +608,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             ))}
           </ol>
         </nav>
+      )}
+
+      {/* ✅ TTS Voice Setup Banner - Shows if Indonesian voice not available */}
+      {isAuthenticated && tts.availableVoices.length > 0 && (
+        <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
       )}
 
       {/* ✅ TTS Control Panel - FIXED CONDITION */}

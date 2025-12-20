@@ -161,6 +161,77 @@ const TTSMobileSupportInfo = ({ onClose }) => {
                   {os === 'iOS' && <p>• Check Siri voice di iOS Settings</p>}
                 </div>
               </details>
+
+              <details className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                <summary className="font-medium cursor-pointer text-green-800 dark:text-green-400">
+                  🇮🇩 Cara Install Suara Bahasa Indonesia
+                </summary>
+                <div className="mt-3 space-y-4 text-sm text-gray-700 dark:text-gray-300">
+                  {os === 'Android' && (
+                    <>
+                      <div>
+                        <p className="font-semibold mb-2">📱 Android (Google TTS):</p>
+                        <ol className="list-decimal list-inside space-y-1 pl-2">
+                          <li>Buka <strong>Settings</strong> → <strong>System</strong> → <strong>Languages & Input</strong></li>
+                          <li>Pilih <strong>Text-to-speech output</strong></li>
+                          <li>Tap <strong>Google Text-to-speech Engine</strong></li>
+                          <li>Tap icon ⚙️ (Settings) di sebelah kanan</li>
+                          <li>Pilih <strong>Install voice data</strong></li>
+                          <li>Cari dan download <strong>"Indonesian (Indonesia)"</strong></li>
+                          <li>Restart browser setelah download selesai</li>
+                        </ol>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                        <p className="text-xs">
+                          💡 <strong>Alternatif:</strong> Download app <strong>"Google Text-to-Speech"</strong> dari Play Store,
+                          lalu update voice data dari dalam app.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {os === 'iOS' && (
+                    <>
+                      <div>
+                        <p className="font-semibold mb-2">📱 iOS/iPadOS:</p>
+                        <ol className="list-decimal list-inside space-y-1 pl-2">
+                          <li>Buka <strong>Settings</strong> → <strong>Accessibility</strong></li>
+                          <li>Scroll down dan pilih <strong>Spoken Content</strong></li>
+                          <li>Tap <strong>Voices</strong></li>
+                          <li>Cari <strong>"Indonesian"</strong> dalam daftar</li>
+                          <li>Tap Indonesian, lalu pilih kualitas suara:
+                            <ul className="list-disc list-inside pl-4 mt-1">
+                              <li><strong>Enhanced Quality</strong> (Recommended) - ~200MB</li>
+                              <li>Default Quality - ~50MB</li>
+                            </ul>
+                          </li>
+                          <li>Tunggu download selesai</li>
+                          <li>Tutup dan buka kembali Safari/browser</li>
+                        </ol>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                        <p className="text-xs">
+                          💡 <strong>Tips:</strong> Enhanced Quality memberikan hasil suara yang jauh lebih natural
+                          dan jelas dibanding Default Quality.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {os === 'Desktop' && (
+                    <p className="text-gray-600 dark:text-gray-400 italic">
+                      Panduan ini khusus untuk perangkat mobile. Desktop biasanya sudah memiliki voice yang lengkap.
+                    </p>
+                  )}
+
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-200 dark:border-yellow-800">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-400">
+                      ⚠️ <strong>Penting:</strong> Setelah install, wajib <strong>refresh halaman</strong> atau
+                      <strong>restart browser</strong> agar suara baru terdeteksi!
+                    </p>
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
 

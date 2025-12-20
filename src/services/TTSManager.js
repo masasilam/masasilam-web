@@ -80,16 +80,22 @@ class TTSManager {
       if (voices.length > 0) {
         this.availableVoices = voices
 
-        // Prioritize Indonesian voices
+        // Prioritize Indonesian voices with fallback to Malay
         const indonesianVoices = voices.filter(v =>
-          v.lang.startsWith('id') || v.lang.startsWith('ms')
+          v.lang.startsWith('id') ||
+          v.lang.startsWith('ms') ||
+          v.lang.toLowerCase().includes('indonesia') ||
+          v.lang.toLowerCase().includes('malay')
         )
 
         if (indonesianVoices.length > 0) {
           this.availableVoices = [
             ...indonesianVoices,
             ...voices.filter(v =>
-              !v.lang.startsWith('id') && !v.lang.startsWith('ms')
+              !v.lang.startsWith('id') &&
+              !v.lang.startsWith('ms') &&
+              !v.lang.toLowerCase().includes('indonesia') &&
+              !v.lang.toLowerCase().includes('malay')
             )
           ]
         }
@@ -100,6 +106,25 @@ class TTSManager {
         // Log available voices for debugging
         if (this.isMobile) {
           console.log('📱 Available voices:', this.availableVoices.map(v => `${v.name} (${v.lang})`))
+
+          // Check specifically for Indonesian
+          const hasIndonesian = this.availableVoices.some(v =>
+            v.lang.startsWith('id') || v.lang.toLowerCase().includes('indonesia')
+          )
+
+          if (!hasIndonesian) {
+            console.warn('⚠️ No Indonesian voice found on this device')
+            console.log('💡 User should install Indonesian language pack')
+
+            // Trigger callback if no Indonesian voice
+            if (this.onError) {
+              this.onError({
+                error: 'no-indonesian-voice',
+                message: 'Indonesian voice not found. Please install language pack.',
+                availableVoices: this.availableVoices.length
+              })
+            }
+          }
         }
       }
     }
@@ -128,6 +153,14 @@ class TTSManager {
         loadVoices()
       }
     }, 1000)
+
+    // ✅ Final check after 2 seconds
+    setTimeout(() => {
+      loadVoices()
+      if (this.availableVoices.length > 0) {
+        console.log('📊 Final voice check - Available:', this.availableVoices.length)
+      }
+    }, 2000)
   }
 
   extractAndChunkText(htmlContent) {

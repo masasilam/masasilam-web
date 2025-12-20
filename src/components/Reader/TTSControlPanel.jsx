@@ -29,6 +29,14 @@ const TTSControlPanel = ({
 }) => {
   const [showSupportInfo, setShowSupportInfo] = useState(false)
 
+  // Check if Indonesian voice is available
+  const hasIndonesianVoice = availableVoices.some(v =>
+    v.lang.startsWith('id') ||
+    v.lang.toLowerCase().includes('indonesia')
+  )
+
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent)
+
   return (
     <>
       {showSupportInfo && (
@@ -71,6 +79,29 @@ const TTSControlPanel = ({
           />
         </div>
       </div>
+
+      {/* No Indonesian Voice Warning */}
+      {isMobile && !hasIndonesianVoice && availableVoices.length > 0 && (
+        <div className="mb-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <span className="text-yellow-600 dark:text-yellow-400 text-lg">⚠️</span>
+            <div className="flex-1 text-xs">
+              <p className="font-semibold text-yellow-800 dark:text-yellow-400 mb-1">
+                Suara Indonesia tidak tersedia
+              </p>
+              <p className="text-yellow-700 dark:text-yellow-300 mb-2">
+                Menggunakan suara default. Untuk hasil terbaik, install bahasa Indonesia di perangkat Anda.
+              </p>
+              <button
+                onClick={() => setShowSupportInfo(true)}
+                className="text-yellow-800 dark:text-yellow-400 underline hover:no-underline"
+              >
+                Cara install suara Indonesia →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Playback Controls */}
       <div className="flex items-center justify-center gap-2 mb-3">
@@ -166,12 +197,32 @@ const TTSControlPanel = ({
                 onChange={(e) => onVoiceChange(parseInt(e.target.value))}
                 className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500"
               >
-                {availableVoices.map((voice, index) => (
-                  <option key={index} value={index}>
-                    {voice.name} ({voice.lang})
-                  </option>
-                ))}
+                {availableVoices.map((voice, index) => {
+                  const isIndonesian = voice.lang.startsWith('id') || voice.lang.toLowerCase().includes('indonesia')
+                  return (
+                    <option key={index} value={index}>
+                      {isIndonesian ? '🇮🇩 ' : ''}{voice.name} ({voice.lang})
+                    </option>
+                  )
+                })}
               </select>
+
+              {/* Current voice info */}
+              {availableVoices[voiceIndex] && (
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded p-2">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      {availableVoices[voiceIndex].lang.startsWith('id') ? '✅' : '⚠️'}
+                      {' '}{availableVoices[voiceIndex].name}
+                    </span>
+                    {!availableVoices[voiceIndex].lang.startsWith('id') && (
+                      <span className="text-yellow-600 dark:text-yellow-400">
+                        Non-ID
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
