@@ -1,5 +1,7 @@
 // src/components/Reader/TTSControlPanel.jsx
-import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack, Settings } from 'lucide-react'
+import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack, Settings, HelpCircle } from 'lucide-react'
+import { useState } from 'react'
+import TTSMobileSupportInfo from './TTSMobileSupportInfo'
 
 /**
  * TTS Control Panel Component
@@ -25,20 +27,35 @@ const TTSControlPanel = ({
   hasPrevChapter,
   hasNextChapter
 }) => {
+  const [showSupportInfo, setShowSupportInfo] = useState(false)
+
   return (
+    <>
+      {showSupportInfo && (
+        <TTSMobileSupportInfo onClose={() => setShowSupportInfo(false)} />
+      )}
     <div className="fixed top-20 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-80">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-sm flex items-center gap-2">
           <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           Text to Speech
         </h4>
-        <button 
-          onClick={onStop} 
-          className="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-          title="Stop TTS"
-        >
-          <VolumeX className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowSupportInfo(true)}
+            className="p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+            title="Help & Troubleshooting"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onStop}
+            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+            title="Stop TTS"
+          >
+            <VolumeX className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Progress indicator */}
@@ -48,7 +65,7 @@ const TTSControlPanel = ({
           <span className="font-medium">{progress}%</span>
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-          <div 
+          <div
             className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
@@ -65,7 +82,7 @@ const TTSControlPanel = ({
         >
           <SkipBack className="w-5 h-5" />
         </button>
-        
+
         <button
           onClick={onTogglePlay}
           className="p-3 rounded-full bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-lg"
@@ -73,7 +90,7 @@ const TTSControlPanel = ({
         >
           {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
         </button>
-        
+
         <button
           onClick={onNextChapter}
           disabled={!hasNextChapter}
@@ -175,6 +192,7 @@ const TTSControlPanel = ({
         </div>
       )}
     </div>
+    </>
   )
 }
 
