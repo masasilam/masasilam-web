@@ -1,160 +1,150 @@
-// ============================================
-// src/pages/AuthorDetailPage.jsx - UPDATED
-// ============================================
-
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import bookService from '../services/bookService'
-import BookGrid from '../components/Book/BookGrid'
-import Button from '../components/Common/Button'
+import BookCard from '../components/Book/BookCard'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
-import { User, BookOpen } from 'lucide-react'
+import { User, BookOpen, Home, ChevronRight } from 'lucide-react'
 
 const AuthorDetailPage = () => {
   const { authorSlug } = useParams()
+  const [author, setAuthor] = useState(null)
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [author, setAuthor] = useState(null)
+  const LIMIT = 24
 
   useEffect(() => {
-    if (authorSlug) {
-      fetchAuthorInfo()
-    }
-  }, [authorSlug])
+    fetchAuthorAndBooks()
+  }, [authorSlug, currentPage])
 
-  useEffect(() => {
-    if (author) {
-      fetchBooksByAuthor()
-    }
-  }, [author, currentPage])
-
-  const fetchAuthorInfo = async () => {
-    try {
-      // Fetch all authors to find the matching one
-      const response = await bookService.getAuthors(1, 1000, authorSlug)
-      const authors = response.data?.list || []
-      const foundAuthor = authors.find(a => a.slug === authorSlug)
-      
-      if (foundAuthor) {
-        setAuthor(foundAuthor)
-      } else {
-        console.warn('Author not found:', authorSlug)
-        setAuthor({ 
-          name: authorSlug.replace(/-/g, ' '),
-          id: null 
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching author info:', error)
-      setAuthor({ 
-        name: authorSlug.replace(/-/g, ' '),
-        id: null 
-      })
-    }
-  }
-
-  const fetchBooksByAuthor = async () => {
+  const fetchAuthorAndBooks = async () => {
     try {
       setLoading(true)
       
-      // TODO: Backend belum support filter by authorId
-      // Untuk sementara ambil semua buku dan filter di frontend
-      const response = await bookService.getBooks({
-        page: currentPage,
-        limit: 24,
-        // authorId: author.id, // Uncomment when backend supports this
-        sortField: 'updateAt',
-        sortOrder: 'DESC',
-      })
-      
-      let booksList = response.data?.data || []
-      
-      // Filter by author name if author exists
-      if (author.name) {
-        booksList = booksList.filter(book => 
-          book.authorNames?.toLowerCase().includes(author.name.toLowerCase())
-        )
-      }
-      
-      setBooks(booksList)
-      setTotalPages(response.data?.totalPages || 1)
+      const [authorsResponse, booksResponse] = await Promise.all([
+        bookService.getAuthors(1, 1000, authorSlug),
+        bookService.getBooks({
+          page: currentPage,
+          limit: LIMIT,
+          authorName: authorSlug.replace(/-/g, ' '),
+          sortField: 'publishedAt',
+          sortOrder: 'DESC'
+        })
+      ])
+
+      const foundAuthor = authorsResponse.data?.list?.find(a => a.slug === authorSlug)
+      setAuthor(foundAuthor || { name: authorSlug.replace(/-/g, ' '), slug: authorSlug })
+      setBooks(booksResponse.data?.data || [])
+      setTotalPages(booksResponse.data?.totalPages || 1)
     } catch (error) {
-      console.error('Error fetching books by author:', error)
+      console.error('Error fetching author data:', error)
+      setAuthor({ name: authorSlug.replace(/-/g, ' '), slug: authorSlug })
+      setBooks([])
     } finally {
       setLoading(false)
     }
   }
 
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (loading && currentPage === 1) return <LoadingSpinner fullScreen />
+
   if (!author) {
-    return <LoadingSpinner fullScreen />
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="container mx-auto px-4 text-center">
+          <User className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Penulis Tidak Ditemukan
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Penulis "{authorSlug}" tidak tersedia
+          </p>
+          <Link to="/penulis" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+            <Home className="w-5 h-5" />
+            Kembali ke Daftar Penulis
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4">
-        {/* Author Header */}
-        <div className="mb-8 text-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 sm:py-12">
+      <div className="container mx-auto px-4 sm:px-6">
+        <nav className="flex items-center gap-2 text-sm mb-6 text-gray-600 dark:text-gray-400" aria-label="Breadcrumb">
+          <Link to="/" className="hover:text-primary transition-colors">Beranda</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link to="/penulis" className="hover:text-primary transition-colors">Penulis</Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 dark:text-white font-medium">{author.name}</span>
+        </nav>
+
+        <header className="mb-8 pb-6 border-b-2 border-primary text-center">
           <div className="w-24 h-24 bg-gradient-to-br from-primary to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
             {author.photoUrl ? (
-              <img
-                src={author.photoUrl}
-                alt={author.name}
-                className="w-24 h-24 rounded-full object-cover"
-              />
+              <img src={author.photoUrl} alt={author.name} className="w-24 h-24 rounded-full object-cover" loading="lazy" />
             ) : (
               <User className="w-12 h-12 text-white" />
             )}
           </div>
-          <h1 className="text-4xl font-bold mb-2 capitalize">
-            {author.name || 'Penulis'}
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-gray-900 dark:text-white mb-3 capitalize">
+            {author.name}
           </h1>
           {author.biography && (
-            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-4">
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg max-w-2xl mx-auto mb-3">
               {author.biography}
             </p>
           )}
-          <p className="text-gray-500 dark:text-gray-500 text-sm">
-            {author.bookCount ? `${author.bookCount} buku` : 'Koleksi buku karya penulis ini'}
-          </p>
-        </div>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <BookOpen className="w-4 h-4" />
+            <span>{author.totalBooks || author.bookCount || books.length} buku tersedia</span>
+          </div>
+        </header>
 
-        {loading && currentPage === 1 ? (
-          <LoadingSpinner />
-        ) : books.length === 0 ? (
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600 dark:text-gray-400">
+        {books.length === 0 ? (
+          <div className="text-center py-16">
+            <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600" />
+            <p className="text-gray-600 dark:text-gray-400 text-lg">
               Belum ada buku dari penulis ini
             </p>
           </div>
         ) : (
           <>
-            <BookGrid books={books} loading={loading && currentPage > 1} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 md:gap-6">
+              {books.map((book) => (
+                <BookCard key={book.id} book={book} />
+              ))}
+            </div>
 
             {totalPages > 1 && (
-              <div className="mt-12 flex justify-center gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1 || loading}
+              <nav className="flex justify-center items-center gap-2 mt-8 flex-wrap" aria-label="Pagination">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Previous page"
                 >
                   Sebelumnya
-                </Button>
-                
-                <span className="flex items-center px-4 text-sm text-gray-600 dark:text-gray-400">
+                </button>
+
+                <span className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
                   Halaman {currentPage} dari {totalPages}
                 </span>
 
-                <Button
-                  variant="secondary"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages || loading}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Next page"
                 >
                   Selanjutnya
-                </Button>
-              </div>
+                </button>
+              </nav>
             )}
           </>
         )}

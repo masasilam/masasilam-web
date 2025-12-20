@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/GenresPage.jsx - FIXED: Only show genres with books
+// src/pages/GenresPage.jsx - FIXED: Show genres with bookCount >= 1
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -92,12 +92,20 @@ const GenresPage = () => {
       setLoading(true)
       const response = await bookService.getGenres(true)
       
-      // ✅ FIXED: Filter hanya genre yang memiliki buku (bookCount > 0)
-      const genresWithBooks = (response.data || []).filter(genre => genre.bookCount > 0)
+      console.log('📚 All genres from API:', response.data)
+      
+      // ✅ FIXED: Filter genre dengan bookCount >= 1 (tidak hanya > 0)
+      const genresWithBooks = (response.data || []).filter(genre => {
+        const count = genre.bookCount || 0
+        console.log(`Genre: ${genre.name}, bookCount: ${count}`)
+        return count >= 1
+      })
+      
+      console.log('✅ Genres with books:', genresWithBooks)
       
       setGenres(genresWithBooks)
     } catch (error) {
-      console.error('Error fetching genres:', error)
+      console.error('❌ Error fetching genres:', error)
     } finally {
       setLoading(false)
     }
@@ -161,7 +169,7 @@ const GenresPage = () => {
                       )}
                       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span className="font-medium">{genre.bookCount} buku</span>
+                        <span className="font-medium">{genre.bookCount || 0} buku</span>
                       </div>
                     </div>
                     

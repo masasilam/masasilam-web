@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
 import './styles/index.css'
 
+
 // Layout Components
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import GuestRoute from './components/Auth/GuestRoute'
@@ -20,7 +21,7 @@ import BookReviewsPage from './pages/BookReviewsPage'
 
 // Metadata Pages (NEW)
 import GenresPage from './pages/GenresPage'
-import CategoryPage from './pages/CategoryPage'
+import GenreDetailPage from './pages/GenreDetailPage'
 import AuthorsPage from './pages/AuthorsPage'
 import AuthorDetailPage from './pages/AuthorDetailPage'
 
@@ -84,7 +85,7 @@ function App() {
         {/* ============ METADATA ROUTES (NEW) ============ */}
         {/* Genre/Category Routes */}
         <Route path="/kategori" element={<PublicLayout><GenresPage /></PublicLayout>} />
-        <Route path="/kategori/:genreSlug" element={<PublicLayout><CategoryPage /></PublicLayout>} />
+        <Route path="/kategori/:genreSlug" element={<PublicLayout><GenreDetailPage /></PublicLayout>} />
         
         {/* Author Routes */}
         <Route path="/penulis" element={<PublicLayout><AuthorsPage /></PublicLayout>} />
