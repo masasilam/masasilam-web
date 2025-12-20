@@ -1,4 +1,3 @@
-// src/services/TTSManager.js
 /**
  * Text-to-Speech Manager
  * Handles chunked reading for long content to avoid Chrome's character limit
@@ -16,6 +15,7 @@ class TTSManager {
     this.htmlContent = ''
     this.textContent = ''
     this.chunks = []
+    this.isStopping = false
     
     // Settings
     this.rate = 1.0
@@ -127,7 +127,15 @@ class TTSManager {
       return
     }
 
-    this.stop() // Stop any existing playback
+    // Cancel any existing speech first
+    if (this.synth.speaking) {
+      this.synth.cancel()
+    }
+    
+    // Reset flags
+    this.isStopping = false
+    this.isPlaying = false
+    this.isPaused = false
     
     this.htmlContent = htmlContent
     const { text, chunks } = this.extractAndChunkText(htmlContent)
@@ -141,6 +149,23 @@ class TTSManager {
     
     console.log(`TTS: Starting playback of ${chunks.length} chunks (${this.totalChars} chars)`)
     
+    // SET STATE FIRST
+    this.isPlaying = true
+    this.isPaused = false
+    this.isEnabled = true
+    
+    console.log('TTS: State set:', {
+      isPlaying: this.isPlaying,
+      isPaused: this.isPaused,
+      isEnabled: this.isEnabled,
+      isStopping: this.isStopping
+    })
+    
+    // Force load voices if not loaded
+    if (this.availableVoices.length === 0) {
+      this.availableVoices = this.synth.getVoices()
+    }
+    
     // Create utterances for each chunk
     for (let i = 0; i < chunks.length; i++) {
       const utterance = new SpeechSynthesisUtterance(chunks[i])
@@ -153,8 +178,7 @@ class TTSManager {
       
       // Track progress
       utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-          // Calculate approximate character position
+        if (event.name === 'word' && !this.isStopping) {
           const chunkStart = this.getChunkStartPosition(i)
           this.currentCharIndex = chunkStart + event.charIndex
           
@@ -165,6 +189,8 @@ class TTSManager {
       }
       
       utterance.onend = () => {
+        if (this.isStopping) return
+        
         console.log(`TTS: Chunk ${i + 1}/${chunks.length} completed`)
         
         // Move to next chunk
@@ -179,16 +205,30 @@ class TTSManager {
       }
       
       utterance.onerror = (event) => {
+        // Ignore interrupted errors when stopping intentionally
+        if (this.isStopping && event.error === 'interrupted') {
+          return
+        }
+        
+        // Ignore interrupted errors during chunk transitions
+        if (event.error === 'interrupted') {
+          console.log(`TTS: Chunk ${i + 1} interrupted (normal during transitions)`)
+          return
+        }
+        
+        // Log other errors
         console.error(`TTS: Error in chunk ${i + 1}:`, event)
         
         if (this.onError) {
           this.onError(event)
         }
         
-        // Try to continue to next chunk
-        if (i < chunks.length - 1) {
-          this.currentUtteranceIndex = i + 1
-          this.playCurrentChunk()
+        // Try to continue to next chunk on non-critical errors
+        if (i < chunks.length - 1 && !this.isStopping) {
+          setTimeout(() => {
+            this.currentUtteranceIndex = i + 1
+            this.playCurrentChunk()
+          }, 100)
         } else {
           this.stop()
         }
@@ -197,11 +237,10 @@ class TTSManager {
       this.utterances.push(utterance)
     }
     
-    this.isPlaying = true
-    this.isPaused = false
-    this.isEnabled = true
-    
+    // EMIT STATE CHANGE
     this.emitStateChange()
+    
+    // PLAY immediately
     this.playCurrentChunk()
   }
 
@@ -211,29 +250,40 @@ class TTSManager {
   getChunkStartPosition(chunkIndex) {
     let position = 0
     for (let i = 0; i < chunkIndex; i++) {
-      position += this.chunks[i].length + 1 // +1 for space between chunks
+      position += this.chunks[i].length + 1
     }
     return position
   }
 
   /**
-   * Play current chunk
+   * Play current chunk - FIXED VERSION
    */
   playCurrentChunk() {
+    if (this.isStopping) {
+      console.log('TTS: Stopping, skip playback')
+      return
+    }
+    
     if (this.currentUtteranceIndex >= this.utterances.length) {
+      console.log('TTS: No more chunks')
       return
     }
     
     const utterance = this.utterances[this.currentUtteranceIndex]
     
-    // Cancel any existing speech
-    this.synth.cancel()
+    console.log('TTS: Playing chunk', {
+      index: this.currentUtteranceIndex + 1,
+      total: this.utterances.length,
+      text: utterance.text.substring(0, 50) + '...',
+      voice: utterance.voice?.name || 'default',
+      isPlaying: this.isPlaying,
+      isStopping: this.isStopping
+    })
     
-    // Small delay to ensure cancel completes
-    setTimeout(() => {
-      this.synth.speak(utterance)
-      console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
-    }, 50)
+    // ✅ LANGSUNG SPEAK - tidak pakai cancel, tidak pakai setTimeout
+    this.synth.speak(utterance)
+    
+    console.log('TTS: synth.speak() called')
   }
 
   /**
@@ -254,6 +304,7 @@ class TTSManager {
   resume() {
     if (!this.isPaused) return
     
+    this.isStopping = false
     this.synth.resume()
     this.isPaused = false
     this.isPlaying = true
@@ -264,7 +315,14 @@ class TTSManager {
    * Stop TTS
    */
   stop() {
+    // Guard: Don't emit if already stopped
+    if (!this.isPlaying && !this.isPaused && !this.isEnabled) {
+      return
+    }
+    
+    this.isStopping = true
     this.synth.cancel()
+    
     this.isPlaying = false
     this.isPaused = false
     this.isEnabled = false
@@ -272,7 +330,12 @@ class TTSManager {
     this.currentUtteranceIndex = 0
     this.utterances = []
     this.chunks = []
+    
     this.emitStateChange()
+    
+    setTimeout(() => {
+      this.isStopping = false
+    }, 200)
   }
 
   /**
@@ -306,9 +369,6 @@ class TTSManager {
     
     if (this.isPlaying || this.isPaused) {
       const wasPlaying = this.isPlaying
-      const currentProgress = this.currentCharIndex
-      
-      // Restart from current position
       this.start(this.htmlContent)
       
       if (!wasPlaying) {

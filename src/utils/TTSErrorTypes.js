@@ -1,63 +1,85 @@
-// src/utils/TTSErrorTypes.js
-
 /**
- * TTS Error Types and their handling
+ * Check if error is a normal interruption (not a real error)
  */
-
-export const TTS_ERROR_TYPES = {
-  // Normal interruptions - NOT actual errors
-  INTERRUPTED: 'interrupted',
-  CANCELED: 'canceled',
+export const isNormalInterruption = (error) => {
+  if (!error) return false
   
-  // Actual errors that need handling
-  NOT_ALLOWED: 'not-allowed',
-  NETWORK: 'network',
-  SYNTHESIS_FAILED: 'synthesis-failed',
-  SYNTHESIS_UNAVAILABLE: 'synthesis-unavailable',
-  AUDIO_BUSY: 'audio-busy',
-  AUDIO_HARDWARE: 'audio-hardware',
-  LANGUAGE_UNAVAILABLE: 'language-unavailable',
-  VOICE_UNAVAILABLE: 'voice-unavailable',
-  TEXT_TOO_LONG: 'text-too-long',
-  INVALID_ARGUMENT: 'invalid-argument'
-}
-
-/**
- * Check if an error is a normal interruption (not an actual error)
- */
-export const isNormalInterruption = (errorCode) => {
-  return errorCode === TTS_ERROR_TYPES.INTERRUPTED || 
-         errorCode === TTS_ERROR_TYPES.CANCELED
+  const errorType = error.error || error.type || ''
+  
+  // These are normal interruptions, not errors
+  const normalInterruptions = [
+    'interrupted',
+    'canceled',
+    'cancelled'
+  ]
+  
+  return normalInterruptions.includes(errorType.toLowerCase())
 }
 
 /**
  * Get user-friendly error message
  */
-export const getTTSErrorMessage = (errorCode) => {
-  const messages = {
-    [TTS_ERROR_TYPES.NOT_ALLOWED]: 'Browser tidak mengizinkan TTS. Coba refresh halaman.',
-    [TTS_ERROR_TYPES.NETWORK]: 'Masalah koneksi jaringan. Periksa koneksi internet Anda.',
-    [TTS_ERROR_TYPES.SYNTHESIS_FAILED]: 'TTS gagal. Coba lagi.',
-    [TTS_ERROR_TYPES.SYNTHESIS_UNAVAILABLE]: 'TTS tidak tersedia di browser Anda.',
-    [TTS_ERROR_TYPES.AUDIO_BUSY]: 'Audio sedang digunakan aplikasi lain.',
-    [TTS_ERROR_TYPES.AUDIO_HARDWARE]: 'Masalah dengan hardware audio.',
-    [TTS_ERROR_TYPES.LANGUAGE_UNAVAILABLE]: 'Bahasa tidak tersedia untuk TTS.',
-    [TTS_ERROR_TYPES.VOICE_UNAVAILABLE]: 'Suara tidak tersedia. Pilih suara lain.',
-    [TTS_ERROR_TYPES.TEXT_TOO_LONG]: 'Teks terlalu panjang untuk diproses.',
-    [TTS_ERROR_TYPES.INVALID_ARGUMENT]: 'Pengaturan TTS tidak valid.'
-  }
+export const getTTSErrorMessage = (error) => {
+  if (!error) return 'Terjadi kesalahan tidak diketahui'
   
-  return messages[errorCode] || 'Terjadi kesalahan pada TTS.'
+  const errorType = error.error || error.type || ''
+  
+  switch (errorType.toLowerCase()) {
+    case 'interrupted':
+    case 'canceled':
+    case 'cancelled':
+      return 'TTS dihentikan'
+    
+    case 'audio-busy':
+      return 'Audio sedang digunakan oleh aplikasi lain'
+    
+    case 'audio-hardware':
+      return 'Masalah dengan perangkat audio'
+    
+    case 'network':
+      return 'Masalah koneksi jaringan'
+    
+    case 'synthesis-unavailable':
+      return 'Layanan TTS tidak tersedia'
+    
+    case 'synthesis-failed':
+      return 'Gagal mensintesis audio'
+    
+    case 'language-unavailable':
+      return 'Bahasa tidak didukung'
+    
+    case 'voice-unavailable':
+      return 'Suara tidak tersedia'
+    
+    case 'text-too-long':
+      return 'Teks terlalu panjang'
+    
+    case 'invalid-argument':
+      return 'Parameter tidak valid'
+    
+    default:
+      return 'Terjadi kesalahan pada TTS'
+  }
 }
 
 /**
- * Check if error needs user action
+ * Log TTS error for debugging
  */
-export const needsUserAction = (errorCode) => {
-  return [
-    TTS_ERROR_TYPES.NOT_ALLOWED,
-    TTS_ERROR_TYPES.SYNTHESIS_UNAVAILABLE,
-    TTS_ERROR_TYPES.AUDIO_HARDWARE,
-    TTS_ERROR_TYPES.VOICE_UNAVAILABLE
-  ].includes(errorCode)
+export const logTTSError = (error, context = '') => {
+  if (isNormalInterruption(error)) {
+    console.log(`TTS: ${context} - Normal interruption:`, error.error)
+  } else {
+    console.error(`TTS Error ${context}:`, {
+      error: error.error,
+      message: getTTSErrorMessage(error),
+      charIndex: error.charIndex,
+      elapsedTime: error.elapsedTime
+    })
+  }
+}
+
+export default {
+  isNormalInterruption,
+  getTTSErrorMessage,
+  logTTSError
 }
