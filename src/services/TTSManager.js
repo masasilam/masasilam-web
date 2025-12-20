@@ -2,7 +2,6 @@
 /**
  * Text-to-Speech Manager
  * Handles chunked reading for long content to avoid Chrome's character limit
- * Fixed for mobile autoplay policy compliance
  */
 class TTSManager {
   constructor() {
@@ -120,34 +119,13 @@ class TTSManager {
   }
 
   /**
-   * Ensure audio context is ready (for mobile autoplay policy)
-   */
-  async ensureAudioContextReady() {
-    try {
-      // Resume if paused (critical for mobile)
-      if (this.synth.paused) {
-        this.synth.resume()
-      }
-      // Wait a bit for the context to be ready
-      await new Promise(resolve => setTimeout(resolve, 100))
-      return true
-    } catch (error) {
-      console.warn('Audio context not ready:', error)
-      return false
-    }
-  }
-
-  /**
    * Start TTS
    */
-  async start(htmlContent) {
+  start(htmlContent) {
     if (!htmlContent) {
       console.warn('No content provided for TTS')
       return
     }
-
-    // Ensure audio context is ready (critical for mobile)
-    await this.ensureAudioContextReady()
 
     this.stop() // Stop any existing playback
     
@@ -309,21 +287,6 @@ class TTSManager {
       return true
     }
     return false
-  }
-
-  /**
-   * Resume audio context (for mobile autoplay policy)
-   */
-  async resumeAudioContext() {
-    try {
-      if (this.synth.paused) {
-        await this.synth.resume()
-      }
-      return true
-    } catch (error) {
-      console.error('Failed to resume audio context:', error)
-      return false
-    }
   }
 
   /**

@@ -5,7 +5,6 @@ import { isNormalInterruption, getTTSErrorMessage } from '../utils/TTSErrorTypes
 
 /**
  * React Hook for Text-to-Speech functionality
- * Fixed for mobile browser autoplay policy
  *
  * @returns {Object} TTS state and control functions
  */
@@ -82,9 +81,9 @@ export const useTTS = () => {
   /**
    * Start TTS with HTML content
    */
-  const start = async (htmlContent) => {
+  const start = (htmlContent) => {
     if (!ttsManagerRef.current) return
-    await ttsManagerRef.current.start(htmlContent)
+    ttsManagerRef.current.start(htmlContent)
   }
 
   /**
@@ -114,14 +113,14 @@ export const useTTS = () => {
   /**
    * Toggle play/pause
    */
-  const toggle = async (htmlContent) => {
+  const toggle = (htmlContent) => {
     if (!ttsManagerRef.current) return
 
     const handled = ttsManagerRef.current.toggle()
 
     // If not handled (not started yet), start with content
     if (!handled && htmlContent) {
-      await start(htmlContent)
+      start(htmlContent)
     }
   }
 
@@ -182,9 +181,6 @@ export const useTTS = () => {
     voiceIndex: state.voiceIndex,
     availableVoices: state.availableVoices,
     showSettings: state.showSettings,
-
-    // Manager ref for direct access (needed for mobile fixes)
-    ttsManagerRef,
     
     // Actions
     start,

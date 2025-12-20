@@ -208,7 +208,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showTTSLoginPrompt, setShowTTSLoginPrompt] = useState(false)
   const [showAnnotationLoginPrompt, setShowAnnotationLoginPrompt] = useState(false)
   const [showBookmarkLoginPrompt, setShowBookmarkLoginPrompt] = useState(false)
-  const [ttsLoading, setTTSLoading] = useState(false)
 
   // Reading mode - cream background
   const [readingMode, setReadingMode] = useState(() => {
@@ -418,16 +417,28 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   }, [chapter, setReadingProgress])
 
   useEffect(() => {
-    const handleSelection = () => {
+    const handleSelection = (e) => {
       if (isInteractingWithPopup) return
+      
+      // Ignore if clicking on buttons, links, or interactive elements
+      const target = e.target
+      if (target.closest('button') || 
+          target.closest('a') || 
+          target.closest('input') ||
+          target.closest('textarea') || 
+          target.closest('[role="button"]') ||
+          target.closest('.fixed')) { // Ignore fixed elements like toolbar
+        return
+      }
+
       const selection = window.getSelection()
       const text = selection.toString().trim()
-      const target = selection.anchorNode
-      if (!target) return
+      const selectionTarget = selection.anchorNode
+      if (!selectionTarget) return
 
-      const isInForm = target.nodeType === Node.TEXT_NODE
-        ? (target.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
-        : (target.closest?.('textarea, input, [contenteditable="true"]') !== null)
+      const isInForm = selectionTarget.nodeType === Node.TEXT_NODE
+        ? (selectionTarget.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
+        : (selectionTarget.closest?.('textarea, input, [contenteditable="true"]') !== null)
       if (isInForm) return
 
       const chapterContentDiv = contentRef.current?.querySelector('.chapter-content')
@@ -804,32 +815,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
-  const handleTTSToggle = async () => {
-  if (!isAuthenticated) {
-    setShowTTSLoginPrompt(true)
-    return
-  }
-  if (!chapter?.htmlContent) return
-  
-  try {
-    setTTSLoading(true)
-    
-    // Ensure audio context is resumed first (critical for mobile)
-    const manager = tts.ttsManagerRef?.current
-    if (manager?.synth?.paused) {
-      await manager.synth.resume()
+  const handleTTSToggle = () => {
+    if (!isAuthenticated) {
+      setShowTTSLoginPrompt(true)
+      return
     }
-    
-    // Small delay to ensure audio context is ready
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    await tts.toggle(chapter.htmlContent)
-  } catch (error) {
-    console.error('TTS toggle error:', error)
-    alert('Gagal memulai TTS. Coba tekan tombol lagi.')
-  } finally {
-    setTTSLoading(false)
-  }
+    if (!chapter?.htmlContent) return
+    tts.toggle(chapter.htmlContent)
   }
 
   const handleTTSApplySettings = () => {
@@ -1035,7 +1027,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             <ChevronLeft className="w-5 h-5" />
             <span className="text-[9px] sm:text-xs">Prev</span>
           </button>
-
+          
           {/* Scrollable Middle: Action Buttons */}
           <div className="flex-1 overflow-x-auto hide-scrollbar">
             <div className="flex items-center gap-1 sm:gap-2 px-1">
