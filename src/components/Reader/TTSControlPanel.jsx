@@ -1,5 +1,5 @@
 // src/components/Reader/TTSControlPanel.jsx
-import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack } from 'lucide-react'
+import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack, Settings } from 'lucide-react'
 
 /**
  * TTS Control Panel Component
@@ -26,15 +26,15 @@ const TTSControlPanel = ({
   hasNextChapter
 }) => {
   return (
-    <div className="fixed top-20 right-4 z-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-72">
+    <div className="fixed top-20 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-80">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-sm flex items-center gap-2">
-          <Volume2 className="w-4 h-4" />
+          <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           Text to Speech
         </h4>
         <button 
           onClick={onStop} 
-          className="text-red-500 hover:text-red-700 transition-colors"
+          className="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
           title="Stop TTS"
         >
           <VolumeX className="w-4 h-4" />
@@ -43,12 +43,13 @@ const TTSControlPanel = ({
 
       {/* Progress indicator */}
       <div className="mb-3">
-        <div className="text-xs text-gray-500 mb-1">
-          Progress: {progress}%
+        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 flex justify-between">
+          <span>Progress</span>
+          <span className="font-medium">{progress}%</span>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
           <div 
-            className="bg-primary h-1.5 rounded-full transition-all duration-300"
+            className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -59,7 +60,7 @@ const TTSControlPanel = ({
         <button
           onClick={onPrevChapter}
           disabled={!hasPrevChapter}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Bab sebelumnya"
         >
           <SkipBack className="w-5 h-5" />
@@ -67,16 +68,16 @@ const TTSControlPanel = ({
         
         <button
           onClick={onTogglePlay}
-          className="p-3 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
+          className="p-3 rounded-full bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-lg"
           title={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+          {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
         </button>
         
         <button
           onClick={onNextChapter}
           disabled={!hasNextChapter}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Bab selanjutnya"
         >
           <SkipForward className="w-5 h-5" />
@@ -86,9 +87,10 @@ const TTSControlPanel = ({
       {/* Settings Toggle */}
       <button
         onClick={onToggleSettings}
-        className="w-full text-xs text-center text-primary hover:underline transition-colors"
+        className="w-full text-xs text-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium py-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1"
       >
-        {showSettings ? 'Sembunyikan' : 'Pengaturan'} ⚙️
+        <Settings className="w-3 h-3" />
+        {showSettings ? 'Sembunyikan Pengaturan' : 'Pengaturan'}
       </button>
 
       {/* Settings Panel */}
@@ -96,7 +98,7 @@ const TTSControlPanel = ({
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
           {/* Speed Control */}
           <div>
-            <label className="text-xs font-medium block mb-1">
+            <label className="text-xs font-medium block mb-2 text-gray-700 dark:text-gray-300">
               Kecepatan: {rate.toFixed(1)}x
             </label>
             <input
@@ -106,9 +108,9 @@ const TTSControlPanel = ({
               step="0.1"
               value={rate}
               onChange={(e) => onRateChange(parseFloat(e.target.value))}
-              className="w-full accent-primary cursor-pointer"
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>0.5x</span>
               <span>1.0x</span>
               <span>2.0x</span>
@@ -117,7 +119,7 @@ const TTSControlPanel = ({
 
           {/* Pitch Control */}
           <div>
-            <label className="text-xs font-medium block mb-1">
+            <label className="text-xs font-medium block mb-2 text-gray-700 dark:text-gray-300">
               Nada: {pitch.toFixed(1)}
             </label>
             <input
@@ -127,9 +129,9 @@ const TTSControlPanel = ({
               step="0.1"
               value={pitch}
               onChange={(e) => onPitchChange(parseFloat(e.target.value))}
-              className="w-full accent-primary cursor-pointer"
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>0.5</span>
               <span>1.0</span>
               <span>2.0</span>
@@ -139,11 +141,13 @@ const TTSControlPanel = ({
           {/* Voice Selection */}
           {availableVoices.length > 0 && (
             <div>
-              <label className="text-xs font-medium block mb-1">Suara</label>
+              <label className="text-xs font-medium block mb-2 text-gray-700 dark:text-gray-300">
+                Suara ({availableVoices.length} tersedia)
+              </label>
               <select
                 value={voiceIndex}
                 onChange={(e) => onVoiceChange(parseInt(e.target.value))}
-                className="w-full text-xs p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white cursor-pointer"
+                className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500"
               >
                 {availableVoices.map((voice, index) => (
                   <option key={index} value={index}>
@@ -154,10 +158,17 @@ const TTSControlPanel = ({
             </div>
           )}
 
+          {/* No Voices Warning */}
+          {availableVoices.length === 0 && (
+            <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
+              ⚠️ Loading voices...
+            </div>
+          )}
+
           {/* Apply Button */}
           <button
             onClick={onApplySettings}
-            className="w-full py-2 bg-primary text-white rounded-lg text-xs hover:bg-primary/90 transition-colors"
+            className="w-full py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow"
           >
             Terapkan Pengaturan
           </button>
