@@ -1,7 +1,7 @@
 // src/services/TTSManager.js
 /**
  * Text-to-Speech Manager
- * Handles chunked reading for long content with mobile support
+ * Handles chunked reading for long content to avoid Chrome's character limit
  */
 class TTSManager {
   constructor() {
@@ -28,19 +28,10 @@ class TTSManager {
     this.onProgressChange = null
     this.onError = null
     
-    // Mobile detection
-    this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    this.isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-    
-    // Chrome has ~4000 char limit, mobile even lower
-    this.MAX_CHUNK_SIZE = this.isMobile ? 2000 : 3000
-    
-    // Track speaking state
-    this.currentUtterance = null
-    this.isInitialized = false
+    // Chrome has ~4000 char limit, we use 3000 to be safe
+    this.MAX_CHUNK_SIZE = 3000
     
     this.initVoices()
-    this.setupVisibilityListener()
   }
 
   initVoices() {
@@ -60,42 +51,12 @@ class TTSManager {
           )
         ]
       }
-      
-      if (this.availableVoices.length > 0) {
-        this.isInitialized = true
-      }
     }
 
     loadVoices()
     
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = loadVoices
-    }
-    
-    // Force load voices on mobile
-    if (this.isMobile) {
-      setTimeout(loadVoices, 100)
-    }
-  }
-
-  /**
-   * Setup visibility change listener to handle background/foreground
-   */
-  setupVisibilityListener() {
-    if (this.isMobile) {
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          // Page is hidden, pause but don't stop
-          if (this.isPlaying) {
-            this.synth.pause()
-          }
-        } else {
-          // Page is visible again, resume if was playing
-          if (this.isPlaying && this.isPaused) {
-            this.synth.resume()
-          }
-        }
-      })
     }
   }
 
@@ -158,18 +119,11 @@ class TTSManager {
   }
 
   /**
-   * Start TTS - Mobile optimized
+   * Start TTS
    */
   start(htmlContent) {
     if (!htmlContent) {
       console.warn('No content provided for TTS')
-      return
-    }
-
-    // Wait for voices to be loaded (critical for mobile)
-    if (!this.isInitialized || this.availableVoices.length === 0) {
-      console.warn('Voices not loaded yet, waiting...')
-      setTimeout(() => this.start(htmlContent), 200)
       return
     }
 
@@ -193,16 +147,14 @@ class TTSManager {
       utterance.rate = this.rate
       utterance.pitch = this.pitch
       
-      // Set voice (critical for mobile)
       if (this.availableVoices.length > 0) {
-        const selectedVoice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
-        utterance.voice = selectedVoice
-        utterance.lang = selectedVoice.lang
+        utterance.voice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
       }
       
       // Track progress
       utterance.onboundary = (event) => {
         if (event.name === 'word') {
+          // Calculate approximate character position
           const chunkStart = this.getChunkStartPosition(i)
           this.currentCharIndex = chunkStart + event.charIndex
           
@@ -210,13 +162,6 @@ class TTSManager {
             this.onProgressChange(this.currentCharIndex, this.totalChars)
           }
         }
-      }
-      
-      utterance.onstart = () => {
-        console.log(`TTS: Chunk ${i + 1}/${chunks.length} started`)
-        this.isPlaying = true
-        this.isPaused = false
-        this.emitStateChange()
       }
       
       utterance.onend = () => {
@@ -234,13 +179,7 @@ class TTSManager {
       }
       
       utterance.onerror = (event) => {
-        console.error(`TTS: Error in chunk ${i + 1}:`, event.error)
-        
-        // iOS specific: "interrupted" error is normal when starting new speech
-        if (event.error === 'interrupted' && this.isIOS) {
-          console.log('TTS: iOS interruption (expected behavior)')
-          return
-        }
+        console.error(`TTS: Error in chunk ${i + 1}:`, event)
         
         if (this.onError) {
           this.onError(event)
@@ -249,7 +188,7 @@ class TTSManager {
         // Try to continue to next chunk
         if (i < chunks.length - 1) {
           this.currentUtteranceIndex = i + 1
-          setTimeout(() => this.playCurrentChunk(), 100)
+          this.playCurrentChunk()
         } else {
           this.stop()
         }
@@ -272,13 +211,13 @@ class TTSManager {
   getChunkStartPosition(chunkIndex) {
     let position = 0
     for (let i = 0; i < chunkIndex; i++) {
-      position += this.chunks[i].length + 1
+      position += this.chunks[i].length + 1 // +1 for space between chunks
     }
     return position
   }
 
   /**
-   * Play current chunk - Mobile optimized
+   * Play current chunk
    */
   playCurrentChunk() {
     if (this.currentUtteranceIndex >= this.utterances.length) {
@@ -286,35 +225,15 @@ class TTSManager {
     }
     
     const utterance = this.utterances[this.currentUtteranceIndex]
-    this.currentUtterance = utterance
     
-    // CRITICAL FIX for mobile: Don't cancel if already speaking
-    // Just queue the new utterance
-    if (this.isMobile) {
-      // On mobile, especially iOS, we need to be more careful
-      if (this.isIOS) {
-        // iOS: Cancel only if nothing is speaking
-        if (!this.synth.speaking) {
-          this.synth.cancel()
-        }
-      } else {
-        // Android: Can cancel, but with delay
-        this.synth.cancel()
-      }
-      
-      // Longer delay for mobile
-      setTimeout(() => {
-        this.synth.speak(utterance)
-        console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
-      }, this.isIOS ? 100 : 50)
-    } else {
-      // Desktop: Cancel and speak
-      this.synth.cancel()
-      setTimeout(() => {
-        this.synth.speak(utterance)
-        console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
-      }, 50)
-    }
+    // Cancel any existing speech
+    this.synth.cancel()
+    
+    // Small delay to ensure cancel completes
+    setTimeout(() => {
+      this.synth.speak(utterance)
+      console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
+    }, 50)
   }
 
   /**
@@ -335,14 +254,7 @@ class TTSManager {
   resume() {
     if (!this.isPaused) return
     
-    // Mobile fix: Resume might not work, need to restart current chunk
-    if (this.isMobile && !this.synth.speaking) {
-      console.log('TTS: Resume failed on mobile, restarting chunk')
-      this.playCurrentChunk()
-    } else {
-      this.synth.resume()
-    }
-    
+    this.synth.resume()
     this.isPaused = false
     this.isPlaying = true
     this.emitStateChange()
@@ -360,7 +272,6 @@ class TTSManager {
     this.currentUtteranceIndex = 0
     this.utterances = []
     this.chunks = []
-    this.currentUtterance = null
     this.emitStateChange()
   }
 
