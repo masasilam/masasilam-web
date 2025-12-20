@@ -2,6 +2,7 @@
 /**
  * Text-to-Speech Manager
  * Handles chunked reading for long content to avoid Chrome's character limit
+ * FIXED: Mobile compatibility improvements
  */
 class TTSManager {
   constructor() {
@@ -58,6 +59,14 @@ class TTSManager {
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = loadVoices
     }
+  }
+
+  /**
+   * Deteksi Safari Mobile
+   */
+  isSafariMobile() {
+    const ua = navigator.userAgent
+    return /iPhone|iPad|iPod/.test(ua) && /Safari/.test(ua) && !/Chrome/.test(ua)
   }
 
   /**
@@ -218,6 +227,7 @@ class TTSManager {
 
   /**
    * Play current chunk
+   * FIXED: Removed setTimeout to maintain user gesture for mobile
    */
   playCurrentChunk() {
     if (this.currentUtteranceIndex >= this.utterances.length) {
@@ -229,11 +239,10 @@ class TTSManager {
     // Cancel any existing speech
     this.synth.cancel()
     
-    // Small delay to ensure cancel completes
-    setTimeout(() => {
-      this.synth.speak(utterance)
-      console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
-    }, 50)
+    // PERBAIKAN MOBILE: Jangan gunakan setTimeout karena memutus user gesture
+    // Langsung speak tanpa delay untuk kompatibilitas mobile
+    this.synth.speak(utterance)
+    console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
   }
 
   /**
@@ -250,13 +259,23 @@ class TTSManager {
 
   /**
    * Resume TTS
+   * FIXED: Special handling for Safari mobile
    */
   resume() {
     if (!this.isPaused) return
     
-    this.synth.resume()
-    this.isPaused = false
-    this.isPlaying = true
+    // PERBAIKAN MOBILE: Safari mobile tidak support resume dengan baik
+    // Restart dari chunk saat ini
+    if (this.isSafariMobile()) {
+      this.isPaused = false
+      this.isPlaying = true
+      this.playCurrentChunk()
+    } else {
+      this.synth.resume()
+      this.isPaused = false
+      this.isPlaying = true
+    }
+    
     this.emitStateChange()
   }
 
