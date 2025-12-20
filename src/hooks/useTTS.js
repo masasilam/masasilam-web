@@ -5,12 +5,13 @@ import { isNormalInterruption, getTTSErrorMessage } from '../utils/TTSErrorTypes
 
 /**
  * React Hook for Text-to-Speech functionality
- * 
+ * Fixed for mobile browser autoplay policy
+ *
  * @returns {Object} TTS state and control functions
  */
 export const useTTS = () => {
   const ttsManagerRef = useRef(null)
-  
+
   const [state, setState] = useState({
     isPlaying: false,
     isPaused: false,
@@ -54,7 +55,7 @@ export const useTTS = () => {
       if (!isNormalInterruption(error)) {
         const message = getTTSErrorMessage(error)
         console.error('TTS Error:', error, '-', message)
-        
+
         // Optional: Show toast notification
         // toast.error(message)
       }
@@ -81,9 +82,9 @@ export const useTTS = () => {
   /**
    * Start TTS with HTML content
    */
-  const start = (htmlContent) => {
+  const start = async (htmlContent) => {
     if (!ttsManagerRef.current) return
-    ttsManagerRef.current.start(htmlContent)
+    await ttsManagerRef.current.start(htmlContent)
   }
 
   /**
@@ -113,14 +114,14 @@ export const useTTS = () => {
   /**
    * Toggle play/pause
    */
-  const toggle = (htmlContent) => {
+  const toggle = async (htmlContent) => {
     if (!ttsManagerRef.current) return
-    
+
     const handled = ttsManagerRef.current.toggle()
-    
+
     // If not handled (not started yet), start with content
     if (!handled && htmlContent) {
-      start(htmlContent)
+      await start(htmlContent)
     }
   }
 
@@ -129,14 +130,14 @@ export const useTTS = () => {
    */
   const updateSettings = ({ rate, pitch, voiceIndex }) => {
     if (!ttsManagerRef.current) return
-    
+
     const updates = {}
     if (rate !== undefined) updates.rate = rate
     if (pitch !== undefined) updates.pitch = pitch
     if (voiceIndex !== undefined) updates.voiceIndex = voiceIndex
-    
+
     ttsManagerRef.current.updateSettings(updates)
-    
+
     setState(prev => ({
       ...prev,
       ...updates
@@ -148,9 +149,9 @@ export const useTTS = () => {
    */
   const applySettings = ({ rate, pitch, voiceIndex }) => {
     if (!ttsManagerRef.current) return
-    
+
     ttsManagerRef.current.applySettings({ rate, pitch, voiceIndex })
-    
+
     setState(prev => ({
       ...prev,
       rate: ttsManagerRef.current.rate,
@@ -181,6 +182,9 @@ export const useTTS = () => {
     voiceIndex: state.voiceIndex,
     availableVoices: state.availableVoices,
     showSettings: state.showSettings,
+
+    // Manager ref for direct access (needed for mobile fixes)
+    ttsManagerRef,
     
     // Actions
     start,

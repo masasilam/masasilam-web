@@ -2,7 +2,7 @@
 /**
  * Text-to-Speech Manager
  * Handles chunked reading for long content to avoid Chrome's character limit
- * FIXED: Mobile compatibility improvements
+ * Fixed for mobile autoplay policy compliance
  */
 class TTSManager {
   constructor() {
@@ -59,14 +59,6 @@ class TTSManager {
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = loadVoices
     }
-  }
-
-  /**
-   * Deteksi Safari Mobile
-   */
-  isSafariMobile() {
-    const ua = navigator.userAgent
-    return /iPhone|iPad|iPod/.test(ua) && /Safari/.test(ua) && !/Chrome/.test(ua)
   }
 
   /**
@@ -128,13 +120,34 @@ class TTSManager {
   }
 
   /**
+   * Ensure audio context is ready (for mobile autoplay policy)
+   */
+  async ensureAudioContextReady() {
+    try {
+      // Resume if paused (critical for mobile)
+      if (this.synth.paused) {
+        this.synth.resume()
+      }
+      // Wait a bit for the context to be ready
+      await new Promise(resolve => setTimeout(resolve, 100))
+      return true
+    } catch (error) {
+      console.warn('Audio context not ready:', error)
+      return false
+    }
+  }
+
+  /**
    * Start TTS
    */
-  start(htmlContent) {
+  async start(htmlContent) {
     if (!htmlContent) {
       console.warn('No content provided for TTS')
       return
     }
+
+    // Ensure audio context is ready (critical for mobile)
+    await this.ensureAudioContextReady()
 
     this.stop() // Stop any existing playback
     
@@ -227,7 +240,6 @@ class TTSManager {
 
   /**
    * Play current chunk
-   * FIXED: Removed setTimeout to maintain user gesture for mobile
    */
   playCurrentChunk() {
     if (this.currentUtteranceIndex >= this.utterances.length) {
@@ -239,10 +251,11 @@ class TTSManager {
     // Cancel any existing speech
     this.synth.cancel()
     
-    // PERBAIKAN MOBILE: Jangan gunakan setTimeout karena memutus user gesture
-    // Langsung speak tanpa delay untuk kompatibilitas mobile
-    this.synth.speak(utterance)
-    console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
+    // Small delay to ensure cancel completes
+    setTimeout(() => {
+      this.synth.speak(utterance)
+      console.log(`TTS: Playing chunk ${this.currentUtteranceIndex + 1}/${this.utterances.length}`)
+    }, 50)
   }
 
   /**
@@ -259,23 +272,13 @@ class TTSManager {
 
   /**
    * Resume TTS
-   * FIXED: Special handling for Safari mobile
    */
   resume() {
     if (!this.isPaused) return
     
-    // PERBAIKAN MOBILE: Safari mobile tidak support resume dengan baik
-    // Restart dari chunk saat ini
-    if (this.isSafariMobile()) {
-      this.isPaused = false
-      this.isPlaying = true
-      this.playCurrentChunk()
-    } else {
-      this.synth.resume()
-      this.isPaused = false
-      this.isPlaying = true
-    }
-    
+    this.synth.resume()
+    this.isPaused = false
+    this.isPlaying = true
     this.emitStateChange()
   }
 
@@ -306,6 +309,21 @@ class TTSManager {
       return true
     }
     return false
+  }
+
+  /**
+   * Resume audio context (for mobile autoplay policy)
+   */
+  async resumeAudioContext() {
+    try {
+      if (this.synth.paused) {
+        await this.synth.resume()
+      }
+      return true
+    } catch (error) {
+      console.error('Failed to resume audio context:', error)
+      return false
+    }
   }
 
   /**
