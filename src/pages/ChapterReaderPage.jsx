@@ -208,6 +208,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showTTSLoginPrompt, setShowTTSLoginPrompt] = useState(false)
   const [showAnnotationLoginPrompt, setShowAnnotationLoginPrompt] = useState(false)
   const [showBookmarkLoginPrompt, setShowBookmarkLoginPrompt] = useState(false)
+  const [ttsLoading, setTTSLoading] = useState(false)
 
   // Reading mode - cream background
   const [readingMode, setReadingMode] = useState(() => {
@@ -803,13 +804,32 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
-  const handleTTSToggle = () => {
-    if (!isAuthenticated) {
-      setShowTTSLoginPrompt(true)
-      return
+  const handleTTSToggle = async () => {
+  if (!isAuthenticated) {
+    setShowTTSLoginPrompt(true)
+    return
+  }
+  if (!chapter?.htmlContent) return
+  
+  try {
+    setTTSLoading(true)
+    
+    // Ensure audio context is resumed first (critical for mobile)
+    const manager = tts.ttsManagerRef?.current
+    if (manager?.synth?.paused) {
+      await manager.synth.resume()
     }
-    if (!chapter?.htmlContent) return
-    tts.toggle(chapter.htmlContent)
+    
+    // Small delay to ensure audio context is ready
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    await tts.toggle(chapter.htmlContent)
+  } catch (error) {
+    console.error('TTS toggle error:', error)
+    alert('Gagal memulai TTS. Coba tekan tombol lagi.')
+  } finally {
+    setTTSLoading(false)
+  }
   }
 
   const handleTTSApplySettings = () => {
@@ -1015,7 +1035,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             <ChevronLeft className="w-5 h-5" />
             <span className="text-[9px] sm:text-xs">Prev</span>
           </button>
-          
+
           {/* Scrollable Middle: Action Buttons */}
           <div className="flex-1 overflow-x-auto hide-scrollbar">
             <div className="flex items-center gap-1 sm:gap-2 px-1">
