@@ -1,5 +1,6 @@
+
 // ============================================
-// FILE: src/hooks/useTextSelection.js - ULTIMATE FIX
+// FILE 2: src/hooks/useTextSelection.js
 // ============================================
 import { useState, useEffect } from 'react'
 
@@ -8,22 +9,14 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
   const [selectionRange, setSelectionRange] = useState(null)
   const [selectionCoords, setSelectionCoords] = useState(null)
 
-  // ✅ Normalize text by removing extra whitespace but keeping line breaks
   const normalizeText = (text) => {
-    // Replace multiple spaces/tabs with single space
-    // But keep newlines
-    return text.replace(/[ \t]+/g, ' ').trim()
-  }
-
-  // ✅ Get normalized text content
-  const getNormalizedContent = (container) => {
-    const text = container.textContent || ''
-    return normalizeText(text)
+    return text.replace(/\s+/g, ' ').trim()
   }
 
   useEffect(() => {
     const handleSelection = () => {
       if (isInteractingWithPopup) return
+
       const selection = window.getSelection()
       const rawText = selection.toString()
       const text = normalizeText(rawText)
@@ -36,6 +29,7 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
       const isInForm = target.nodeType === Node.TEXT_NODE
         ? (target.parentElement?.closest('textarea, input, [contenteditable="true"]') !== null)
         : (target.closest?.('textarea, input, [contenteditable="true"]') !== null)
+
       if (isInForm) return
 
       const chapterContentDiv = contentRef.current?.querySelector('.chapter-content')
@@ -44,37 +38,38 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
       if (text && isInChapterContent && chapterContentDiv) {
         const range = selection.getRangeAt(0).cloneRange()
 
-        // Get normalized full content
-        const fullContent = getNormalizedContent(chapterContentDiv)
+        const walker = document.createTreeWalker(
+          chapterContentDiv,
+          NodeFilter.SHOW_TEXT,
+          {
+            acceptNode: (node) => {
+              if (node.parentElement?.closest('script, style')) {
+                return NodeFilter.FILTER_REJECT
+              }
+              return NodeFilter.FILTER_ACCEPT
+            }
+          }
+        )
 
-        // Get preceding text (normalized)
-        const precedingRange = document.createRange()
-        precedingRange.setStart(chapterContentDiv, 0)
-        precedingRange.setEnd(range.startContainer, range.startOffset)
-        const precedingText = normalizeText(precedingRange.toString())
+        let currentPos = 0
+        let startOffset = -1
+        let node
 
-        // Calculate offsets in normalized text
-        const startOffset = precedingText.length
-        const endOffset = startOffset + text.length
+        while (node = walker.nextNode()) {
+          const nodeText = normalizeText(node.textContent)
+          const nodeLength = nodeText.length
 
-        // Verify
-        const textAtPosition = fullContent.substring(startOffset, endOffset)
-        const matches = textAtPosition === text
+          if (node === range.startContainer) {
+            startOffset = currentPos + Math.min(range.startOffset, node.textContent.length)
+            break
+          }
 
-        console.log('📝 Selection captured:', {
-          text: text.substring(0, 50),
-          startOffset,
-          endOffset,
-          length: text.length,
-          verification: matches ? '✅ Match' : '⚠️ Mismatch',
-          textAtPosition: textAtPosition.substring(0, 50)
-        })
-
-        if (!matches) {
-          console.warn('⚠️ Text verification failed')
-          console.warn('Expected:', text)
-          console.warn('Found:', textAtPosition)
+          currentPos = currentPos + nodeLength + 1
         }
+
+        if (startOffset === -1) startOffset = 0
+
+        const endOffset = startOffset + text.length
 
         setSelectedText(text)
         setSelectionRange({
@@ -88,10 +83,12 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
         const spaceBelow = window.innerHeight - rect.bottom
         const spaceAbove = rect.top
         const showAbove = spaceAbove > spaceBelow || spaceBelow < popupHeight
+
         const top = showAbove
           ? rect.top + window.scrollY - popupHeight - 10
           : rect.bottom + window.scrollY + 10
         const left = rect.left + (rect.width / 2)
+
         setSelectionCoords({ top, left })
       } else if (!isInteractingWithPopup && !isInForm) {
         clearSelection()
@@ -106,6 +103,7 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
 
     document.addEventListener('mouseup', handleSelection)
     document.addEventListener('touchend', handleSelection)
+
     return () => {
       document.removeEventListener('mouseup', handleSelection)
       document.removeEventListener('touchend', handleSelection)

@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/pages/ChapterReaderPage.jsx - COMPLETE FIXED VERSION
+// FILE 3: src/pages/ChapterReaderPage.jsx
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -75,11 +75,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   })
 
   const fullChapterPath = chapterPath || ''
-
-  // ✅ FIX: Gunakan useRef untuk menyimpan stopOnUnmount flag
   const stopTTSOnUnmount = useRef(true)
 
-  // Custom hooks
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(
     bookSlug,
     chapter,
@@ -117,16 +114,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     if (!chapter?.htmlContent) return
-
-    console.log('🎯 handleTTSToggle called, current state:', {
-      isPlaying: tts.isPlaying,
-      isPaused: tts.isPaused,
-      isEnabled: tts.isEnabled
-    })
-
-    // ✅ FIX: Set flag to prevent auto-stop
     stopTTSOnUnmount.current = false
-
     tts.toggle(chapter.htmlContent)
   }
 
@@ -146,12 +134,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     onExportClose: () => setShowExportModal(false)
   })
 
-  // Save reading mode preference
   useEffect(() => {
     localStorage.setItem('readingMode', readingMode)
   }, [readingMode])
 
-  // Auto-save progress
   useEffect(() => {
     if (!isAuthenticated || !chapter?.chapterNumber) return
 
@@ -172,7 +158,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         position: window.scrollY,
         readingTimeSeconds: elapsedSeconds,
         isCompleted
-      }).catch(error => console.error('Error saving progress:', error))
+      }).catch(() => {})
 
       setProgressData(prev => ({
         ...prev,
@@ -184,17 +170,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return () => clearInterval(interval)
   }, [isAuthenticated, chapter, bookSlug, progressData.startTime])
 
-  // ✅ FIX: Stop TTS hanya saat chapter berubah atau unmount dengan flag
   useEffect(() => {
     return () => {
       if (isAuthenticated && stopTTSOnUnmount.current) {
-        console.log('🗑️ Cleanup: Stopping TTS on unmount')
         tts.stop()
       }
     }
   }, [fullChapterPath, isAuthenticated, tts])
 
-  // Initialize chapter data
   useEffect(() => {
     const initializeChapterData = async () => {
       if (!fullChapterPath) return
@@ -204,7 +187,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       }
     }
     initializeChapterData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookSlug, fullChapterPath, isAuthenticated])
 
   useEffect(() => {
@@ -212,40 +194,33 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       fetchReviews()
       localStorage.setItem(`lastChapter_${bookSlug}`, fullChapterPath)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapter, fullChapterPath, bookSlug])
 
-  // ✅ FIX: Scroll restoration with highlight support
   useEffect(() => {
     if (!loading) {
       if (location.state?.highlightId && contentRef.current) {
-        // Scroll to specific highlight
         setTimeout(() => {
           const highlightElement = contentRef.current.querySelector(`mark[data-highlight-id="${location.state.highlightId}"]`)
           if (highlightElement) {
             highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            // Add temporary highlight effect
             highlightElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'
             setTimeout(() => {
               highlightElement.style.boxShadow = ''
             }, 2000)
           }
           window.history.replaceState({}, document.title)
-        }, 800) // Wait for highlights to render
+        }, 800)
       } else if (location.state?.scrollTo !== undefined) {
-        // Scroll to specific position
         setTimeout(() => {
           window.scrollTo({ top: location.state.scrollTo, behavior: 'smooth' })
           window.history.replaceState({}, document.title)
         }, 500)
       } else {
-        // Default scroll to top
         window.scrollTo(0, 0)
       }
     }
   }, [loading, location.state])
 
-  // Reading progress tracking
   useEffect(() => {
     const handleScroll = () => {
       if (!contentRef.current || !setReadingProgress) return
@@ -259,7 +234,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [chapter, setReadingProgress])
 
-  // External links handler
   useEffect(() => {
     if (!contentRef.current) return
     const links = contentRef.current.querySelectorAll('.chapter-content a')
@@ -278,7 +252,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       const response = await chapterService.readChapterByPath(bookSlug, fullChapterPath)
       setChapter(response)
     } catch (error) {
-      console.error('Error fetching chapter:', error)
+      // Error handling
     } finally {
       setLoading(false)
     }
@@ -293,7 +267,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         notes: data.notes || []
       })
     } catch (error) {
-      console.error('Error fetching annotations:', error)
       setAnnotations({ bookmarks: [], highlights: [], notes: [] })
     }
   }
@@ -305,12 +278,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       const reviewsData = response.data?.data || response.data || []
       setReviews(reviewsData)
     } catch (error) {
-      console.error('Error fetching reviews:', error)
       setReviews([])
     }
   }
 
-  // ✅ FIX: Convert position to string
   const handleAddBookmark = async () => {
     if (!isAuthenticated) {
       setShowBookmarkLoginPrompt(true)
@@ -324,12 +295,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       fetchAnnotations()
       alert('✓ Penanda buku ditambahkan!')
     } catch (error) {
-      console.error('Error adding bookmark:', error)
       alert('✗ Gagal menambahkan penanda buku')
     }
   }
 
-  // ✅ FIX: Use correct field names for backend
   const handleAddHighlight = async (color) => {
     if (!isAuthenticated) {
       setShowAnnotationLoginPrompt(true)
@@ -337,13 +306,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     if (!selectedText || !selectionRange) return
-
-    console.log('💾 Saving highlight:', {
-      text: selectedText,
-      startOffset: selectionRange.startOffset,
-      endOffset: selectionRange.endOffset,
-      color
-    })
 
     try {
       await chapterService.addHighlight(bookSlug, parseInt(chapter.chapterNumber), {
@@ -356,7 +318,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       fetchAnnotations()
       alert('✓ Highlight ditambahkan!')
     } catch (error) {
-      console.error('Error adding highlight:', error)
       alert('✗ Gagal menambahkan highlight')
     }
   }
@@ -379,7 +340,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       fetchAnnotations()
       alert('✓ Catatan ditambahkan!')
     } catch (error) {
-      console.error('Error adding note:', error)
       alert('✗ Gagal menambahkan catatan')
     }
   }
@@ -430,7 +390,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       fetchReviews()
       alert('✓ Review ditambahkan!')
     } catch (error) {
-      console.error('Error adding review:', error)
       alert('✗ Gagal menambahkan review: ' + (error.response?.data?.message || error.message))
     }
   }
@@ -448,8 +407,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       }
       fetchReviews()
     } catch (error) {
-      console.error('Error toggling like:', error)
-      alert('Gagal memproses like')
+      // Error handling
     }
   }
 
@@ -465,7 +423,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       fetchReviews()
       alert('✓ Balasan ditambahkan!')
     } catch (error) {
-      console.error('Error adding reply:', error)
       alert('✗ Gagal menambahkan balasan: ' + (error.response?.data?.message || error.message))
     }
   }
@@ -475,30 +432,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return breadcrumbs.map(b => b.slug).join('/')
   }
 
-  // ✅ FIX: Smart annotation click handler with highlight support
   const handleAnnotationClick = (e, annotation) => {
     e.preventDefault()
     e.stopPropagation()
 
-    console.log('🔍 Annotation clicked:', {
-      annotation,
-      currentChapter: chapter?.chapterNumber,
-      bookSlug
-    })
-
     setShowToolbar(false)
 
-    // Check if annotation is in current chapter
     if (annotation.chapterNumber === parseInt(chapter?.chapterNumber)) {
-      // Same chapter
-
-      // For highlights, try to scroll to the highlighted element
       if (annotation.highlightedText && contentRef.current) {
         setTimeout(() => {
           const highlightElement = contentRef.current.querySelector(`mark[data-highlight-id="${annotation.id}"]`)
           if (highlightElement) {
             highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            // Add temporary highlight effect
             highlightElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'
             setTimeout(() => {
               highlightElement.style.boxShadow = ''
@@ -508,18 +453,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         }, 100)
       }
 
-      // For bookmarks or if highlight element not found, scroll to position
       const position = parseInt(annotation.position) || 0
-      console.log('📍 Same chapter - scrolling to position:', position)
       window.scrollTo({ top: position, behavior: 'smooth' })
 
     } else {
-      // Different chapter - need to navigate
       if (annotation.chapterSlug) {
         const targetUrl = buildChapterUrl(bookSlug, annotation.chapterSlug)
-        console.log('🚀 Navigating to:', targetUrl)
 
-        // For highlights, pass highlightId; for bookmarks, pass scrollTo position
         if (annotation.highlightedText) {
           navigate(targetUrl, { state: { highlightId: annotation.id } })
         } else {
@@ -528,7 +468,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         }
       } else {
         const chapterName = annotation.chapterTitle || `Bab ${annotation.chapterNumber}`
-        console.warn('⚠️ No chapterSlug available for annotation')
         alert(`Anotasi ini berada di "${chapterName}". Navigasi ke bab tersebut untuk melihatnya.`)
       }
     }
@@ -548,16 +487,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return chapter.htmlContent
   }, [chapter?.htmlContent])
 
-  // ✅ FIX: Filter highlights for current chapter only
   const currentChapterHighlights = useMemo(() => {
-    const filtered = annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
-    console.log('🔍 Highlights for current chapter:', {
-      total: annotations.highlights.length,
-      filtered: filtered.length,
-      currentChapter: chapter?.chapterNumber,
-      highlights: filtered
-    })
-    return filtered
+    return annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
   }, [annotations.highlights, chapter?.chapterNumber])
 
   if (loading) {
@@ -581,19 +512,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     )
   }
 
-  console.log('🎯 TTS Debug:', {
-    isAuthenticated,
-    isEnabled: tts.isEnabled,
-    isPlaying: tts.isPlaying,
-    isPaused: tts.isPaused,
-    shouldShowPanel: isAuthenticated && tts.isEnabled
-  })
-
   return (
     <div className="relative pb-20">
       <style>{hideScrollbarStyle}</style>
 
-      {/* Tracking Indicator */}
       {isTracking && isAuthenticated && (
         <div className="fixed top-16 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2 z-50 shadow-lg">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
@@ -601,7 +523,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </div>
       )}
 
-      {/* Login Modals */}
       {showTTSLoginPrompt && (
         <LoginPromptModal
           icon={Volume2}
@@ -635,7 +556,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Search Modal */}
       {showSearchModal && (
         <SearchInBook
           bookSlug={bookSlug}
@@ -643,7 +563,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Export Modal */}
       {showExportModal && (
         <ExportAnnotations
           bookSlug={bookSlug}
@@ -651,7 +570,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Footnote Popup */}
       {footnotePopup && (
         <FootnotePopup
           content={footnotePopup.content}
@@ -662,10 +580,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Swipe Indicator */}
       <SwipeIndicator direction={swipeDirection} />
 
-      {/* Breadcrumbs */}
       {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
         <nav className="mb-6 text-sm">
           <ol className="flex items-center gap-2 flex-wrap">
@@ -693,12 +609,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </nav>
       )}
 
-      {/* TTS Voice Setup Banner */}
       {isAuthenticated && tts.availableVoices.length > 0 && (
         <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
       )}
 
-      {/* TTS Control Panel */}
       {isAuthenticated && tts.isEnabled && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
@@ -725,7 +639,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Bottom Toolbar */}
       <BottomToolbar
         chapter={chapter}
         isAuthenticated={isAuthenticated}
@@ -747,7 +660,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         onReadingModeToggle={() => setReadingMode(!readingMode)}
       />
 
-      {/* Text Selection Popup */}
       {selectedText && selectionCoords && (
         <TextSelectionPopup
           selectedText={selectedText}
@@ -771,7 +683,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* Annotation Panel */}
       {isAuthenticated && showToolbar && (
         <AnnotationPanel
           annotations={annotations}
@@ -785,7 +696,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       )}
 
       <article ref={contentRef}>
-        {/* Header */}
         <header className="mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">
             {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
@@ -793,7 +703,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
         </header>
 
-        {/* Chapter Stats Widget */}
         {isAuthenticated && (
           <ChapterStatsWidget
             bookSlug={bookSlug}
@@ -801,13 +710,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         )}
 
-        {/* Reading Area with Border */}
         <div className={`transition-colors duration-300 rounded-lg my-8 ${
           readingMode
             ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300'
             : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
         }`}>
-          {console.log('🎨 Rendering ChapterContent with highlights:', currentChapterHighlights)}
           <ChapterContent
             htmlContent={memoizedContent}
             fontSize={fontSize}
@@ -816,7 +723,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         </div>
 
-        {/* Chapter Rating */}
         <div className="my-8">
           <ChapterRating
             bookSlug={bookSlug}
@@ -826,7 +732,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         </div>
 
-        {/* Reviews Section */}
         <ReviewsSection
           reviews={reviews}
           isAuthenticated={isAuthenticated}
