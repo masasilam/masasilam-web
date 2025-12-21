@@ -1,5 +1,5 @@
 // ============================================
-// FILE 13: src/hooks/useTextSelection.js
+// FILE: src/hooks/useTextSelection.js - ULTIMATE FIX
 // ============================================
 import { useState, useEffect } from 'react'
 
@@ -8,11 +8,28 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
   const [selectionRange, setSelectionRange] = useState(null)
   const [selectionCoords, setSelectionCoords] = useState(null)
 
+  // ✅ Normalize text by removing extra whitespace but keeping line breaks
+  const normalizeText = (text) => {
+    // Replace multiple spaces/tabs with single space
+    // But keep newlines
+    return text.replace(/[ \t]+/g, ' ').trim()
+  }
+
+  // ✅ Get normalized text content
+  const getNormalizedContent = (container) => {
+    const text = container.textContent || ''
+    return normalizeText(text)
+  }
+
   useEffect(() => {
     const handleSelection = () => {
       if (isInteractingWithPopup) return
       const selection = window.getSelection()
-      const text = selection.toString().trim()
+      const rawText = selection.toString()
+      const text = normalizeText(rawText)
+
+      if (!text) return
+
       const target = selection.anchorNode
       if (!target) return
 
@@ -24,10 +41,48 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
       const chapterContentDiv = contentRef.current?.querySelector('.chapter-content')
       const isInChapterContent = chapterContentDiv?.contains(selection.anchorNode)
 
-      if (text && isInChapterContent) {
-        setSelectedText(text)
+      if (text && isInChapterContent && chapterContentDiv) {
         const range = selection.getRangeAt(0).cloneRange()
-        setSelectionRange(range)
+
+        // Get normalized full content
+        const fullContent = getNormalizedContent(chapterContentDiv)
+
+        // Get preceding text (normalized)
+        const precedingRange = document.createRange()
+        precedingRange.setStart(chapterContentDiv, 0)
+        precedingRange.setEnd(range.startContainer, range.startOffset)
+        const precedingText = normalizeText(precedingRange.toString())
+
+        // Calculate offsets in normalized text
+        const startOffset = precedingText.length
+        const endOffset = startOffset + text.length
+
+        // Verify
+        const textAtPosition = fullContent.substring(startOffset, endOffset)
+        const matches = textAtPosition === text
+
+        console.log('📝 Selection captured:', {
+          text: text.substring(0, 50),
+          startOffset,
+          endOffset,
+          length: text.length,
+          verification: matches ? '✅ Match' : '⚠️ Mismatch',
+          textAtPosition: textAtPosition.substring(0, 50)
+        })
+
+        if (!matches) {
+          console.warn('⚠️ Text verification failed')
+          console.warn('Expected:', text)
+          console.warn('Found:', textAtPosition)
+        }
+
+        setSelectedText(text)
+        setSelectionRange({
+          range,
+          startOffset,
+          endOffset
+        })
+
         const rect = range.getBoundingClientRect()
         const popupHeight = 400
         const spaceBelow = window.innerHeight - rect.bottom
@@ -61,6 +116,7 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
     setSelectedText('')
     setSelectionRange(null)
     setSelectionCoords(null)
+    window.getSelection()?.removeAllRanges()
   }
 
   return {

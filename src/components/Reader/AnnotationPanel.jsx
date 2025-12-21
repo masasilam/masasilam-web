@@ -1,20 +1,33 @@
 // ============================================
-// FILE 8: src/components/Reader/AnnotationPanel.jsx
+// FILE: src/components/Reader/AnnotationPanel.jsx - COMPLETE FIXED
 // ============================================
 import { X, Bookmark, Highlighter, StickyNote } from 'lucide-react'
 
-const AnnotationPanel = ({ 
-  annotations, 
+const AnnotationPanel = ({
+  annotations,
   currentChapterNumber,
-  onClose, 
+  onClose,
   onAnnotationClick,
   onDeleteBookmark,
   onDeleteHighlight,
-  onDeleteNote 
+  onDeleteNote
 }) => {
-  const currentChapterHighlights = annotations.highlights?.filter(
-    h => (h.page || h.chapterNumber) === parseInt(currentChapterNumber)
-  ) || []
+  // Helper function to get chapter label from API data
+  const getChapterLabel = (annotation) => {
+    if (annotation.chapterTitle) {
+      return annotation.chapterTitle
+    }
+    if (annotation.chapterNumber) {
+      return `Bab ${annotation.chapterNumber}`
+    }
+    if (annotation.chapter?.title) {
+      return annotation.chapter.title
+    }
+    if (annotation.page) {
+      return `Bab ${annotation.page}`
+    }
+    return 'Bab tidak diketahui'
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose}>
@@ -44,13 +57,22 @@ const AnnotationPanel = ({
                         className="flex-1 text-left text-sm hover:text-primary"
                       >
                         <div className="font-medium">
-                          {bookmark.chapter?.title || `Bab ${bookmark.page}`}
+                          {getChapterLabel(bookmark)}
                         </div>
                         {bookmark.note && (
                           <div className="text-gray-600 dark:text-gray-400 text-xs mt-1">
                             {bookmark.note}
                           </div>
                         )}
+                        <div className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+                          {new Date(bookmark.createdAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
                       </button>
                       <button
                         onClick={() => onDeleteBookmark(bookmark.id)}
@@ -69,23 +91,36 @@ const AnnotationPanel = ({
           <div className="mb-6">
             <h4 className="font-semibold mb-3 flex items-center gap-2">
               <Highlighter className="w-5 h-5" />
-              Highlight ({currentChapterHighlights.length})
+              Highlight ({annotations.highlights.length})
             </h4>
-            {currentChapterHighlights.length === 0 ? (
-              <p className="text-sm text-gray-500">Belum ada highlight di bab ini</p>
+            {annotations.highlights.length === 0 ? (
+              <p className="text-sm text-gray-500">Belum ada highlight</p>
             ) : (
               <div className="space-y-2">
-                {currentChapterHighlights.map(highlight => (
+                {annotations.highlights.map(highlight => (
                   <div key={highlight.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                      <button
+                        onClick={(e) => onAnnotationClick(e, highlight)}
+                        className="flex-1 text-left hover:opacity-80 transition-opacity"
+                      >
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          {getChapterLabel(highlight)}
+                        </div>
                         <div
                           className="text-sm italic p-2 rounded"
                           style={{ backgroundColor: highlight.color + '40' }}
                         >
-                          "{highlight.selectedText}"
+                          "{highlight.highlightedText}"
                         </div>
-                      </div>
+                        <div className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+                          {new Date(highlight.createdAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </button>
                       <button
                         onClick={() => onDeleteHighlight(highlight.id)}
                         className="text-red-500 hover:text-red-700 ml-2"
@@ -117,16 +152,23 @@ const AnnotationPanel = ({
                         className="flex-1 text-left"
                       >
                         <div className="text-sm font-medium mb-1">
-                          {note.chapter?.title || `Bab ${note.page}`}
+                          {getChapterLabel(note)}
                         </div>
                         <div className="text-sm text-gray-700 dark:text-gray-300">
                           {note.content}
                         </div>
                         {note.selectedText && (
                           <div className="text-xs text-gray-500 italic mt-1">
-                            "{note.selectedText.substring(0, 100)}..."
+                            "{note.selectedText.substring(0, 100)}{note.selectedText.length > 100 ? '...' : ''}"
                           </div>
                         )}
+                        <div className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+                          {new Date(note.createdAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
                       </button>
                       <button
                         onClick={() => onDeleteNote(note.id)}

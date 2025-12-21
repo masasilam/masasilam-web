@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/pages/ChapterReaderPage.jsx - TTS FIXED
+// FILE: src/pages/ChapterReaderPage.jsx - COMPLETE FIXED VERSION
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -215,15 +215,33 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapter, fullChapterPath, bookSlug])
 
-  // Scroll restoration
+  // ✅ FIX: Scroll restoration with highlight support
   useEffect(() => {
-    if (location.state?.scrollTo !== undefined && !loading) {
-      setTimeout(() => {
-        window.scrollTo({ top: location.state.scrollTo, behavior: 'smooth' })
-        window.history.replaceState({}, document.title)
-      }, 500)
-    } else {
-      window.scrollTo(0, 0)
+    if (!loading) {
+      if (location.state?.highlightId && contentRef.current) {
+        // Scroll to specific highlight
+        setTimeout(() => {
+          const highlightElement = contentRef.current.querySelector(`mark[data-highlight-id="${location.state.highlightId}"]`)
+          if (highlightElement) {
+            highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            // Add temporary highlight effect
+            highlightElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'
+            setTimeout(() => {
+              highlightElement.style.boxShadow = ''
+            }, 2000)
+          }
+          window.history.replaceState({}, document.title)
+        }, 800) // Wait for highlights to render
+      } else if (location.state?.scrollTo !== undefined) {
+        // Scroll to specific position
+        setTimeout(() => {
+          window.scrollTo({ top: location.state.scrollTo, behavior: 'smooth' })
+          window.history.replaceState({}, document.title)
+        }, 500)
+      } else {
+        // Default scroll to top
+        window.scrollTo(0, 0)
+      }
     }
   }, [loading, location.state])
 
@@ -292,6 +310,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
+  // ✅ FIX: Convert position to string
   const handleAddBookmark = async () => {
     if (!isAuthenticated) {
       setShowBookmarkLoginPrompt(true)
@@ -299,8 +318,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
     try {
       await chapterService.addBookmark(bookSlug, parseInt(chapter.chapterNumber), {
-        position: window.scrollY,
-        note: ''
+        position: String(window.scrollY)
       })
       setShowToolbar(false)
       fetchAnnotations()
@@ -311,6 +329,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
+  // ✅ FIX: Use correct field names for backend
   const handleAddHighlight = async (color) => {
     if (!isAuthenticated) {
       setShowAnnotationLoginPrompt(true)
@@ -318,12 +337,20 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     if (!selectedText || !selectionRange) return
+
+    console.log('💾 Saving highlight:', {
+      text: selectedText,
+      startOffset: selectionRange.startOffset,
+      endOffset: selectionRange.endOffset,
+      color
+    })
+
     try {
       await chapterService.addHighlight(bookSlug, parseInt(chapter.chapterNumber), {
-        selectedText,
+        highlightedText: selectedText,
         color,
-        startOffset: selectionRange.startOffset,
-        endOffset: selectionRange.endOffset
+        startPosition: selectionRange.startOffset,
+        endPosition: selectionRange.endOffset
       })
       clearSelection()
       fetchAnnotations()
@@ -448,17 +475,61 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return breadcrumbs.map(b => b.slug).join('/')
   }
 
+  // ✅ FIX: Smart annotation click handler with highlight support
   const handleAnnotationClick = (e, annotation) => {
     e.preventDefault()
     e.stopPropagation()
-    const position = parseInt(annotation.position) || 0
+
+    console.log('🔍 Annotation clicked:', {
+      annotation,
+      currentChapter: chapter?.chapterNumber,
+      bookSlug
+    })
+
     setShowToolbar(false)
-    if (annotation.page === parseInt(chapter?.chapterNumber)) {
+
+    // Check if annotation is in current chapter
+    if (annotation.chapterNumber === parseInt(chapter?.chapterNumber)) {
+      // Same chapter
+
+      // For highlights, try to scroll to the highlighted element
+      if (annotation.highlightedText && contentRef.current) {
+        setTimeout(() => {
+          const highlightElement = contentRef.current.querySelector(`mark[data-highlight-id="${annotation.id}"]`)
+          if (highlightElement) {
+            highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            // Add temporary highlight effect
+            highlightElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'
+            setTimeout(() => {
+              highlightElement.style.boxShadow = ''
+            }, 2000)
+            return
+          }
+        }, 100)
+      }
+
+      // For bookmarks or if highlight element not found, scroll to position
+      const position = parseInt(annotation.position) || 0
+      console.log('📍 Same chapter - scrolling to position:', position)
       window.scrollTo({ top: position, behavior: 'smooth' })
+
     } else {
-      if (annotation.chapter) {
-        const targetUrl = buildChapterUrl(bookSlug, annotation.chapter)
-        navigate(targetUrl, { state: { scrollTo: position } })
+      // Different chapter - need to navigate
+      if (annotation.chapterSlug) {
+        const targetUrl = buildChapterUrl(bookSlug, annotation.chapterSlug)
+        console.log('🚀 Navigating to:', targetUrl)
+
+        // For highlights, pass highlightId; for bookmarks, pass scrollTo position
+        if (annotation.highlightedText) {
+          navigate(targetUrl, { state: { highlightId: annotation.id } })
+        } else {
+          const position = parseInt(annotation.position) || 0
+          navigate(targetUrl, { state: { scrollTo: position } })
+        }
+      } else {
+        const chapterName = annotation.chapterTitle || `Bab ${annotation.chapterNumber}`
+        console.warn('⚠️ No chapterSlug available for annotation')
+        alert(`Anotasi ini berada di "${chapterName}". Navigasi ke bab tersebut untuk melihatnya.`)
       }
     }
   }
@@ -476,6 +547,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     if (!chapter?.htmlContent) return ''
     return chapter.htmlContent
   }, [chapter?.htmlContent])
+
+  // ✅ FIX: Filter highlights for current chapter only
+  const currentChapterHighlights = useMemo(() => {
+    const filtered = annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
+    console.log('🔍 Highlights for current chapter:', {
+      total: annotations.highlights.length,
+      filtered: filtered.length,
+      currentChapter: chapter?.chapterNumber,
+      highlights: filtered
+    })
+    return filtered
+  }, [annotations.highlights, chapter?.chapterNumber])
 
   if (loading) {
     return (
@@ -610,12 +693,12 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </nav>
       )}
 
-      {/* ✅ TTS Voice Setup Banner - Shows if Indonesian voice not available */}
+      {/* TTS Voice Setup Banner */}
       {isAuthenticated && tts.availableVoices.length > 0 && (
         <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
       )}
 
-      {/* ✅ TTS Control Panel - FIXED CONDITION */}
+      {/* TTS Control Panel */}
       {isAuthenticated && tts.isEnabled && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
@@ -677,11 +760,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             clearSelection()
             navigate('/masuk', { state: { from: location.pathname } })
           }}
-          onMouseDown={(e) => { 
+          onMouseDown={(e) => {
             e.stopPropagation()
             setIsInteractingWithPopup(true)
           }}
-          onTouchStart={(e) => { 
+          onTouchStart={(e) => {
             e.stopPropagation()
             setIsInteractingWithPopup(true)
           }}
@@ -720,14 +803,16 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
         {/* Reading Area with Border */}
         <div className={`transition-colors duration-300 rounded-lg my-8 ${
-          readingMode 
-            ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300' 
+          readingMode
+            ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300'
             : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
         }`}>
-          <ChapterContent 
-            htmlContent={memoizedContent} 
-            fontSize={fontSize} 
-            readingMode={readingMode} 
+          {console.log('🎨 Rendering ChapterContent with highlights:', currentChapterHighlights)}
+          <ChapterContent
+            htmlContent={memoizedContent}
+            fontSize={fontSize}
+            readingMode={readingMode}
+            highlights={currentChapterHighlights}
           />
         </div>
 
