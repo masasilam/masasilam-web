@@ -334,9 +334,9 @@ const BookDetailPage = () => {
             {book.genres && (
               <div className="mb-6">
                 <div className="flex flex-wrap gap-2">
-                  {book.genres.split(',').reverse().map((genre, index) => {
+                    {book.genres.split(',').reverse().map((genre, index) => {
                     const genreName = genre.trim()
-                    const genreSlug = genreName.toLowerCase().replace(/\s+/g, '-')
+                    const genreSlug = genreName.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')
                     return <Link key={index} to={`/kategori/${genreSlug}`} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-primary hover:text-white transition">{genreName}</Link>
                   })}
                 </div>
