@@ -1,148 +1,72 @@
 // ============================================
-// src/services/dashboardService.js - IMPROVED
+// src/services/dashboardService.js - OPTIMIZED
 // ============================================
 
 import api from './api'
 
-// Helper function untuk menormalisasi respons
-const normalizeResponse = (apiResponse, dataPath = 'data') => {
-  if (!apiResponse || !apiResponse.data) {
-    return {
-      success: false,
-      message: 'No response data',
-      data: { items: [], totalData: 0 }
-    }
-  }
+// Normalize API response - support both object & array data
+const normalize = (res, isArray = false) => {
+  if (!res?.data) return { success: false, message: 'No data', data: isArray ? [] : null }
 
-  const responseData = apiResponse.data
-  
-  // Cari data di berbagai kemungkinan path
-  let items = []
-  let totalData = 0
-  
-  // Coba berbagai struktur
-  if (responseData[dataPath]?.list) {
-    items = responseData[dataPath].list
-    totalData = responseData[dataPath].total || 0
-  } else if (responseData.list) {
-    items = responseData.list
-    totalData = responseData.total || 0
-  } else if (responseData[dataPath]?.items) {
-    items = responseData[dataPath].items
-    totalData = responseData[dataPath].totalData || 0
-  } else if (responseData.items) {
-    items = responseData.items
-    totalData = responseData.totalData || 0
-  } else if (Array.isArray(responseData[dataPath])) {
-    items = responseData[dataPath]
-    totalData = items.length
-  } else if (Array.isArray(responseData)) {
-    items = responseData
-    totalData = items.length
-  }
+  const { result, detail, code, data } = res.data
 
+  if (!isArray) return { success: result === 'Success', message: detail || '', code: code || 200, data }
+
+  // Handle array responses
+  const items = data?.list || data?.items || (Array.isArray(data) ? data : [])
   return {
-    success: responseData.result === 'Success',
-    message: responseData.detail || '',
-    code: responseData.code || 200,
+    success: result === 'Success',
+    message: detail || '',
+    code: code || 200,
     data: {
       items,
-      totalData,
-      page: responseData[dataPath]?.page || responseData.page || 1,
-      limit: responseData[dataPath]?.limit || responseData.limit || 12,
-      total: responseData[dataPath]?.total || responseData.total || totalData
+      total: data?.total || items.length,
+      page: data?.page || 1,
+      limit: data?.limit || 12
     }
   }
 }
 
 export const dashboardService = {
-  // Main Dashboard - Overview lengkap
-  getMainDashboard: async () => {
-    const response = await api.get('/dashboard')
-    return normalizeResponse(response)
-  },
+  getMainDashboard: () => api.get('/dashboard').then(res => normalize(res)),
 
-  // Perpustakaan - dengan filter & sort
-  getLibrary: async (filter = 'all', page = 1, limit = 12, sortBy = 'last_read') => {
-    try {
-      const response = await api.get('/dashboard/library', {
-        params: { filter, page, limit, sortBy }
-      })
-      return normalizeResponse(response)
-    } catch (error) {
-      console.error('Dashboard service error:', error)
-      throw error
-    }
-  },
+  getLibrary: (filter = 'all', page = 1, limit = 12, sortBy = 'last_read') =>
+    api.get('/dashboard/library', { params: { filter, page, limit, sortBy } })
+      .then(res => normalize(res, true)),
 
-  // Riwayat Baca - DIPERBAIKI
-  getReadingHistory: async (days = 7, page = 1, limit = 20) => {
-    try {
-      const response = await api.get('/dashboard/history', {
-        params: { days, page, limit }
-      })
-      return normalizeResponse(response)
-    } catch (error) {
-      console.error('Reading history error:', error)
-      throw error
-    }
-  },
+  getReadingHistory: (days = 7, page = 1, limit = 20) =>
+    api.get('/dashboard/history', { params: { days, page, limit } })
+      .then(res => normalize(res, true)),
 
-  // Statistik Membaca
-  getStatistics: async (period = 30) => {
-    const response = await api.get('/dashboard/stats', {
-      params: { period }
-    })
-    return normalizeResponse(response)
-  },
+  getStatistics: (period = 30) =>
+    api.get('/dashboard/stats', { params: { period } })
+      .then(res => normalize(res)),
 
-  // Semua Annotations (bookmarks, highlights, notes)
-  getAnnotations: async (type = 'all', page = 1, limit = 20, sortBy = 'recent') => {
-    const response = await api.get('/dashboard/annotations', {
-      params: { type, page, limit, sortBy }
-    })
-    return normalizeResponse(response)
-  },
+  getAnnotations: (type = 'all', page = 1, limit = 20, sortBy = 'recent') =>
+    api.get('/dashboard/annotations', { params: { type, page, limit, sortBy } })
+      .then(res => normalize(res, true)),
 
-  // Ulasan User
-  getReviews: async (page = 1, limit = 10) => {
-    const response = await api.get('/dashboard/reviews', {
-      params: { page, limit }
-    })
-    return normalizeResponse(response)
-  },
+  getReviews: (page = 1, limit = 10) =>
+    api.get('/dashboard/reviews', { params: { page, limit } })
+      .then(res => normalize(res, true)),
 
-  // Quick Stats - untuk widgets
-  getQuickStats: async () => {
-    const response = await api.get('/dashboard/quick-stats')
-    return normalizeResponse(response)
-  },
+  getQuickStats: () =>
+    api.get('/dashboard/quick-stats')
+      .then(res => normalize(res)),
 
-  // Reading Calendar
-  getCalendar: async (year, month) => {
-    const response = await api.get('/dashboard/calendar', {
-      params: { year, month }
-    })
-    return normalizeResponse(response)
-  },
+  getCalendar: (year, month) =>
+    api.get('/dashboard/calendar', { params: { year, month } })
+      .then(res => normalize(res)),
 
-  // Achievements
-  getAchievements: async () => {
-    const response = await api.get('/dashboard/achievements')
-    return normalizeResponse(response)
-  },
+  getAchievements: () =>
+    api.get('/dashboard/achievements')
+      .then(res => normalize(res, true)),
 
-  // Reading Goals
-  getGoals: async () => {
-    const response = await api.get('/dashboard/goals')
-    return normalizeResponse(response)
-  },
+  getGoals: () =>
+    api.get('/dashboard/goals')
+      .then(res => normalize(res)),
 
-  // Recommendations
-  getRecommendations: async (limit = 10) => {
-    const response = await api.get('/dashboard/recommendations', {
-      params: { limit }
-    })
-    return normalizeResponse(response)
-  }
+  getRecommendations: (limit = 10) =>
+    api.get('/dashboard/recommendations', { params: { limit } })
+      .then(res => normalize(res, true))
 }
