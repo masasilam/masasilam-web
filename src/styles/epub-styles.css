@@ -19,13 +19,21 @@
   -moz-hyphens: auto;
   -ms-hyphens: auto;
   hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
+  /* Relaxed hyphenation limits for Indonesian */
+  -webkit-hyphenate-limit-before: 2;
+  -webkit-hyphenate-limit-after: 3;
+  -webkit-hyphenate-limit-chars: 5 2 2;
+  -moz-hyphenate-limit-chars: 5 2 2;
+  hyphenate-limit-chars: 5 2 2;
   hyphenate-limit-lines: 2;
+  -webkit-hyphenate-limit-last: always;
+  hyphenate-limit-last: always;
+  /* Better word breaking */
   word-wrap: break-word;
   overflow-wrap: break-word;
+  word-break: normal;
   /* Bahasa Indonesia hyphenation */
-  -webkit-hyphenate-language: id;
-  hyphenate-language: id;
+  -webkit-locale: "id";
   lang: id;
 }
 
