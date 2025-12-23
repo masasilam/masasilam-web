@@ -35,6 +35,28 @@ const hideScrollbarStyle = `
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Enhanced hyphenation support */
+  .chapter-content,
+  .chapter-content p,
+  .chapter-content blockquote {
+    -webkit-hyphens: auto !important;
+    -moz-hyphens: auto !important;
+    -ms-hyphens: auto !important;
+    hyphens: auto !important;
+
+    /* Better word breaking for Indonesian */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+
+    /* Hyphenation limits */
+    -webkit-hyphenate-limit-before: 2;
+    -webkit-hyphenate-limit-after: 3;
+    -webkit-hyphenate-limit-chars: 5 2 2;
+    hyphenate-limit-chars: 5 2 2;
+    hyphenate-limit-lines: 2;
   }`
 
 const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
@@ -46,8 +68,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const isAuthenticated = !!localStorage.getItem('token')
   const tts = useTTS()
 
-  const { isTracking } = useReadingTracker(bookSlug, chapterPath?.split('/').pop(), isAuthenticated)
-
+  // ✅ ALL STATE DECLARATIONS FIRST
   const [chapter, setChapter] = useState(null)
   const [loading, setLoading] = useState(true)
   const [annotations, setAnnotations] = useState({ bookmarks: [], highlights: [], notes: [] })
@@ -78,6 +99,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const fullChapterPath = chapterPath || ''
   const stopTTSOnUnmount = useRef(true)
+
+  // ✅ THEN HOOKS THAT DEPEND ON STATE (after chapter is declared)
+  const { isTracking } = useReadingTracker(bookSlug, chapter, isAuthenticated)
 
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(
     bookSlug,
@@ -763,11 +787,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           )}
         </header>
 
-        <div className={`transition-colors duration-300 rounded-lg my-8 ${
-          readingMode
-            ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300'
-            : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
-        }`}>
+        <div
+          lang="id"
+          className={`transition-colors duration-300 rounded-lg my-8 ${
+            readingMode
+              ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300'
+              : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
+          }`}
+        >
           <ChapterContent
             htmlContent={memoizedContent}
             fontSize={fontSize}
@@ -776,7 +803,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         </div>
 
-        {/* ✅ POSISI BARU: Statistik Bab setelah area baca */}
         {isAuthenticated && (
           <ChapterStatsWidget
             bookSlug={bookSlug}

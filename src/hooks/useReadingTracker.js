@@ -11,12 +11,12 @@ const generateUUID = () => {
   })
 }
 
-export const useReadingTracker = (bookSlug, chapterNumber, isAuthenticated) => {
+export const useReadingTracker = (bookSlug, chapterData, isAuthenticated) => {
   const sessionIdRef = useRef(null)
   const startTimeRef = useRef(null)
   const heartbeatIntervalRef = useRef(null)
   const [isTracking, setIsTracking] = useState(false)
-  
+
   // Generate or retrieve session ID
   useEffect(() => {
     if (!sessionIdRef.current) {
@@ -26,15 +26,22 @@ export const useReadingTracker = (bookSlug, chapterNumber, isAuthenticated) => {
 
   // Start tracking when chapter loads
   useEffect(() => {
-    if (!isAuthenticated || !bookSlug || !chapterNumber) return
+    // ✅ FIXED: Validate chapterNumber properly
+    if (!isAuthenticated || !bookSlug || !chapterData?.chapterNumber) return
+
+    const chapterNumber = parseInt(chapterData.chapterNumber)
+    if (isNaN(chapterNumber)) {
+      console.warn('Invalid chapter number:', chapterData.chapterNumber)
+      return
+    }
 
     const startTracking = async () => {
       try {
         startTimeRef.current = Date.now()
-        
+
         await chapterService.startReading(bookSlug, {
           sessionId: sessionIdRef.current,
-          chapterNumber: parseInt(chapterNumber),
+          chapterNumber: chapterNumber,
           startPosition: window.scrollY,
           deviceType: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
           source: 'web'
@@ -47,7 +54,7 @@ export const useReadingTracker = (bookSlug, chapterNumber, isAuthenticated) => {
           try {
             await chapterService.sendHeartbeat(bookSlug, {
               sessionId: sessionIdRef.current,
-              chapterNumber: parseInt(chapterNumber),
+              chapterNumber: chapterNumber,
               currentPosition: window.scrollY,
               timestamp: new Date().toISOString()
             })
@@ -69,31 +76,34 @@ export const useReadingTracker = (bookSlug, chapterNumber, isAuthenticated) => {
         clearInterval(heartbeatIntervalRef.current)
       }
     }
-  }, [bookSlug, chapterNumber, isAuthenticated])
+  }, [bookSlug, chapterData?.chapterNumber, isAuthenticated])
 
   // End tracking on unmount or page leave
   useEffect(() => {
-    if (!isAuthenticated || !isTracking) return
+    if (!isAuthenticated || !isTracking || !chapterData?.chapterNumber) return
+
+    const chapterNumber = parseInt(chapterData.chapterNumber)
+    if (isNaN(chapterNumber)) return
 
     const endTracking = async () => {
       try {
         const endTime = Date.now()
         const durationSeconds = Math.floor((endTime - startTimeRef.current) / 1000)
-        
+
         const contentHeight = document.documentElement.scrollHeight
         const viewportHeight = window.innerHeight
         const scrollableHeight = contentHeight - viewportHeight
-        const scrollDepth = scrollableHeight > 0 
+        const scrollDepth = scrollableHeight > 0
           ? Math.min(100, Math.round((window.scrollY / scrollableHeight) * 100))
           : 100
 
         await chapterService.endReading(bookSlug, {
           sessionId: sessionIdRef.current,
-          chapterNumber: parseInt(chapterNumber),
+          chapterNumber: chapterNumber,
           endPosition: window.scrollY,
           scrollDepthPercentage: scrollDepth,
           wordsRead: calculateWordsRead(),
-          interactionCount: 0 // Could track clicks, selections, etc.
+          interactionCount: 0
         })
 
         setIsTracking(false)
@@ -108,11 +118,11 @@ export const useReadingTracker = (bookSlug, chapterNumber, isAuthenticated) => {
       if (navigator.sendBeacon) {
         const data = JSON.stringify({
           sessionId: sessionIdRef.current,
-          chapterNumber: parseInt(chapterNumber),
+          chapterNumber: chapterNumber,
           endPosition: window.scrollY,
           scrollDepthPercentage: Math.round((window.scrollY / document.documentElement.scrollHeight) * 100)
         })
-        
+
         navigator.sendBeacon(
           `/api/books/${bookSlug}/chapters/reading/end`,
           new Blob([data], { type: 'application/json' })
@@ -126,7 +136,7 @@ export const useReadingTracker = (bookSlug, chapterNumber, isAuthenticated) => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       endTracking()
     }
-  }, [bookSlug, chapterNumber, isAuthenticated, isTracking])
+  }, [bookSlug, chapterData?.chapterNumber, isAuthenticated, isTracking])
 
   const calculateWordsRead = () => {
     const chapterContent = document.querySelector('.chapter-content')
