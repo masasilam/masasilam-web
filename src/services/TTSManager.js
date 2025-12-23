@@ -1,3 +1,4 @@
+// src/utils/TTSManager.js
 /**
  * Text-to-Speech Manager - MOBILE COMPATIBLE VERSION WITH WAKE LOCK
  * Handles chunked reading with mobile browser quirks fixed
@@ -124,22 +125,32 @@ class TTSManager {
       if (voices.length > 0) {
         this.availableVoices = voices
 
-        const indonesianVoices = voices.filter(v =>
-          v.lang.startsWith('id') ||
-          v.lang.startsWith('ms') ||
-          v.lang.toLowerCase().includes('indonesia') ||
-          v.lang.toLowerCase().includes('malay')
-        )
+        const indonesianVoices = voices.filter(v => {
+          const lang = v.lang.toLowerCase()
+          const name = v.name.toLowerCase()
+          return lang.startsWith('id') ||
+                 lang.startsWith('in') ||
+                 lang.startsWith('ms') ||
+                 lang.includes('indonesia') ||
+                 lang.includes('malay') ||
+                 name.includes('indonesia') ||
+                 name.includes('indonesian')
+        })
 
         if (indonesianVoices.length > 0) {
           this.availableVoices = [
             ...indonesianVoices,
-            ...voices.filter(v =>
-              !v.lang.startsWith('id') &&
-              !v.lang.startsWith('ms') &&
-              !v.lang.toLowerCase().includes('indonesia') &&
-              !v.lang.toLowerCase().includes('malay')
-            )
+            ...voices.filter(v => {
+              const lang = v.lang.toLowerCase()
+              const name = v.name.toLowerCase()
+              return !lang.startsWith('id') &&
+                     !lang.startsWith('in') &&
+                     !lang.startsWith('ms') &&
+                     !lang.includes('indonesia') &&
+                     !lang.includes('malay') &&
+                     !name.includes('indonesia') &&
+                     !name.includes('indonesian')
+            })
           ]
         }
 
@@ -149,9 +160,15 @@ class TTSManager {
         if (this.isMobile) {
           console.log('📱 Available voices:', this.availableVoices.map(v => `${v.name} (${v.lang})`))
 
-          const hasIndonesian = this.availableVoices.some(v =>
-            v.lang.startsWith('id') || v.lang.toLowerCase().includes('indonesia')
-          )
+          const hasIndonesian = this.availableVoices.some(v => {
+            const lang = v.lang.toLowerCase()
+            const name = v.name.toLowerCase()
+            return lang.startsWith('id') ||
+                   lang.startsWith('in') ||
+                   lang.includes('indonesia') ||
+                   name.includes('indonesia') ||
+                   name.includes('indonesian')
+          })
 
           if (!hasIndonesian) {
             console.warn('⚠️ No Indonesian voice found on this device')

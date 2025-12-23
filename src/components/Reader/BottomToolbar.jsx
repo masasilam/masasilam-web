@@ -1,6 +1,4 @@
-// ============================================
-// FILE 7: src/components/Reader/BottomToolbar.jsx (FIXED - ALL BUTTONS VISIBLE)
-// ============================================
+// src/components/Reader/BottomToolbar.jsx
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,7 +8,8 @@ import {
   Search,
   Menu,
   Bookmark,
-  Download
+  Download,
+  ChevronUp
 } from 'lucide-react'
 
 const BottomToolbar = ({
@@ -18,9 +17,11 @@ const BottomToolbar = ({
   isAuthenticated,
   isTTSPlaying,
   readingMode,
+  showTTSPanel, // ✅ NEW
   onPrevChapter,
   onNextChapter,
   onTTSToggle,
+  onToggleTTSPanel, // ✅ NEW
   onSearchClick,
   onToolbarToggle,
   onBookmarkClick,
@@ -29,6 +30,33 @@ const BottomToolbar = ({
 }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 shadow-lg overflow-visible">
+      {/* ✅ NEW: TTS Minimized Indicator - Show when TTS is playing but panel is hidden */}
+      {isAuthenticated && isTTSPlaying && !showTTSPanel && (
+        <div className="border-b border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+          <button
+            onClick={onToggleTTSPanel}
+            className="w-full px-4 py-2 flex items-center justify-between hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                  Audio sedang diputar
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-blue-600 dark:text-blue-400">Aktif</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <span className="text-xs">Buka Panel</span>
+              <ChevronUp className="w-4 h-4" />
+            </div>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center py-3 px-2 sm:px-4 gap-2 overflow-visible">
         {/* Left: Previous Button - FIXED POSITION */}
         <button
@@ -65,7 +93,7 @@ const BottomToolbar = ({
               </span>
             </button>
 
-            {/* TTS Button */}
+            {/* ✅ MODIFIED: TTS Button - dengan indicator panel tersembunyi */}
             <button
               onClick={onTTSToggle}
               className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative flex-shrink-0 overflow-visible ${
@@ -79,13 +107,17 @@ const BottomToolbar = ({
                   <Lock className="w-3 h-3" />
                 </div>
               )}
+              {/* ✅ Show green dot when playing with panel hidden */}
+              {isAuthenticated && isTTSPlaying && !showTTSPanel && (
+                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse border border-white dark:border-gray-900"></div>
+              )}
               {isAuthenticated && isTTSPlaying ? <Pause className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               <span className="text-[9px] sm:text-xs whitespace-nowrap">
                 {isAuthenticated && isTTSPlaying ? 'Pause' : 'Dengar'}
               </span>
             </button>
 
-            {/* Search Button - NOW ALWAYS VISIBLE */}
+            {/* Search Button */}
             <button
               onClick={onSearchClick}
               className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 relative overflow-visible"
@@ -127,7 +159,7 @@ const BottomToolbar = ({
               <span className="text-[9px] sm:text-xs whitespace-nowrap">Penanda</span>
             </button>
 
-            {/* Export Button - NOW ALWAYS VISIBLE */}
+            {/* Export Button */}
             <button
               onClick={() => alert('Fitur ekspor segera hadir!')}
               className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 relative overflow-visible"

@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/pages/ChapterReaderPage.jsx
-// ============================================
+// src/pages/ChapterReaderPage.jsx
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
@@ -66,6 +64,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showSearchLoginPrompt, setShowSearchLoginPrompt] = useState(false)
   const [showExportLoginPrompt, setShowExportLoginPrompt] = useState(false)
 
+  // ✅ NEW: State untuk show/hide TTS panel
+  const [showTTSPanel, setShowTTSPanel] = useState(true)
+
   const [readingMode, setReadingMode] = useState(() => {
     return localStorage.getItem('readingMode') === 'true'
   })
@@ -110,14 +111,33 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     clearSelection
   } = useTextSelection(contentRef, isInteractingWithPopup)
 
+  // ✅ MODIFIED: Handler TTS toggle - show panel ketika mulai
   const handleTTSToggle = () => {
     if (!isAuthenticated) {
       setShowTTSLoginPrompt(true)
       return
     }
     if (!chapter?.htmlContent) return
+
     stopTTSOnUnmount.current = false
     tts.toggle(chapter.htmlContent)
+
+    // ✅ Show panel when starting TTS
+    if (!tts.isPlaying) {
+      setShowTTSPanel(true)
+    }
+  }
+
+  // ✅ NEW: Stop handler - hide panel when stopping
+  const handleTTSStop = () => {
+    stopTTSOnUnmount.current = true
+    tts.stop()
+    setShowTTSPanel(false)
+  }
+
+  // ✅ NEW: Handler untuk toggle TTS panel visibility
+  const handleToggleTTSPanel = () => {
+    setShowTTSPanel(!showTTSPanel)
   }
 
   const handleSearchClick = () => {
@@ -653,7 +673,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
       )}
 
-      {isAuthenticated && tts.isEnabled && (
+      {/* ✅ MODIFIED: TTS Control Panel - dengan conditional rendering */}
+      {isAuthenticated && tts.isEnabled && showTTSPanel && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
           progress={tts.progress}
@@ -663,10 +684,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           availableVoices={tts.availableVoices}
           showSettings={tts.showSettings}
           onTogglePlay={handleTTSToggle}
-          onStop={() => {
-            stopTTSOnUnmount.current = true
-            tts.stop()
-          }}
+          onStop={handleTTSStop}
           onPrevChapter={handlePrevChapter}
           onNextChapter={handleNextChapter}
           onToggleSettings={tts.toggleSettings}
@@ -676,17 +694,21 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           onApplySettings={handleTTSApplySettings}
           hasPrevChapter={!!chapter?.previousChapter}
           hasNextChapter={!!chapter?.nextChapter}
+          onMinimize={() => setShowTTSPanel(false)}
         />
       )}
 
+      {/* ✅ MODIFIED: Bottom Toolbar - dengan props baru */}
       <BottomToolbar
         chapter={chapter}
         isAuthenticated={isAuthenticated}
         isTTSPlaying={tts.isPlaying}
         readingMode={readingMode}
+        showTTSPanel={showTTSPanel}
         onPrevChapter={handlePrevChapter}
         onNextChapter={handleNextChapter}
         onTTSToggle={handleTTSToggle}
+        onToggleTTSPanel={handleToggleTTSPanel}
         onSearchClick={handleSearchClick}
         onToolbarToggle={() => {
           if (!isAuthenticated) {

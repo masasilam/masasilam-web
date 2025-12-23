@@ -49,7 +49,7 @@ const DashboardLayout = () => {
   ]
 
   const bottomMenuItems = [
-    { path: '/', icon: Home, label: 'Kembali ke Beranda', external: true },
+    { path: '/', icon: Home, label: 'Beranda', external: true },
     { path: '/buku', icon: BookOpen, label: 'Koleksi Buku', external: true },
     { path: '/dasbor/pengaturan', icon: Settings, label: 'Pengaturan' },
   ]
