@@ -1,19 +1,19 @@
 // ============================================
-// FILE 7: src/components/Reader/BottomToolbar.jsx (FIXED FOR MOBILE)
+// FILE 7: src/components/Reader/BottomToolbar.jsx (FIXED - ALL BUTTONS VISIBLE)
 // ============================================
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Volume2, 
-  Pause, 
-  Lock, 
-  Search, 
-  Menu, 
-  Bookmark, 
-  Download 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Volume2,
+  Pause,
+  Lock,
+  Search,
+  Menu,
+  Bookmark,
+  Download
 } from 'lucide-react'
 
-const BottomToolbar = ({ 
+const BottomToolbar = ({
   chapter,
   isAuthenticated,
   isTTSPlaying,
@@ -28,8 +28,8 @@ const BottomToolbar = ({
   onReadingModeToggle
 }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 shadow-lg">
-      <div className="flex items-center py-3 px-2 sm:px-4 gap-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 shadow-lg overflow-visible">
+      <div className="flex items-center py-3 px-2 sm:px-4 gap-2 overflow-visible">
         {/* Left: Previous Button - FIXED POSITION */}
         <button
           onClick={onPrevChapter}
@@ -43,10 +43,10 @@ const BottomToolbar = ({
           <ChevronLeft className="w-5 h-5" />
           <span className="text-[9px] sm:text-xs font-medium">Prev</span>
         </button>
-        
+
         {/* Center: Scrollable Action Buttons */}
-        <div className="flex-1 overflow-x-auto hide-scrollbar">
-          <div className="flex items-center gap-1 sm:gap-2 justify-center min-w-max px-1">
+        <div className="flex-1 overflow-x-auto hide-scrollbar overflow-y-visible">
+          <div className="flex items-center gap-1 sm:gap-2 justify-center min-w-max px-1 py-2">
             {/* Reading Mode Toggle */}
             <button
               onClick={onReadingModeToggle}
@@ -68,14 +68,14 @@ const BottomToolbar = ({
             {/* TTS Button */}
             <button
               onClick={onTTSToggle}
-              className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative flex-shrink-0 ${
+              className={`flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative flex-shrink-0 overflow-visible ${
                 isAuthenticated && isTTSPlaying
                   ? 'bg-primary text-white shadow-md scale-105'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105'
               }`}
             >
               {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5 shadow-md z-10">
                   <Lock className="w-3 h-3" />
                 </div>
               )}
@@ -85,24 +85,27 @@ const BottomToolbar = ({
               </span>
             </button>
 
-            {/* Search Button */}
-            {isAuthenticated && (
-              <button
-                onClick={onSearchClick}
-                className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
-              >
-                <Search className="w-5 h-5" />
-                <span className="text-[9px] sm:text-xs whitespace-nowrap">Cari</span>
-              </button>
-            )}
+            {/* Search Button - NOW ALWAYS VISIBLE */}
+            <button
+              onClick={onSearchClick}
+              className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 relative overflow-visible"
+            >
+              {!isAuthenticated && (
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5 shadow-md z-10">
+                  <Lock className="w-3 h-3" />
+                </div>
+              )}
+              <Search className="w-5 h-5" />
+              <span className="text-[9px] sm:text-xs whitespace-nowrap">Cari</span>
+            </button>
 
             {/* Annotation Button */}
             <button
               onClick={onToolbarToggle}
-              className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 flex-shrink-0"
+              className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all relative hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 flex-shrink-0 overflow-visible"
             >
               {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5 shadow-md z-10">
                   <Lock className="w-3 h-3" />
                 </div>
               )}
@@ -113,10 +116,10 @@ const BottomToolbar = ({
             {/* Bookmark Button */}
             <button
               onClick={onBookmarkClick}
-              className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 relative hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+              className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 relative hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 overflow-visible"
             >
               {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5 shadow-md z-10">
                   <Lock className="w-3 h-3" />
                 </div>
               )}
@@ -124,16 +127,19 @@ const BottomToolbar = ({
               <span className="text-[9px] sm:text-xs whitespace-nowrap">Penanda</span>
             </button>
 
-            {/* Export Button */}
-            {isAuthenticated && (
-              <button
-                onClick={onExportClick}
-                className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
-              >
-                <Download className="w-5 h-5" />
-                <span className="text-[9px] sm:text-xs whitespace-nowrap">Ekspor</span>
-              </button>
-            )}
+            {/* Export Button - NOW ALWAYS VISIBLE */}
+            <button
+              onClick={onExportClick}
+              className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 relative overflow-visible"
+            >
+              {!isAuthenticated && (
+                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5 shadow-md z-10">
+                  <Lock className="w-3 h-3" />
+                </div>
+              )}
+              <Download className="w-5 h-5" />
+              <span className="text-[9px] sm:text-xs whitespace-nowrap">Ekspor</span>
+            </button>
           </div>
         </div>
 
