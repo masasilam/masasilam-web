@@ -198,7 +198,7 @@ const ReaderLayout = ({
                                 </div>
                               </div>
                             </Link>
-                            
+
                             {chapter.subChapters?.length > 0 && (
                               <div className="ml-11 pb-2 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
                                 {chapter.subChapters.map((sub) => (
@@ -221,18 +221,18 @@ const ReaderLayout = ({
                 )}
               </div>
 
-              <button 
-                onClick={toggleTheme} 
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" 
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Toggle tema"
                 title={theme === 'light' ? 'Mode Gelap' : 'Mode Terang'}
               >
                 {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </button>
-              
-              <button 
-                onClick={() => setMenuOpen(!menuOpen)} 
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" 
+
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Pengaturan"
                 title="Pengaturan"
               >
@@ -251,21 +251,21 @@ const ReaderLayout = ({
 
       {menuOpen && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setMenuOpen(false)}>
-          <div 
-            className="absolute right-0 top-14 bottom-0 w-full max-w-sm bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 overflow-y-auto" 
+          <div
+            className="absolute right-0 top-14 bottom-0 w-full max-w-sm bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-semibold text-lg">Pengaturan Pembaca</h3>
-                <button 
+                <button
                   onClick={resetToDefaults}
                   className="text-xs text-primary hover:underline transition-colors"
                 >
                   Reset Default
                 </button>
               </div>
-              
+
               <div className="space-y-6">
                 {fontSize !== undefined && setFontSize && (
                   <div>
@@ -275,13 +275,13 @@ const ReaderLayout = ({
                         Ukuran Font: {fontSize}px
                       </label>
                     </div>
-                    <input 
-                      type="range" 
-                      min="10" 
-                      max="24" 
-                      value={fontSize} 
-                      onChange={(e) => setFontSize(parseInt(e.target.value))} 
-                      className="w-full accent-primary cursor-pointer" 
+                    <input
+                      type="range"
+                      min="10"
+                      max="24"
+                      value={fontSize}
+                      onChange={(e) => setFontSize(parseInt(e.target.value))}
+                      className="w-full accent-primary cursor-pointer"
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>Kecil</span>
@@ -303,12 +303,12 @@ const ReaderLayout = ({
                       { value: 'georgia', label: 'Georgia' },
                       { value: 'palatino', label: 'Palatino' }
                     ].map((font) => (
-                      <button 
+                      <button
                         key={font.value}
                         onClick={() => setFontFamily(font.value)}
                         className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
-                          fontFamily === font.value 
-                            ? 'bg-primary text-white border-primary' 
+                          fontFamily === font.value
+                            ? 'bg-primary text-white border-primary'
                             : 'border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
                       >
@@ -327,12 +327,12 @@ const ReaderLayout = ({
                         { value: 'wide', label: 'Lebar' },
                         { value: 'full', label: 'Penuh' }
                       ].map((width) => (
-                        <button 
+                        <button
                           key={width.value}
                           onClick={() => setContentWidth(width.value)}
                           className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
-                            contentWidth === width.value 
-                              ? 'bg-primary text-white border-primary' 
+                            contentWidth === width.value
+                              ? 'bg-primary text-white border-primary'
                               : 'border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
                         >

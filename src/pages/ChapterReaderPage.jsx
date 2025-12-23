@@ -64,7 +64,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showSearchLoginPrompt, setShowSearchLoginPrompt] = useState(false)
   const [showExportLoginPrompt, setShowExportLoginPrompt] = useState(false)
 
-  // ✅ NEW: State untuk show/hide TTS panel
   const [showTTSPanel, setShowTTSPanel] = useState(true)
 
   const [readingMode, setReadingMode] = useState(() => {
@@ -111,7 +110,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     clearSelection
   } = useTextSelection(contentRef, isInteractingWithPopup)
 
-  // ✅ MODIFIED: Handler TTS toggle - show panel ketika mulai
   const handleTTSToggle = () => {
     if (!isAuthenticated) {
       setShowTTSLoginPrompt(true)
@@ -122,20 +120,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     stopTTSOnUnmount.current = false
     tts.toggle(chapter.htmlContent)
 
-    // ✅ Show panel when starting TTS
     if (!tts.isPlaying) {
       setShowTTSPanel(true)
     }
   }
 
-  // ✅ NEW: Stop handler - hide panel when stopping
   const handleTTSStop = () => {
     stopTTSOnUnmount.current = true
     tts.stop()
     setShowTTSPanel(false)
   }
 
-  // ✅ NEW: Handler untuk toggle TTS panel visibility
   const handleToggleTTSPanel = () => {
     setShowTTSPanel(!showTTSPanel)
   }
@@ -673,7 +668,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
       )}
 
-      {/* ✅ MODIFIED: TTS Control Panel - dengan conditional rendering */}
       {isAuthenticated && tts.isEnabled && showTTSPanel && (
         <TTSControlPanel
           isPlaying={tts.isPlaying}
@@ -698,7 +692,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         />
       )}
 
-      {/* ✅ MODIFIED: Bottom Toolbar - dengan props baru */}
       <BottomToolbar
         chapter={chapter}
         isAuthenticated={isAuthenticated}
@@ -758,19 +751,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       )}
 
       <article ref={contentRef}>
-        <header className="mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
+        <header className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">
             {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
+          {chapter.bookSubtitle && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
+              {chapter.bookSubtitle}
+            </p>
+          )}
         </header>
-
-        {isAuthenticated && (
-          <ChapterStatsWidget
-            bookSlug={bookSlug}
-            chapterNumber={parseInt(chapter.chapterNumber)}
-          />
-        )}
 
         <div className={`transition-colors duration-300 rounded-lg my-8 ${
           readingMode
@@ -784,6 +775,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             highlights={currentChapterHighlights}
           />
         </div>
+
+        {/* ✅ POSISI BARU: Statistik Bab setelah area baca */}
+        {isAuthenticated && (
+          <ChapterStatsWidget
+            bookSlug={bookSlug}
+            chapterNumber={parseInt(chapter.chapterNumber)}
+          />
+        )}
 
         <div className="my-8">
           <ChapterRating
