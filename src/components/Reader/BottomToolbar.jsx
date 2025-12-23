@@ -129,14 +129,9 @@ const BottomToolbar = ({
 
             {/* Export Button - NOW ALWAYS VISIBLE */}
             <button
-              onClick={onExportClick}
+              onClick={() => alert('Fitur ekspor segera hadir!')}
               className="flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-lg transition-all hover:scale-105 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 relative overflow-visible"
             >
-              {!isAuthenticated && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5 shadow-md z-10">
-                  <Lock className="w-3 h-3" />
-                </div>
-              )}
               <Download className="w-5 h-5" />
               <span className="text-[9px] sm:text-xs whitespace-nowrap">Ekspor</span>
             </button>
