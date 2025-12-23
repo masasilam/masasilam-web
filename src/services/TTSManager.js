@@ -2,6 +2,7 @@
 /**
  * Text-to-Speech Manager - MOBILE COMPATIBLE VERSION WITH WAKE LOCK
  * Handles chunked reading with mobile browser quirks fixed
+ * ✅ FIXED: Mobile pause/resume now works correctly
  */
 class TTSManager {
   constructor() {
@@ -462,6 +463,7 @@ class TTSManager {
     }
   }
 
+  // ✅ FIXED: Mobile pause now cancels utterance
   pause() {
     if (!this.isPlaying || this.isPaused) {
       console.log('⚠️ TTS: Cannot pause - not playing or already paused')
@@ -469,12 +471,21 @@ class TTSManager {
     }
 
     console.log('⏸️ TTS: Pausing...')
-    this.synth.pause()
+
+    // ✅ Di mobile, cancel utterance karena pause tidak reliable
+    if (this.isMobile) {
+      this.synth.cancel()
+      console.log('📱 TTS: Mobile pause - cancelled utterance, will restart on resume')
+    } else {
+      this.synth.pause()
+    }
+
     this.isPaused = true
     this.isPlaying = false
     this.emitStateChange()
   }
 
+  // ✅ FIXED: Mobile resume now restarts from current chunk
   resume() {
     if (!this.isPaused) {
       console.log('⚠️ TTS: Cannot resume - not paused')
@@ -484,15 +495,24 @@ class TTSManager {
     console.log('▶️ TTS: Resuming...')
     this.isStopping = false
 
-    this.synth.resume()
-
+    // ✅ Di mobile, restart dari chunk terakhir
     if (this.isMobile) {
-      setTimeout(() => this.synth.resume(), 50)
-    }
+      console.log('📱 TTS: Mobile resume - restarting from chunk', this.currentUtteranceIndex + 1)
+      this.isPaused = false
+      this.isPlaying = true
+      this.emitStateChange()
 
-    this.isPaused = false
-    this.isPlaying = true
-    this.emitStateChange()
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        this.playCurrentChunk()
+      }, 100)
+    } else {
+      this.synth.resume()
+      setTimeout(() => this.synth.resume(), 50)
+      this.isPaused = false
+      this.isPlaying = true
+      this.emitStateChange()
+    }
   }
 
   stop() {
