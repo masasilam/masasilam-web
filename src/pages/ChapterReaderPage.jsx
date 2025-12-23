@@ -27,7 +27,7 @@ import TextSelectionPopup from '../components/Reader/TextSelectionPopup'
 import BottomToolbar from '../components/Reader/BottomToolbar'
 import AnnotationPanel from '../components/Reader/AnnotationPanel'
 import ReviewsSection from '../components/Reader/ReviewsSection'
-import { Volume2, Highlighter, Bookmark } from 'lucide-react'
+import { Volume2, Highlighter, Bookmark, Search } from 'lucide-react'
 import '../styles/epub-styles.css'
 
 const hideScrollbarStyle = `
@@ -63,6 +63,8 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showTTSLoginPrompt, setShowTTSLoginPrompt] = useState(false)
   const [showAnnotationLoginPrompt, setShowAnnotationLoginPrompt] = useState(false)
   const [showBookmarkLoginPrompt, setShowBookmarkLoginPrompt] = useState(false)
+  const [showSearchLoginPrompt, setShowSearchLoginPrompt] = useState(false)
+  const [showExportLoginPrompt, setShowExportLoginPrompt] = useState(false)
 
   const [readingMode, setReadingMode] = useState(() => {
     return localStorage.getItem('readingMode') === 'true'
@@ -118,6 +120,22 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     tts.toggle(chapter.htmlContent)
   }
 
+  const handleSearchClick = () => {
+    if (!isAuthenticated) {
+      setShowSearchLoginPrompt(true)
+      return
+    }
+    setShowSearchModal(true)
+  }
+
+  const handleExportClick = () => {
+    if (!isAuthenticated) {
+      setShowExportLoginPrompt(true)
+      return
+    }
+    setShowExportModal(true)
+  }
+
   useKeyboardShortcuts({
     chapter,
     isAuthenticated,
@@ -128,7 +146,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     onPrevChapter: handlePrevChapter,
     onNextChapter: handleNextChapter,
     onTTSToggle: handleTTSToggle,
-    onSearchOpen: () => setShowSearchModal(true),
+    onSearchOpen: handleSearchClick,
     onFootnoteClose: () => setFootnotePopup(null),
     onSearchClose: () => setShowSearchModal(false),
     onExportClose: () => setShowExportModal(false)
@@ -527,7 +545,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         <LoginPromptModal
           icon={Volume2}
           title="Fitur Text-to-Speech"
-          description="Text-to-Speech adalah fitur khusus untuk pengguna yang sudah login. Masuk sekarang untuk mendengarkan bab ini dibacakan!"
+          description="Masuk sekarang untuk mendengarkan bab ini dibacakan!"
           onClose={() => setShowTTSLoginPrompt(false)}
           onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
           onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
@@ -538,7 +556,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         <LoginPromptModal
           icon={Highlighter}
           title="Fitur Anotasi"
-          description="Highlight dan catatan adalah fitur khusus untuk pengguna yang sudah login. Masuk sekarang untuk menyimpan anotasi Anda!"
+          description="Masuk sekarang untuk menyimpan anotasi Anda!"
           onClose={() => setShowAnnotationLoginPrompt(false)}
           onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
           onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
@@ -549,8 +567,30 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         <LoginPromptModal
           icon={Bookmark}
           title="Fitur Penanda Buku"
-          description="Penanda buku adalah fitur khusus untuk pengguna yang sudah login. Masuk sekarang untuk menyimpan penanda Anda!"
+          description="Masuk sekarang untuk menyimpan penanda Anda!"
           onClose={() => setShowBookmarkLoginPrompt(false)}
+          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+        />
+      )}
+
+      {showSearchLoginPrompt && (
+        <LoginPromptModal
+          icon={Search}
+          title="Fitur Pencarian"
+          description="Masuk sekarang untuk mencari kata atau frasa dalam buku ini!"
+          onClose={() => setShowSearchLoginPrompt(false)}
+          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+        />
+      )}
+
+      {showExportLoginPrompt && (
+        <LoginPromptModal
+          icon={Search}
+          title="Fitur Ekspor Anotasi"
+          description="Masuk sekarang untuk mengekspor semua catatan dan highlight Anda!"
+          onClose={() => setShowExportLoginPrompt(false)}
           onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
           onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
         />
@@ -647,7 +687,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         onPrevChapter={handlePrevChapter}
         onNextChapter={handleNextChapter}
         onTTSToggle={handleTTSToggle}
-        onSearchClick={() => setShowSearchModal(true)}
+        onSearchClick={handleSearchClick}
         onToolbarToggle={() => {
           if (!isAuthenticated) {
             setShowAnnotationLoginPrompt(true)
@@ -656,7 +696,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           setShowToolbar(!showToolbar)
         }}
         onBookmarkClick={handleAddBookmark}
-        onExportClick={() => setShowExportModal(true)}
+        onExportClick={handleExportClick}
         onReadingModeToggle={() => setReadingMode(!readingMode)}
       />
 
