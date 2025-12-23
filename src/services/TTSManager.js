@@ -1,5 +1,5 @@
 /**
- * Text-to-Speech Manager - MOBILE COMPATIBLE VERSION
+ * Text-to-Speech Manager - MOBILE COMPATIBLE VERSION WITH WAKE LOCK
  * Handles chunked reading with mobile browser quirks fixed
  */
 class TTSManager {
@@ -20,6 +20,10 @@ class TTSManager {
     this.isMobile = this.detectMobile()
     this.resumeInfinityWorkaround = null
 
+    // ✅ Wake Lock untuk mencegah layar mati
+    this.wakeLock = null
+    this.wakeLockSupported = 'wakeLock' in navigator
+
     // Settings
     this.rate = 1.0
     this.pitch = 1.0
@@ -31,14 +35,15 @@ class TTSManager {
     this.onProgressChange = null
     this.onError = null
 
-    // ✅ Mobile has stricter limits - use smaller chunks
     this.MAX_CHUNK_SIZE = this.isMobile ? 500 : 3000
 
     console.log('🎯 TTS: Device type:', this.isMobile ? 'Mobile' : 'Desktop')
     console.log('📏 TTS: Chunk size:', this.MAX_CHUNK_SIZE)
+    console.log('🔒 TTS: Wake Lock supported:', this.wakeLockSupported)
 
     this.initVoices()
     this.setupMobileWorkarounds()
+    this.setupWakeLock()
   }
 
   detectMobile() {
@@ -46,27 +51,66 @@ class TTSManager {
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua)
   }
 
+  // ✅ Setup Wake Lock untuk mencegah layar mati
+  setupWakeLock() {
+    if (!this.wakeLockSupported) {
+      console.warn('⚠️ TTS: Wake Lock API not supported on this device')
+      return
+    }
+
+    // Re-acquire wake lock when visibility changes
+    document.addEventListener('visibilitychange', async () => {
+      if (this.wakeLock !== null && document.visibilityState === 'visible') {
+        await this.requestWakeLock()
+      }
+    })
+  }
+
+  // ✅ Request Wake Lock
+  async requestWakeLock() {
+    if (!this.wakeLockSupported) return
+
+    try {
+      this.wakeLock = await navigator.wakeLock.request('screen')
+      console.log('🔒 TTS: Wake Lock acquired')
+
+      this.wakeLock.addEventListener('release', () => {
+        console.log('🔓 TTS: Wake Lock released')
+      })
+    } catch (err) {
+      console.warn('⚠️ TTS: Wake Lock request failed:', err.message)
+    }
+  }
+
+  // ✅ Release Wake Lock
+  async releaseWakeLock() {
+    if (this.wakeLock !== null) {
+      try {
+        await this.wakeLock.release()
+        this.wakeLock = null
+        console.log('🔓 TTS: Wake Lock released manually')
+      } catch (err) {
+        console.warn('⚠️ TTS: Wake Lock release failed:', err.message)
+      }
+    }
+  }
+
   setupMobileWorkarounds() {
-    // ✅ iOS Safari requires resume workaround
     if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
       console.log('📱 TTS: iOS detected - applying workarounds')
 
-      // iOS pauses speech after ~15 seconds of inactivity
       this.resumeInfinityWorkaround = setInterval(() => {
         if (this.isPlaying && !this.isPaused) {
-          // Touch the synth to keep it alive
           this.synth.pause()
           this.synth.resume()
         }
       }, 14000)
     }
 
-    // ✅ Android Chrome workaround - cancel and restart helps
     if (/android/i.test(navigator.userAgent)) {
       console.log('🤖 TTS: Android detected - applying workarounds')
     }
 
-    // ✅ Force load voices on mobile
     document.addEventListener('touchstart', () => {
       if (this.availableVoices.length === 0) {
         this.availableVoices = this.synth.getVoices()
@@ -80,7 +124,6 @@ class TTSManager {
       if (voices.length > 0) {
         this.availableVoices = voices
 
-        // Prioritize Indonesian voices with fallback to Malay
         const indonesianVoices = voices.filter(v =>
           v.lang.startsWith('id') ||
           v.lang.startsWith('ms') ||
@@ -103,11 +146,9 @@ class TTSManager {
         this.isInitialized = true
         console.log('✅ TTS: Voices loaded:', this.availableVoices.length)
 
-        // Log available voices for debugging
         if (this.isMobile) {
           console.log('📱 Available voices:', this.availableVoices.map(v => `${v.name} (${v.lang})`))
 
-          // Check specifically for Indonesian
           const hasIndonesian = this.availableVoices.some(v =>
             v.lang.startsWith('id') || v.lang.toLowerCase().includes('indonesia')
           )
@@ -116,7 +157,6 @@ class TTSManager {
             console.warn('⚠️ No Indonesian voice found on this device')
             console.log('💡 User should install Indonesian language pack')
 
-            // Trigger callback if no Indonesian voice
             if (this.onError) {
               this.onError({
                 error: 'no-indonesian-voice',
@@ -135,26 +175,9 @@ class TTSManager {
       this.synth.onvoiceschanged = loadVoices
     }
 
-    // ✅ Multiple attempts to load voices (mobile needs this)
-    setTimeout(() => {
-      if (this.availableVoices.length === 0) {
-        loadVoices()
-      }
-    }, 100)
-
-    setTimeout(() => {
-      if (this.availableVoices.length === 0) {
-        loadVoices()
-      }
-    }, 500)
-
-    setTimeout(() => {
-      if (this.availableVoices.length === 0) {
-        loadVoices()
-      }
-    }, 1000)
-
-    // ✅ Final check after 2 seconds
+    setTimeout(() => { if (this.availableVoices.length === 0) loadVoices() }, 100)
+    setTimeout(() => { if (this.availableVoices.length === 0) loadVoices() }, 500)
+    setTimeout(() => { if (this.availableVoices.length === 0) loadVoices() }, 1000)
     setTimeout(() => {
       loadVoices()
       if (this.availableVoices.length > 0) {
@@ -167,18 +190,15 @@ class TTSManager {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = htmlContent
 
-    // Remove script and style tags
     const scripts = tempDiv.querySelectorAll('script, style')
     scripts.forEach(el => el.remove())
 
     const text = tempDiv.textContent || tempDiv.innerText || ''
     const cleanText = text.replace(/\s+/g, ' ').trim()
 
-    // Split into chunks
     const chunks = []
     let currentChunk = ''
 
-    // Split by sentences first
     const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText]
 
     for (const sentence of sentences) {
@@ -188,7 +208,6 @@ class TTSManager {
           currentChunk = ''
         }
 
-        // If single sentence is too long, split by words
         if (sentence.length > this.MAX_CHUNK_SIZE) {
           const words = sentence.split(' ')
           let wordChunk = ''
@@ -226,7 +245,11 @@ class TTSManager {
 
     console.log('🎬 TTS: Starting playback...')
 
-    // ✅ MOBILE FIX: Cancel with extra delay
+    // ✅ Request Wake Lock saat mulai playback
+    if (this.isMobile) {
+      this.requestWakeLock()
+    }
+
     this.synth.cancel()
 
     const delay = this.isMobile ? 200 : 100
@@ -236,7 +259,6 @@ class TTSManager {
   }
 
   _startPlayback(htmlContent) {
-    // Reset all flags
     this.isStopping = false
     this.isPlaying = false
     this.isPaused = false
@@ -253,13 +275,11 @@ class TTSManager {
 
     console.log(`📝 TTS: Processing ${chunks.length} chunks (${this.totalChars} chars)`)
 
-    // Ensure voices are loaded
     if (this.availableVoices.length === 0) {
       this.availableVoices = this.synth.getVoices()
       console.log('🔄 TTS: Force loaded voices:', this.availableVoices.length)
     }
 
-    // ✅ MOBILE: Check if voices are available
     if (this.availableVoices.length === 0) {
       console.error('❌ TTS: No voices available on this device')
       if (this.onError) {
@@ -268,18 +288,14 @@ class TTSManager {
       return
     }
 
-    // Create utterances for each chunk
     for (let i = 0; i < chunks.length; i++) {
       const utterance = new SpeechSynthesisUtterance(chunks[i])
       utterance.rate = this.rate
       utterance.pitch = this.pitch
 
-      // Set voice if available
       if (this.availableVoices.length > 0) {
         const selectedVoice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
         utterance.voice = selectedVoice
-
-        // ✅ MOBILE: Explicitly set language
         utterance.lang = selectedVoice.lang
 
         if (i === 0) {
@@ -287,7 +303,6 @@ class TTSManager {
         }
       }
 
-      // Track progress
       utterance.onboundary = (event) => {
         if (event.name === 'word' && !this.isStopping) {
           const chunkStart = this.getChunkStartPosition(i)
@@ -299,12 +314,10 @@ class TTSManager {
         }
       }
 
-      // ✅ MOBILE FIX: onstart handler
       utterance.onstart = () => {
         console.log(`▶️ TTS: Chunk ${i + 1}/${chunks.length} started`)
       }
 
-      // Chunk completion handler
       utterance.onend = () => {
         if (this.isStopping) {
           console.log('⏹️ TTS: Stopping, skip transition')
@@ -313,11 +326,9 @@ class TTSManager {
 
         console.log(`✅ TTS: Chunk ${i + 1}/${chunks.length} completed`)
 
-        // Move to next chunk
         if (i < chunks.length - 1) {
           this.currentUtteranceIndex = i + 1
 
-          // ✅ MOBILE: Longer delay between chunks
           const transitionDelay = this.isMobile ? 100 : 50
           setTimeout(() => {
             if (!this.isStopping) {
@@ -325,31 +336,25 @@ class TTSManager {
             }
           }, transitionDelay)
         } else {
-          // All chunks completed
           console.log('🎉 TTS: All chunks completed')
           this.stop()
         }
       }
 
-      // Error handler
       utterance.onerror = (event) => {
-        // Ignore interrupted errors when stopping intentionally
         if (this.isStopping && event.error === 'interrupted') {
           console.log('⚠️ TTS: Interrupted (intentional)')
           return
         }
 
-        // Ignore interrupted errors during chunk transitions
         if (event.error === 'interrupted') {
           console.log('⚠️ TTS: Interrupted (transition)')
           return
         }
 
-        // ✅ MOBILE: synthesis-failed is common - try to continue
         if (event.error === 'synthesis-failed') {
           console.warn(`⚠️ TTS: Synthesis failed on chunk ${i + 1}, attempting to continue...`)
 
-          // Try next chunk after a delay
           if (i < chunks.length - 1 && !this.isStopping) {
             setTimeout(() => {
               this.currentUtteranceIndex = i + 1
@@ -361,14 +366,12 @@ class TTSManager {
           return
         }
 
-        // Log other errors
         console.error(`❌ TTS: Error in chunk ${i + 1}:`, event.error)
 
         if (this.onError) {
           this.onError(event)
         }
 
-        // Try to continue to next chunk on non-critical errors
         if (i < chunks.length - 1 && !this.isStopping) {
           setTimeout(() => {
             this.currentUtteranceIndex = i + 1
@@ -382,7 +385,6 @@ class TTSManager {
       this.utterances.push(utterance)
     }
 
-    // Set state BEFORE playing
     this.isPlaying = true
     this.isPaused = false
     this.isEnabled = true
@@ -393,10 +395,7 @@ class TTSManager {
       isEnabled: this.isEnabled
     })
 
-    // Emit state change
     this.emitStateChange()
-
-    // Start playing immediately
     this.playCurrentChunk()
   }
 
@@ -428,7 +427,6 @@ class TTSManager {
       voice: utterance.voice?.name || 'default'
     })
 
-    // ✅ MOBILE FIX: Resume synth before speaking (iOS fix)
     if (this.isMobile) {
       this.synth.resume()
     }
@@ -439,7 +437,6 @@ class TTSManager {
     } catch (error) {
       console.error('❌ TTS: Error calling speak():', error)
 
-      // ✅ Fallback: Try again after delay
       setTimeout(() => {
         if (!this.isStopping) {
           this.synth.speak(utterance)
@@ -470,7 +467,6 @@ class TTSManager {
     console.log('▶️ TTS: Resuming...')
     this.isStopping = false
 
-    // ✅ MOBILE FIX: Resume might need multiple calls
     this.synth.resume()
 
     if (this.isMobile) {
@@ -483,7 +479,6 @@ class TTSManager {
   }
 
   stop() {
-    // Guard: Don't emit if already stopped
     if (!this.isPlaying && !this.isPaused && !this.isEnabled) {
       console.log('⚠️ TTS: Already stopped')
       return
@@ -493,6 +488,11 @@ class TTSManager {
 
     this.isStopping = true
     this.synth.cancel()
+
+    // ✅ Release Wake Lock saat stop
+    if (this.isMobile) {
+      this.releaseWakeLock()
+    }
 
     this.isPlaying = false
     this.isPaused = false
@@ -561,10 +561,14 @@ class TTSManager {
   destroy() {
     console.log('🗑️ TTS: Destroying manager...')
 
-    // Clear iOS workaround
     if (this.resumeInfinityWorkaround) {
       clearInterval(this.resumeInfinityWorkaround)
       this.resumeInfinityWorkaround = null
+    }
+
+    // ✅ Release Wake Lock saat destroy
+    if (this.isMobile) {
+      this.releaseWakeLock()
     }
 
     this.stop()

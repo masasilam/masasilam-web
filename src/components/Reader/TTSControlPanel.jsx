@@ -1,5 +1,5 @@
 // src/components/Reader/TTSControlPanel.jsx
-import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack, Settings, HelpCircle } from 'lucide-react'
+import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack, Settings, HelpCircle, Lightbulb } from 'lucide-react'
 import { useState } from 'react'
 import TTSMobileSupportInfo from './TTSMobileSupportInfo'
 
@@ -28,6 +28,11 @@ const TTSControlPanel = ({
   hasNextChapter
 }) => {
   const [showSupportInfo, setShowSupportInfo] = useState(false)
+  const [showMobileTips, setShowMobileTips] = useState(() => {
+    // Auto show tips on first time for mobile
+    const hasSeenTips = localStorage.getItem('tts-mobile-tips-seen')
+    return !hasSeenTips
+  })
 
   // Check if Indonesian voice is available
   const hasIndonesianVoice = availableVoices.some(v =>
@@ -37,12 +42,18 @@ const TTSControlPanel = ({
 
   const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent)
 
+  const handleCloseMobileTips = () => {
+    setShowMobileTips(false)
+    localStorage.setItem('tts-mobile-tips-seen', 'true')
+  }
+
   return (
     <>
       {showSupportInfo && (
         <TTSMobileSupportInfo onClose={() => setShowSupportInfo(false)} />
       )}
-    <div className="fixed top-20 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-80">
+
+    <div className="fixed top-20 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-80 max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-sm flex items-center gap-2">
           <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -65,6 +76,51 @@ const TTSControlPanel = ({
           </button>
         </div>
       </div>
+
+      {/* Mobile Tips Banner - Only show when playing and on mobile */}
+      {isMobile && isPlaying && showMobileTips && (
+        <div className="mb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 relative">
+          <button
+            onClick={handleCloseMobileTips}
+            className="absolute top-2 right-2 text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
+            title="Tutup"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div className="flex items-start gap-2">
+            <Lightbulb className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs">
+              <p className="font-semibold text-blue-800 dark:text-blue-400 mb-2">
+                💡 Tips Mendengarkan di HP
+              </p>
+              <ul className="text-blue-700 dark:text-blue-300 space-y-1.5">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span>Jaga layar tetap <strong>menyala</strong> saat mendengarkan</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span>Gunakan <strong>headset/earphone</strong> untuk kualitas lebih baik</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span>Atur <strong>Auto-Lock ke "Never"</strong> sementara</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span><strong>Charge HP</strong> saat mendengarkan konten panjang</span>
+                </li>
+              </ul>
+              <p className="text-blue-600 dark:text-blue-400 mt-2 text-[10px] italic">
+                ⚠️ Browser mobile akan menghentikan audio saat layar mati untuk menghemat baterai
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress indicator */}
       <div className="mb-3">
@@ -240,6 +296,16 @@ const TTSControlPanel = ({
           >
             Terapkan Pengaturan
           </button>
+        </div>
+      )}
+
+      {/* Quick Actions Footer */}
+      {isMobile && isPlaying && (
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-green-500">●</span>
+            <span>Layar menyala = Audio aktif</span>
+          </div>
         </div>
       )}
     </div>
