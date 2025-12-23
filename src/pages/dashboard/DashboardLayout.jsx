@@ -247,7 +247,7 @@ const DashboardLayout = () => {
                   <span className="absolute top-1/2 left-0 w-full h-[1.5px] bg-red-500 dark:bg-red-400 transform -rotate-12 -translate-y-1/2"></span>
                 </span>
                 {' '}
-                {new Date().getFullYear()} masasilam • Dashboard v1.0
+                {new Date().getFullYear()} MasasilaM
               </div>
               
               {/* Footer Links - Gunakan navigate untuk keluar dashboard */}
