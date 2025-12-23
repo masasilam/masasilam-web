@@ -1,4 +1,4 @@
-// src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC
+// src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC FIXED
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard } from 'lucide-react'
@@ -6,20 +6,20 @@ import { useTheme } from '../../hooks/useTheme'
 import { chapterService } from '../../services/chapterService'
 import logoSvg from '/masasilam-logo.svg'
 
-const ReaderLayout = ({ 
-  children, 
-  fontSize, 
-  setFontSize, 
-  readingProgress, 
-  contentWidth, 
-  setContentWidth, 
-  ttsState, 
-  onTTSToggle 
+const ReaderLayout = ({
+  children,
+  fontSize,
+  setFontSize,
+  readingProgress,
+  contentWidth,
+  setContentWidth,
+  ttsState,
+  onTTSToggle
 }) => {
   const { theme, toggleTheme } = useTheme()
   const { bookSlug } = useParams()
   const navigate = useNavigate()
-  
+
   const [menuOpen, setMenuOpen] = useState(false)
   const [tocOpen, setTocOpen] = useState(false)
   const [chapters, setChapters] = useState([])
@@ -42,7 +42,7 @@ const ReaderLayout = ({
       'georgia': 'Georgia, "Times New Roman", serif',
       'palatino': '"Palatino Linotype", "Book Antiqua", Palatino, serif'
     }
-    
+
     chapterContent.style.fontFamily = fontFamilyMap[fontFamily]
   }, [fontFamily])
 
@@ -55,11 +55,24 @@ const ReaderLayout = ({
         console.error('Error fetching chapters:', error)
       }
     }
-    
+
     if (bookSlug) {
       fetchChapters()
     }
   }, [bookSlug])
+
+  // Prevent body scroll when TOC is open on mobile
+  useEffect(() => {
+    if (tocOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [tocOpen])
 
   const widthClasses = {
     normal: 'max-w-3xl',
@@ -76,7 +89,7 @@ const ReaderLayout = ({
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {readingProgress !== undefined && (
-        <div 
+        <div
           className="fixed top-0 left-0 h-1 bg-primary z-50 transition-all duration-150"
           style={{ width: `${readingProgress}%` }}
         />
@@ -113,8 +126,8 @@ const ReaderLayout = ({
                 <button
                   onClick={onTTSToggle}
                   className={`p-2 rounded-lg transition-colors ${
-                    ttsState.isPlaying 
-                      ? 'bg-primary text-white hover:bg-primary/90' 
+                    ttsState.isPlaying
+                      ? 'bg-primary text-white hover:bg-primary/90'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                   aria-label={ttsState.isPlaying ? 'Pause TTS' : 'Play TTS'}
@@ -140,21 +153,23 @@ const ReaderLayout = ({
 
                 {tocOpen && (
                   <>
-                    <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setTocOpen(false)} />
-                    
-                    {/* RESPONSIVE TOC */}
-                    <div className="fixed md:absolute right-0 top-0 md:top-12 bottom-0 md:bottom-auto w-full md:w-80 max-w-[85vw] md:max-w-none md:max-h-[70vh] bg-white dark:bg-gray-800 border-l md:border border-gray-200 dark:border-gray-700 md:rounded-lg shadow-xl overflow-y-auto z-40">
-                      <div className="p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between">
+                    <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setTocOpen(false)} />
+
+                    {/* RESPONSIVE TOC - FIXED FOR MOBILE */}
+                    <div className="fixed md:absolute right-0 top-0 md:top-12 bottom-0 md:bottom-auto w-full md:w-80 max-w-[85vw] md:max-w-none md:max-h-[70vh] bg-white dark:bg-gray-800 border-l md:border border-gray-200 dark:border-gray-700 md:rounded-lg shadow-xl overflow-y-auto z-[70]">
+                      {/* Sticky Header */}
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between z-10">
                         <h3 className="font-semibold">Daftar Isi</h3>
-                        <button 
+                        <button
                           onClick={() => setTocOpen(false)}
                           className="md:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                         >
                           <X className="w-5 h-5" />
                         </button>
                       </div>
-                      
-                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+
+                      {/* Scrollable Content with Bottom Padding for Mobile */}
+                      <div className="divide-y divide-gray-200 dark:divide-gray-700 pb-24 md:pb-4">
                         {chapters.filter(ch => ch.parentChapterId === null).map((chapter) => (
                           <div key={chapter.id}>
                             <Link
