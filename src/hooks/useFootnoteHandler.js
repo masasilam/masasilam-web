@@ -1,6 +1,3 @@
-// ============================================
-// FILE 12: src/hooks/useFootnoteHandler.js
-// ============================================
 import { useState, useEffect } from 'react'
 import { chapterService } from '../services/chapterService'
 
@@ -22,70 +19,108 @@ const useFootnoteHandler = (contentRef, chapter, bookSlug) => {
       const footnoteId = hashMatch[1]
 
       let footnoteElement = contentRef.current.querySelector(`#${footnoteId}`)
-
       if (footnoteElement) {
-        const content = footnoteElement.innerHTML
-        setFootnotePopup({ id: footnoteId, content, isLocal: true })
+        setFootnotePopup({ id: footnoteId, content: footnoteElement.innerHTML, isLocal: true })
         return
       }
 
       try {
         setFootnotePopup({
           id: footnoteId,
-          content: `<div class="text-center py-4">
-            <svg class="animate-spin h-5 w-5 mx-auto mb-2 text-primary" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-              <circle class="opacity-75" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" stroke-dasharray="32"></circle>
-            </svg>
-            <p class="text-gray-500 text-sm">Memuat catatan...</p>
-          </div>`,
+          content: '<div style="text-align: center; padding: 1rem;"><p>Memuat catatan...</p></div>',
           isLocal: false
         })
 
-        const possibleChapters = ['muka', 'kolofon', 'catatan-kaki', 'catatan', 'keterangan', 'pendahuluan', 'prakata', 'kata-pengantar', 'daftar-pustaka', 'lampiran']
+        // Check parent chapter
+        if (chapter?.parentChapter?.slug && chapter?.breadcrumbs?.length > 0) {
+          const parentPath = chapter.breadcrumbs.filter(b => b.chapterLevel === 1).map(b => b.slug).join('/')
+          if (parentPath) {
+            try {
+              const parentData = await chapterService.readChapterByPath(bookSlug, parentPath)
+              const tempDiv = document.createElement('div')
+              tempDiv.innerHTML = parentData.htmlContent
+              footnoteElement = tempDiv.querySelector(`#${footnoteId}`)
+              if (footnoteElement) {
+                setFootnotePopup({
+                  id: footnoteId,
+                  content: footnoteElement.innerHTML,
+                  isLocal: false,
+                  sourceChapter: parentData.chapterTitle,
+                  sourceSlug: parentPath
+                })
+                return
+              }
+            } catch (err) {}
+          }
+        }
 
-        for (const slug of possibleChapters) {
+        // Check siblings (level 2 chapters only)
+        if (chapter?.chapterLevel === 2 && chapter?.breadcrumbs?.length > 0) {
+          try {
+            const allChaptersResponse = await chapterService.getAllChapters(bookSlug)
+            const allChapters = allChaptersResponse.data?.data || []
+            const parentChapterId = chapter.breadcrumbs[0]?.chapterId
+
+            if (parentChapterId) {
+              const parentChapter = allChapters.find(ch => ch.id === parentChapterId)
+              if (parentChapter?.subChapters) {
+                const siblings = parentChapter.subChapters.filter(sub => sub.id !== chapter.chapterId).reverse()
+                const parentSlug = chapter.breadcrumbs[0]?.slug
+
+                for (const sibling of siblings) {
+                  try {
+                    const siblingPath = `${parentSlug}/${sibling.slug}`
+                    const siblingData = await chapterService.readChapterByPath(bookSlug, siblingPath)
+                    const tempDiv = document.createElement('div')
+                    tempDiv.innerHTML = siblingData.htmlContent
+                    footnoteElement = tempDiv.querySelector(`#${footnoteId}`)
+                    if (footnoteElement) {
+                      setFootnotePopup({
+                        id: footnoteId,
+                        content: footnoteElement.innerHTML,
+                        isLocal: false,
+                        sourceChapter: siblingData.chapterTitle,
+                        sourceSlug: siblingPath
+                      })
+                      return
+                    }
+                  } catch (err) {}
+                }
+              }
+            }
+          } catch (err) {}
+        }
+
+        // Check common chapters
+        const commonChapters = ['catatan-kaki', 'catatan', 'keterangan', 'muka', 'kolofon', 'pendahuluan', 'prakata', 'kata-pengantar', 'daftar-pustaka', 'lampiran']
+        for (const slug of commonChapters) {
           try {
             const chapterData = await chapterService.readChapterByPath(bookSlug, slug)
             const tempDiv = document.createElement('div')
             tempDiv.innerHTML = chapterData.htmlContent
             footnoteElement = tempDiv.querySelector(`#${footnoteId}`)
-
             if (footnoteElement) {
-              const content = footnoteElement.innerHTML
               setFootnotePopup({
                 id: footnoteId,
-                content,
+                content: footnoteElement.innerHTML,
                 isLocal: false,
                 sourceChapter: chapterData.chapterTitle,
                 sourceSlug: slug
               })
               return
             }
-          } catch (err) {
-            continue
-          }
+          } catch (err) {}
         }
 
         setFootnotePopup({
           id: footnoteId,
-          content: `<div class="text-center py-6 px-4">
-            <div class="text-5xl mb-3">📚</div>
-            <p class="text-amber-600 font-semibold mb-2">Catatan referensi tidak ditemukan</p>
-            <p class="text-sm text-gray-600 mb-4">Catatan ini mungkin ada di bab lain.</p>
-            <p class="text-xs text-gray-500">ID: <code class="bg-gray-100 px-2 py-1 rounded">${footnoteId}</code></p>
-          </div>`,
+          content: '<div style="text-align: center; padding: 2rem;"><p>Catatan tidak ditemukan</p></div>',
           isLocal: false
         })
       } catch (error) {
-        console.error('Error fetching footnote:', error)
         setFootnotePopup({
           id: footnoteId,
-          content: `<div class="text-center py-6 px-4">
-            <div class="text-5xl mb-3">❌</div>
-            <p class="text-red-500 font-semibold mb-2">Gagal memuat catatan</p>
-            <p class="text-sm text-gray-600">Terjadi kesalahan saat mengambil data catatan.</p>
-          </div>`,
+          content: '<div style="text-align: center; padding: 2rem;"><p>Gagal memuat catatan</p></div>',
           isLocal: false
         })
       }
@@ -93,9 +128,7 @@ const useFootnoteHandler = (contentRef, chapter, bookSlug) => {
 
     const contentElement = contentRef.current
     contentElement.addEventListener('click', handleFootnoteClick)
-    return () => {
-      contentElement.removeEventListener('click', handleFootnoteClick)
-    }
+    return () => contentElement.removeEventListener('click', handleFootnoteClick)
   }, [chapter, bookSlug, contentRef])
 
   const handleGoToFootnote = () => {

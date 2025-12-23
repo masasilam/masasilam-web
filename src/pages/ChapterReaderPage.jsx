@@ -1,5 +1,5 @@
 // ============================================
-// FILE 3: src/pages/ChapterReaderPage.jsx
+// FILE: src/pages/ChapterReaderPage.jsx
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -270,7 +270,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       const response = await chapterService.readChapterByPath(bookSlug, fullChapterPath)
       setChapter(response)
     } catch (error) {
-      // Error handling
+      console.error('Error fetching chapter:', error)
     } finally {
       setLoading(false)
     }
@@ -425,7 +425,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       }
       fetchReviews()
     } catch (error) {
-      // Error handling
+      console.error('Error liking review:', error)
     }
   }
 
