@@ -35,10 +35,15 @@ const TTSControlPanel = ({
   })
 
   // Check if Indonesian voice is available
-  const hasIndonesianVoice = availableVoices.some(v =>
-    v.lang.startsWith('id') ||
-    v.lang.toLowerCase().includes('indonesia')
-  )
+  const hasIndonesianVoice = availableVoices.some(v => {
+    const lang = v.lang.toLowerCase()
+    const name = v.name.toLowerCase()
+    return lang.startsWith('id') ||
+           lang.startsWith('in') ||
+           lang.includes('indonesia') ||
+           name.includes('indonesia') ||
+           name.includes('indonesian')
+  })
 
   const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent)
 
@@ -257,7 +262,13 @@ const TTSControlPanel = ({
                       className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500"
                     >
                       {availableVoices.map((voice, index) => {
-                        const isIndonesian = voice.lang.startsWith('id') || voice.lang.toLowerCase().includes('indonesia')
+                        const lang = voice.lang.toLowerCase()
+                        const name = voice.name.toLowerCase()
+                        const isIndonesian = lang.startsWith('id') ||
+                                           lang.startsWith('in') ||
+                                           lang.includes('indonesia') ||
+                                           name.includes('indonesia') ||
+                                           name.includes('indonesian')
                         return (
                           <option key={index} value={index}>
                             {isIndonesian ? '🇮🇩 ' : ''}{voice.name} ({voice.lang})
@@ -271,14 +282,34 @@ const TTSControlPanel = ({
                       <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded p-2">
                         <div className="flex items-center justify-between">
                           <span>
-                            {availableVoices[voiceIndex].lang.startsWith('id') ? '✅' : '⚠️'}
+                            {(() => {
+                              const voice = availableVoices[voiceIndex]
+                              const lang = voice.lang.toLowerCase()
+                              const name = voice.name.toLowerCase()
+                              const isIndonesian = lang.startsWith('id') ||
+                                                 lang.startsWith('in') ||
+                                                 lang.includes('indonesia') ||
+                                                 name.includes('indonesia') ||
+                                                 name.includes('indonesian')
+                              return isIndonesian ? '✅' : '⚠️'
+                            })()}
                             {' '}{availableVoices[voiceIndex].name}
                           </span>
-                          {!availableVoices[voiceIndex].lang.startsWith('id') && (
-                            <span className="text-yellow-600 dark:text-yellow-400">
-                              Non-ID
-                            </span>
-                          )}
+                          {(() => {
+                            const voice = availableVoices[voiceIndex]
+                            const lang = voice.lang.toLowerCase()
+                            const name = voice.name.toLowerCase()
+                            const isIndonesian = lang.startsWith('id') ||
+                                               lang.startsWith('in') ||
+                                               lang.includes('indonesia') ||
+                                               name.includes('indonesia') ||
+                                               name.includes('indonesian')
+                            return !isIndonesian && (
+                              <span className="text-yellow-600 dark:text-yellow-400">
+                                Non-ID
+                              </span>
+                            )
+                          })()}
                         </div>
                       </div>
                     )}
