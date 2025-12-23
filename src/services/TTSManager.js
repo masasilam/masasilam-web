@@ -2,7 +2,7 @@
 /**
  * Text-to-Speech Manager - MOBILE COMPATIBLE VERSION WITH WAKE LOCK
  * Handles chunked reading with mobile browser quirks fixed
- * ✅ FIXED: Mobile pause/resume now works correctly
+ * ✅ ADVANCED FIX: Mobile pause/resume now continues from last word position
  */
 class TTSManager {
   constructor() {
@@ -21,6 +21,10 @@ class TTSManager {
     this.isInitialized = false
     this.isMobile = this.detectMobile()
     this.resumeInfinityWorkaround = null
+
+    // ✅ NEW: Track word-level position for better mobile resume
+    this.lastWordBoundaryChar = 0
+    this.pausedAtChar = 0
 
     // ✅ Wake Lock untuk mencegah layar mati
     this.wakeLock = null
@@ -53,14 +57,12 @@ class TTSManager {
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua)
   }
 
-  // ✅ Setup Wake Lock untuk mencegah layar mati
   setupWakeLock() {
     if (!this.wakeLockSupported) {
       console.warn('⚠️ TTS: Wake Lock API not supported on this device')
       return
     }
 
-    // Re-acquire wake lock when visibility changes
     document.addEventListener('visibilitychange', async () => {
       if (this.wakeLock !== null && document.visibilityState === 'visible') {
         await this.requestWakeLock()
@@ -68,7 +70,6 @@ class TTSManager {
     })
   }
 
-  // ✅ Request Wake Lock
   async requestWakeLock() {
     if (!this.wakeLockSupported) return
 
@@ -84,7 +85,6 @@ class TTSManager {
     }
   }
 
-  // ✅ Release Wake Lock
   async releaseWakeLock() {
     if (this.wakeLock !== null) {
       try {
@@ -263,7 +263,6 @@ class TTSManager {
 
     console.log('🎬 TTS: Starting playback...')
 
-    // ✅ Request Wake Lock saat mulai playback
     if (this.isMobile) {
       this.requestWakeLock()
     }
@@ -290,6 +289,8 @@ class TTSManager {
     this.currentCharIndex = 0
     this.currentUtteranceIndex = 0
     this.utterances = []
+    this.lastWordBoundaryChar = 0
+    this.pausedAtChar = 0
 
     console.log(`📝 TTS: Processing ${chunks.length} chunks (${this.totalChars} chars)`)
 
@@ -325,6 +326,9 @@ class TTSManager {
         if (event.name === 'word' && !this.isStopping) {
           const chunkStart = this.getChunkStartPosition(i)
           this.currentCharIndex = chunkStart + event.charIndex
+
+          // ✅ Track last word boundary for mobile resume
+          this.lastWordBoundaryChar = this.currentCharIndex
 
           if (this.onProgressChange) {
             this.onProgressChange(this.currentCharIndex, this.totalChars)
@@ -425,7 +429,32 @@ class TTSManager {
     return position
   }
 
-  playCurrentChunk() {
+  // ✅ NEW: Create partial chunk from last word position
+  createPartialChunk(chunkIndex, startChar) {
+    if (chunkIndex >= this.chunks.length) return null
+
+    const fullChunk = this.chunks[chunkIndex]
+    const chunkStart = this.getChunkStartPosition(chunkIndex)
+    const relativeChar = startChar - chunkStart
+
+    if (relativeChar <= 0) return fullChunk
+
+    // Find the start of the word at or after relativeChar
+    let text = fullChunk.substring(relativeChar)
+
+    // Trim leading whitespace
+    text = text.trimStart()
+
+    console.log('✂️ TTS: Created partial chunk:', {
+      original: fullChunk.substring(0, 50) + '...',
+      partial: text.substring(0, 50) + '...',
+      skipped: relativeChar + ' chars'
+    })
+
+    return text
+  }
+
+  playCurrentChunk(fromChar = null) {
     if (this.isStopping) {
       console.log('⏹️ TTS: Stopping flag set, skip playback')
       return
@@ -436,13 +465,77 @@ class TTSManager {
       return
     }
 
-    const utterance = this.utterances[this.currentUtteranceIndex]
+    let utterance
+
+    // ✅ If resuming from a specific character, create partial chunk
+    if (fromChar !== null && this.isMobile) {
+      const partialText = this.createPartialChunk(this.currentUtteranceIndex, fromChar)
+
+      if (partialText) {
+        utterance = new SpeechSynthesisUtterance(partialText)
+        utterance.rate = this.rate
+        utterance.pitch = this.pitch
+
+        if (this.availableVoices.length > 0) {
+          const selectedVoice = this.availableVoices[this.voiceIndex] || this.availableVoices[0]
+          utterance.voice = selectedVoice
+          utterance.lang = selectedVoice.lang
+        }
+
+        // Setup handlers for partial chunk
+        const i = this.currentUtteranceIndex
+
+        utterance.onboundary = (event) => {
+          if (event.name === 'word' && !this.isStopping) {
+            this.currentCharIndex = fromChar + event.charIndex
+            this.lastWordBoundaryChar = this.currentCharIndex
+
+            if (this.onProgressChange) {
+              this.onProgressChange(this.currentCharIndex, this.totalChars)
+            }
+          }
+        }
+
+        utterance.onend = () => {
+          if (this.isStopping) return
+
+          if (i < this.chunks.length - 1) {
+            this.currentUtteranceIndex = i + 1
+            setTimeout(() => {
+              if (!this.isStopping) {
+                this.playCurrentChunk()
+              }
+            }, 100)
+          } else {
+            this.stop()
+          }
+        }
+
+        utterance.onerror = (event) => {
+          if (event.error === 'interrupted' || this.isStopping) return
+
+          console.error('❌ TTS: Error in partial chunk:', event.error)
+
+          if (i < this.chunks.length - 1) {
+            setTimeout(() => {
+              this.currentUtteranceIndex = i + 1
+              this.playCurrentChunk()
+            }, 100)
+          }
+        }
+      } else {
+        utterance = this.utterances[this.currentUtteranceIndex]
+      }
+    } else {
+      utterance = this.utterances[this.currentUtteranceIndex]
+    }
 
     console.log('▶️ TTS: Playing chunk', {
       index: this.currentUtteranceIndex + 1,
       total: this.utterances.length,
       preview: utterance.text.substring(0, 50) + '...',
-      voice: utterance.voice?.name || 'default'
+      voice: utterance.voice?.name || 'default',
+      isPartial: fromChar !== null
     })
 
     if (this.isMobile) {
@@ -463,7 +556,7 @@ class TTSManager {
     }
   }
 
-  // ✅ FIXED: Mobile pause now cancels utterance
+  // ✅ ADVANCED FIX: Save word position on pause
   pause() {
     if (!this.isPlaying || this.isPaused) {
       console.log('⚠️ TTS: Cannot pause - not playing or already paused')
@@ -472,10 +565,17 @@ class TTSManager {
 
     console.log('⏸️ TTS: Pausing...')
 
-    // ✅ Di mobile, cancel utterance karena pause tidak reliable
+    // ✅ Save the last word boundary position
+    this.pausedAtChar = this.lastWordBoundaryChar
+
+    console.log('💾 TTS: Saved position:', {
+      char: this.pausedAtChar,
+      progress: Math.round((this.pausedAtChar / this.totalChars) * 100) + '%'
+    })
+
     if (this.isMobile) {
       this.synth.cancel()
-      console.log('📱 TTS: Mobile pause - cancelled utterance, will restart on resume')
+      console.log('📱 TTS: Mobile pause - will resume from char', this.pausedAtChar)
     } else {
       this.synth.pause()
     }
@@ -485,7 +585,7 @@ class TTSManager {
     this.emitStateChange()
   }
 
-  // ✅ FIXED: Mobile resume now restarts from current chunk
+  // ✅ ADVANCED FIX: Resume from saved word position
   resume() {
     if (!this.isPaused) {
       console.log('⚠️ TTS: Cannot resume - not paused')
@@ -495,16 +595,15 @@ class TTSManager {
     console.log('▶️ TTS: Resuming...')
     this.isStopping = false
 
-    // ✅ Di mobile, restart dari chunk terakhir
     if (this.isMobile) {
-      console.log('📱 TTS: Mobile resume - restarting from chunk', this.currentUtteranceIndex + 1)
+      console.log('📱 TTS: Mobile resume from char', this.pausedAtChar)
       this.isPaused = false
       this.isPlaying = true
       this.emitStateChange()
 
-      // Small delay to ensure state is updated
+      // ✅ Resume from saved word position
       setTimeout(() => {
-        this.playCurrentChunk()
+        this.playCurrentChunk(this.pausedAtChar)
       }, 100)
     } else {
       this.synth.resume()
@@ -526,7 +625,6 @@ class TTSManager {
     this.isStopping = true
     this.synth.cancel()
 
-    // ✅ Release Wake Lock saat stop
     if (this.isMobile) {
       this.releaseWakeLock()
     }
@@ -538,6 +636,8 @@ class TTSManager {
     this.currentUtteranceIndex = 0
     this.utterances = []
     this.chunks = []
+    this.lastWordBoundaryChar = 0
+    this.pausedAtChar = 0
 
     this.emitStateChange()
 
@@ -603,7 +703,6 @@ class TTSManager {
       this.resumeInfinityWorkaround = null
     }
 
-    // ✅ Release Wake Lock saat destroy
     if (this.isMobile) {
       this.releaseWakeLock()
     }
