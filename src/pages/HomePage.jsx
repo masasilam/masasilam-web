@@ -1,20 +1,13 @@
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, ArrowRight, Star, TrendingUp, Sparkles } from 'lucide-react'
-import bookService from '../services/bookService' 
+import { BookOpen, ArrowRight, ChevronLeft, ChevronRight, TrendingUp, Sparkles } from 'lucide-react'
+import bookService from '../services/bookService'
 import LoadingSpinner from './../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 
-// Memoized BookCard Component
-const BookCard = memo(({ book, showRating }) => (
-  <Link to={`/buku/${book.slug || book.id}`} className="group">
-    <div className={`aspect-[2/3] bg-gray-100 dark:bg-gray-700 border-2 ${showRating ? 'border-yellow-300 dark:border-yellow-600' : 'border-gray-300 dark:border-gray-600'} overflow-hidden mb-2 sm:mb-3 hover:shadow-2xl hover:border-primary transition-all duration-300 rounded-lg relative`}>
-      {showRating && (
-        <div className="absolute top-2 right-2 z-10 bg-yellow-500 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg">
-          <Star className="w-3 h-3 fill-current" />
-          {book.averageRating?.toFixed(1) || '5.0'}
-        </div>
-      )}
+const BookCard = memo(({ book }) => (
+  <Link to={`/buku/${book.slug || book.id}`} className="group flex-shrink-0 w-32 sm:w-40 lg:w-48">
+    <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 overflow-hidden mb-2 sm:mb-3 hover:shadow-2xl hover:border-primary transition-all duration-300 rounded-lg">
       {book.cover_image ? (
         <img src={book.cover_image} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
       ) : (
@@ -23,55 +16,62 @@ const BookCard = memo(({ book, showRating }) => (
         </div>
       )}
     </div>
-    <h3 className="text-[10px] sm:text-xs md:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-0.5 group-hover:text-primary transition-colors">{book.title}</h3>
-    <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{book.authorNames || book.author || 'Anonim'}</p>
+    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-0.5 group-hover:text-primary transition-colors">{book.title}</h3>
+    <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{book.authorNames || book.author || 'Anonim'}</p>
   </Link>
 ))
 
-// Memoized MiniBookCard for Hero Grid
-const MiniBookCard = memo(({ book }) => (
-  <Link to={`/buku/${book.slug || book.id}`} className="group">
-    <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 overflow-hidden hover:shadow-2xl hover:border-primary transition-all rounded-lg">
-      {book.cover_image ? (
-        <img src={book.cover_image} alt={book.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center p-2">
-          <BookOpen className="w-4 h-4 text-primary mb-1" />
-          <div className="text-[7px] text-center text-gray-700 dark:text-gray-300 line-clamp-3">{book.title}</div>
+const ScrollableBooks = memo(({ books, title, actionText, actionPath }) => {
+  const scrollRef = useRef(null)
+  const scroll = useCallback((d) => scrollRef.current?.scrollBy({ left: d === 'left' ? -400 : 400, behavior: 'smooth' }), [])
+
+  return (
+    <div className="relative">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div>
+          <h2 className="font-serif text-2xl sm:text-4xl font-light text-gray-900 dark:text-white mb-1">{title}</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-base">{actionText}</p>
         </div>
-      )}
+        <div className="hidden lg:flex gap-2">
+          <button onClick={() => scroll('left')} className="p-2 bg-white dark:bg-gray-700 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:border-primary hover:shadow-lg transition-all" aria-label="Scroll left">
+            <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          </button>
+          <button onClick={() => scroll('right')} className="p-2 bg-white dark:bg-gray-700 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:border-primary hover:shadow-lg transition-all" aria-label="Scroll right">
+            <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          </button>
+        </div>
+      </div>
+      <div ref={scrollRef} className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {books.map((b, i) => <BookCard key={b.id || i} book={b} />)}
+      </div>
+      <div className="mt-6 text-center">
+        <Button onClick={() => window.location.href = actionPath} className="w-full sm:w-auto">Lihat Semua <ArrowRight className="w-4 h-4 ml-2" /></Button>
+      </div>
     </div>
-  </Link>
-))
+  )
+})
 
 const HomePage = () => {
-  const [books, setBooks] = useState({ popular: [], new: [], recommended: [] })
+  const [books, setBooks] = useState({ popular: [], new: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [popular, newest, recommended] = await Promise.all([
-          bookService.getBooks({ page: 1, limit: 16, sortField: 'viewCount', sortOrder: 'DESC' }),
-          bookService.getBooks({ page: 1, limit: 12, sortField: 'updateAt', sortOrder: 'DESC' }),
-          bookService.getBooks({ page: 1, limit: 8, sortField: 'averageRating', sortOrder: 'DESC' }),
+        const [pop, nw] = await Promise.all([
+          bookService.getBooks({ page: 1, limit: 24, sortField: 'viewCount', sortOrder: 'DESC' }),
+          bookService.getBooks({ page: 1, limit: 24, sortField: 'updateAt', sortOrder: 'DESC' })
         ])
-        
-        const map = (res) => (res.data?.list || res.data?.data || []).map(b => ({
-          ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image
-        }))
-        
-        setBooks({ popular: map(popular), new: map(newest), recommended: map(recommended) })
+        const map = (r) => (r.data?.list || r.data?.data || []).map(b => ({ ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image }))
+        setBooks({ popular: map(pop), new: map(nw) })
       } catch (err) {
-        console.error('Error:', err)
+        // Silent error
       } finally {
         setLoading(false)
       }
     }
     fetchData()
   }, [])
-
-  const navigate = useCallback((path) => () => window.location.href = path, [])
 
   if (loading) return <LoadingSpinner fullScreen />
 
@@ -84,145 +84,124 @@ const HomePage = () => {
 
   const links = [
     { to: '/buku/terpopuler', icon: TrendingUp, color: 'orange', title: 'Terpopuler', desc: 'Buku paling banyak dibaca' },
-    { to: '/buku/terbaru', icon: Sparkles, color: 'blue', title: 'Terbaru', desc: 'Buku yang baru ditambahkan' },
-    { to: '/buku/rekomendasi', icon: Star, color: 'yellow', title: 'Rekomendasi', desc: 'Buku dengan rating terbaik' }
+    { to: '/buku/terbaru', icon: Sparkles, color: 'blue', title: 'Terbaru', desc: 'Buku yang baru ditambahkan' }
   ]
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Masthead */}
       <header className="bg-white dark:bg-gray-800 border-b-2 border-primary shadow-sm">
-        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="max-w-[240px] sm:max-w-2xl lg:max-w-4xl mx-auto px-3 sm:px-6 pt-4 pb-3 sm:py-8">
           <div className="text-center">
-            <div className="text-xs tracking-[0.3em] text-primary mb-5 sm:mb-4 uppercase font-medium">Perpustakaan Digital</div>
-            <div className="flex items-center justify-center gap-4 sm:gap-8 mb-3 sm:mb-4">
+            <div className="text-[9px] tracking-[0.2em] text-primary mb-2 sm:mb-4 uppercase font-medium">Perpustakaan Digital</div>
+            <div className="flex items-center justify-center gap-1.5 sm:gap-8 mb-2 sm:mb-4">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-              <img src="/masasilam-logo.svg" alt="masasilam" className="w-24 h-24 sm:w-32 sm:h-32 dark:invert" />
+              <img src="/masasilam-logo.svg" alt="MASASILAM Logo" className="w-10 h-10 sm:w-32 sm:h-32 dark:invert" width="128" height="128" />
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
             </div>
-            <h1 className="font-serif text-4xl sm:text-6xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-2" style={{ letterSpacing: '0.08em' }}>MASASILAM</h1>
-            <div className="text-[9px] sm:text-xs tracking-[0.3em] text-gray-600 dark:text-gray-400 uppercase">Domain Publik • Literatur Klasik • Gratis Selamanya</div>
+            <h1 className="font-serif text-xl sm:text-6xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-2" style={{ letterSpacing: '0.08em' }}>MASASILAM</h1>
+            <p className="text-[7px] sm:text-xs tracking-[0.2em] text-gray-600 dark:text-gray-400 uppercase mb-0.5">Domain Publik • Literatur Klasik</p>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
       <section className="bg-white dark:bg-gray-800 py-8 sm:py-12 lg:py-16">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
             <div className="lg:col-span-7 lg:order-2">
-              <div className="relative h-64 sm:h-80 lg:h-[600px] rounded-sm overflow-hidden shadow-2xl">
-                <img src="/perpustakaan-keliling.jpg" alt="Perpustakaan" className="w-full h-full object-cover" loading="eager" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                <div className="absolute bottom-3 sm:bottom-8 left-3 right-3 sm:left-8 sm:right-8 bg-white/95 dark:bg-gray-800/95 p-3 sm:p-6 border-l-4 border-primary shadow-2xl">
-                  <p className="font-serif text-sm sm:text-xl italic text-gray-900 dark:text-white">"Buku adalah jendela dunia."</p>
-                  <div className="mt-2 text-[10px] sm:text-sm text-gray-600 dark:text-gray-400">— Pepatah Klasik</div>
+              <article className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-0 bg-gradient-to-br from-amber-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 rounded-sm overflow-y-auto lg:overflow-visible shadow-2xl border-2 border-amber-200 dark:border-amber-700 flex items-center justify-center">
+                <div className="p-4 sm:p-8 lg:p-12 w-full">
+                  <div className="bg-white/90 dark:bg-gray-900/90 p-4 sm:p-6 lg:p-10 rounded-xl border-l-4 border-primary shadow-2xl backdrop-blur-sm">
+                    <header className="text-center mb-4 sm:mb-6">
+                      <h2 className="font-serif text-lg sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">Catetan Th. 1946</h2>
+                      <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-400">oleh <span className="font-semibold">Chairil Anwar</span></p>
+                    </header>
+                    <div className="font-serif text-xs sm:text-base lg:text-lg leading-relaxed text-gray-800 dark:text-gray-200 space-y-4 sm:space-y-5">
+                      <p>Ada tanganku, sekali akan jemu terkulai,<br/>Mainan cahaya di air hilang bentuk dalam kabut,<br/>Dan suara yang kucintai 'kan berhenti membelai.<br/>Kupahat batu nisan sendiri dan kupagut.</p>
+                      <p>Kita—anjing diburu—hanya melihat sebagian dari sandiwara sekarang<br/>Tidak tahu Romeo & Juliet berpeluk di kubur atau di ranjang<br/>Lahir seorang besar dan tenggelam beratus ribu<br/>Keduanya harus dicatet, keduanya dapat tempat.</p>
+                      <p>Dan kita nanti tiada sawan lagi diburu<br/>Jika bedil sudah disimpan, cuma kenangan berdebu;<br/>Kita memburu arti atau diserahkan kepada anak lahir sempat<br/>Karena itu jangan mengerdip, tatap dan penamu asah,<br/>Tulis karena kertas gersang; tenggorokan kering sedikit mau basah!</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </article>
             </div>
-            <div className="lg:col-span-5 lg:order-1">
+            <aside className="lg:col-span-5 lg:order-1">
               <h2 className="font-serif text-3xl sm:text-5xl font-light mb-2 text-gray-900 dark:text-white">Koleksi Pilihan</h2>
               <p className="font-serif text-lg sm:text-2xl text-gray-700 dark:text-gray-300 mb-6">Karya Terbaik Domain Publik</p>
-              <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-6">
-                {books.popular.slice(0, 16).map((book, i) => <MiniBookCard key={book.id || i} book={book} />)}
-              </div>
-              <Button onClick={navigate('/buku/terpopuler')} className="w-full sm:w-auto">
-                Lihat Semua Koleksi <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
+              <nav className="grid grid-cols-4 gap-2 sm:gap-3 mb-6" aria-label="Koleksi buku populer">
+                {books.popular.slice(0, 16).map((b, i) => (
+                  <Link key={b.id || i} to={`/buku/${b.slug || b.id}`} className="group">
+                    <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 overflow-hidden hover:shadow-2xl hover:border-primary transition-all rounded-lg">
+                      {b.cover_image ? (
+                        <img src={b.cover_image} alt={b.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                          <BookOpen className="w-4 h-4 text-primary mb-1" />
+                          <div className="text-[7px] text-center text-gray-700 dark:text-gray-300 line-clamp-3">{b.title}</div>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </nav>
+              <Button onClick={() => window.location.href = '/buku/terpopuler'} className="w-full sm:w-auto">Lihat Semua Koleksi <ArrowRight className="w-4 h-4 ml-2" /></Button>
+            </aside>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="bg-gray-100 dark:bg-gray-900 border-y-2 border-primary py-8 sm:py-10">
+      <section className="bg-gray-100 dark:bg-gray-900 border-y-2 border-primary py-8 sm:py-10" aria-label="Statistik perpustakaan">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 text-center">
-            {stats.map((stat, i) => (
+            {stats.map((s, i) => (
               <div key={i} className="group hover:scale-105 transition-transform">
-                <div className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-primary transition-colors">{stat.num}</div>
-                <div className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider font-semibold">{stat.label}</div>
+                <div className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-primary transition-colors">{s.num}</div>
+                <div className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider font-semibold">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Recent Books */}
       <section className="bg-white dark:bg-gray-800 py-8 sm:py-16">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 pb-6 border-b-2 border-primary gap-4">
-            <div className="flex-1">
-              <h2 className="font-serif text-2xl sm:text-4xl font-light text-gray-900 dark:text-white mb-2">Buku Terbaru</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-base">Karya klasik yang baru ditambahkan minggu ini</p>
-            </div>
-            <Button onClick={navigate('/buku/terbaru')} className="w-full sm:w-auto flex-shrink-0">
-              Lihat Semua <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-6">
-            {books.new.slice(0, 12).map((book, i) => <BookCard key={book.id || i} book={book} />)}
-          </div>
+          <ScrollableBooks books={books.new} title="Buku Terbaru" actionText="Karya klasik yang baru ditambahkan minggu ini" actionPath="/buku/terbaru" />
         </div>
       </section>
 
-      {/* Recommended */}
-      <section className="bg-gray-50 dark:bg-gray-900 py-8 sm:py-16">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 pb-6 border-b-2 border-yellow-500 gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
-                <h2 className="font-serif text-2xl sm:text-4xl font-light text-gray-900 dark:text-white">Buku Rekomendasi</h2>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-base">Buku pilihan dengan rating terbaik</p>
-            </div>
-            <Button onClick={navigate('/buku/rekomendasi')} className="w-full sm:w-auto flex-shrink-0 bg-yellow-600 hover:bg-yellow-700">
-              Lihat Semua <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-8">
-            {books.recommended.slice(0, 8).map((book, i) => <BookCard key={book.id || i} book={book} showRating />)}
-          </div>
-        </div>
-      </section>
-
-      {/* Quick Links */}
       <section className="bg-white dark:bg-gray-800 py-8 sm:py-16">
         <div className="container mx-auto px-4 sm:px-6">
           <h2 className="font-serif text-3xl sm:text-4xl font-light text-center text-gray-900 dark:text-white mb-8 sm:mb-12">Jelajahi Koleksi Kami</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 max-w-5xl mx-auto">
-            {links.map((link, i) => (
-              <Link key={i} to={link.to} className={`group bg-gradient-to-br from-${link.color}-50 to-${link.color}-100 dark:from-${link.color}-900/20 dark:to-${link.color}-800/20 p-6 sm:p-8 rounded-2xl border-2 border-${link.color}-200 dark:border-${link.color}-700 hover:border-${link.color}-400 hover:shadow-2xl transition-all`}>
+          <nav className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 max-w-4xl mx-auto" aria-label="Navigasi kategori">
+            {links.map((l, i) => (
+              <Link key={i} to={l.to} className={`group bg-gradient-to-br from-${l.color}-50 to-${l.color}-100 dark:from-${l.color}-900/20 dark:to-${l.color}-800/20 p-6 sm:p-8 rounded-2xl border-2 border-${l.color}-200 dark:border-${l.color}-700 hover:border-${l.color}-400 hover:shadow-2xl transition-all`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-3 bg-${link.color}-500 text-white rounded-xl group-hover:scale-110 transition-transform`}>
-                    <link.icon className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <div className={`p-3 bg-${l.color}-500 text-white rounded-xl group-hover:scale-110 transition-transform`}>
+                    <l.icon className="w-6 h-6 sm:w-8 sm:h-8" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{link.title}</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{l.title}</h3>
                 </div>
-                <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">{link.desc}</p>
-                <div className={`flex items-center text-${link.color}-600 dark:text-${link.color}-400 font-semibold text-sm group-hover:gap-3 transition-all`}>
+                <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">{l.desc}</p>
+                <div className={`flex items-center text-${l.color}-600 dark:text-${l.color}-400 font-semibold text-sm group-hover:gap-3 transition-all`}>
                   Lihat Koleksi <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
             ))}
+          </nav>
+        </div>
+      </section>
+
+      <section className="bg-gray-50 dark:bg-gray-900 border-t-2 border-primary py-8 sm:py-16">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
+          <div className="max-w-3xl mx-auto">
+            <img src="/masasilam-logo.svg" alt="MASASILAM Logo" className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 dark:invert" width="128" height="128" />
+            <h2 className="font-serif text-3xl sm:text-5xl font-light text-gray-900 dark:text-white mb-3 sm:mb-6">Mulai Membaca <span className="italic">Sekarang</span></h2>
+            <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi ribuan karya sastra klasik dari seluruh dunia. Gratis. Legal. Tanpa batas waktu.</p>
+            <Button size="lg" onClick={() => window.location.href = '/buku'} className="w-full sm:w-auto">Jelajahi Buku <ArrowRight className="w-5 h-5 ml-2" /></Button>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-gray-50 dark:bg-gray-900 border-t-2 border-primary py-8 sm:py-16">
-        <div className="container mx-auto px-4 sm:px-6 text-center">
-          <div className="max-w-3xl mx-auto">
-            <img src="/masasilam-logo.svg" alt="masasilam" className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 dark:invert" />
-            <h2 className="font-serif text-3xl sm:text-5xl font-light text-gray-900 dark:text-white mb-3 sm:mb-6">Mulai Membaca <span className="italic">Sekarang</span></h2>
-            <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi ribuan karya sastra klasik dari seluruh dunia. Gratis. Legal. Tanpa batas waktu.</p>
-            <Button size="lg" onClick={navigate('/buku')} className="w-full sm:w-auto">
-              Jelajahi Buku <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </div>
-        </div>
-      </section>
+      <style jsx>{`.scrollbar-hide::-webkit-scrollbar{display:none}`}</style>
     </div>
   )
 }
