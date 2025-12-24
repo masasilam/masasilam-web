@@ -1,6 +1,6 @@
 import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, ArrowRight, ChevronLeft, ChevronRight, TrendingUp, Sparkles } from 'lucide-react'
+import { BookOpen, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import bookService from '../services/bookService'
 import LoadingSpinner from './../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
@@ -82,22 +82,12 @@ const HomePage = () => {
     { num: '∞', label: 'Tanpa Batas' }
   ]
 
-  const links = [
-    { to: '/buku/terpopuler', icon: TrendingUp, color: 'orange', title: 'Terpopuler', desc: 'Buku paling banyak dibaca' },
-    { to: '/buku/terbaru', icon: Sparkles, color: 'blue', title: 'Terbaru', desc: 'Buku yang baru ditambahkan' }
-  ]
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 border-b-2 border-primary shadow-sm">
         <div className="max-w-[240px] sm:max-w-2xl lg:max-w-4xl mx-auto px-3 sm:px-6 pt-4 pb-3 sm:py-8">
           <div className="text-center">
             <div className="text-[9px] tracking-[0.2em] text-primary mb-2 sm:mb-4 uppercase font-medium">Perpustakaan Digital</div>
-            <div className="flex items-center justify-center gap-1.5 sm:gap-8 mb-2 sm:mb-4">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-              <img src="/masasilam-logo.svg" alt="MASASILAM Logo" className="w-10 h-10 sm:w-32 sm:h-32 dark:invert" width="128" height="128" />
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-            </div>
             <h1 className="font-serif text-xl sm:text-6xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-2" style={{ letterSpacing: '0.08em' }}>MASASILAM</h1>
             <p className="text-[7px] sm:text-xs tracking-[0.2em] text-gray-600 dark:text-gray-400 uppercase mb-0.5">Domain Publik • Literatur Klasik</p>
           </div>
@@ -168,35 +158,12 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="bg-white dark:bg-gray-800 py-8 sm:py-16">
-        <div className="container mx-auto px-4 sm:px-6">
-          <h2 className="font-serif text-3xl sm:text-4xl font-light text-center text-gray-900 dark:text-white mb-8 sm:mb-12">Jelajahi Koleksi Kami</h2>
-          <nav className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 max-w-4xl mx-auto" aria-label="Navigasi kategori">
-            {links.map((l, i) => (
-              <Link key={i} to={l.to} className={`group bg-gradient-to-br from-${l.color}-50 to-${l.color}-100 dark:from-${l.color}-900/20 dark:to-${l.color}-800/20 p-6 sm:p-8 rounded-2xl border-2 border-${l.color}-200 dark:border-${l.color}-700 hover:border-${l.color}-400 hover:shadow-2xl transition-all`}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-3 bg-${l.color}-500 text-white rounded-xl group-hover:scale-110 transition-transform`}>
-                    <l.icon className="w-6 h-6 sm:w-8 sm:h-8" />
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{l.title}</h3>
-                </div>
-                <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">{l.desc}</p>
-                <div className={`flex items-center text-${l.color}-600 dark:text-${l.color}-400 font-semibold text-sm group-hover:gap-3 transition-all`}>
-                  Lihat Koleksi <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </section>
-
       <section className="bg-gray-50 dark:bg-gray-900 border-t-2 border-primary py-8 sm:py-16">
         <div className="container mx-auto px-4 sm:px-6 text-center">
           <div className="max-w-3xl mx-auto">
-            <img src="/masasilam-logo.svg" alt="MASASILAM Logo" className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 dark:invert" width="128" height="128" />
             <h2 className="font-serif text-3xl sm:text-5xl font-light text-gray-900 dark:text-white mb-3 sm:mb-6">Mulai Membaca <span className="italic">Sekarang</span></h2>
             <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi ribuan karya sastra klasik dari seluruh dunia. Gratis. Legal. Tanpa batas waktu.</p>
-            <Button size="lg" onClick={() => window.location.href = '/buku'} className="w-full sm:w-auto">Jelajahi Buku <ArrowRight className="w-5 h-5 ml-2" /></Button>
+            <Button size="lg" onClick={() => window.location.href = '/buku'} className="w-full sm:w-auto">Jelajahi Semua Koleksi Buku <ArrowRight className="w-5 h-5 ml-2" /></Button>
           </div>
         </div>
       </section>
