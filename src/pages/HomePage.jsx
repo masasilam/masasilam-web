@@ -45,7 +45,7 @@ const ScrollableBooks = memo(({ books, title, actionText, actionPath }) => {
         {books.map((b, i) => <BookCard key={b.id || i} book={b} />)}
       </div>
       <div className="mt-6 text-center">
-        <Button onClick={() => window.location.href = actionPath} className="w-full sm:w-auto">Lihat Semua <ArrowRight className="w-4 h-4 ml-2" /></Button>
+        <Button onClick={() => window.location.href = actionPath} className="w-full sm:w-auto">Lihat Semua Buku Terbaru <ArrowRight className="w-4 h-4 ml-2" /></Button>
       </div>
     </div>
   )
@@ -143,7 +143,7 @@ const HomePage = () => {
                   </Link>
                 ))}
               </nav>
-              <Button onClick={() => window.location.href = '/buku/terpopuler'} className="w-full sm:w-auto">Lihat Semua Koleksi <ArrowRight className="w-4 h-4 ml-2" /></Button>
+              <Button onClick={() => window.location.href = '/buku/terpopuler'} className="w-full sm:w-auto">Lihat Semua Koleksi Pilihan <ArrowRight className="w-4 h-4 ml-2" /></Button>
             </aside>
           </div>
         </div>
