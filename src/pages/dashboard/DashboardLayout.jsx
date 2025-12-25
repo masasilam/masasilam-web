@@ -244,12 +244,12 @@ const DashboardLayout = () => {
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="relative inline-block">
                   <span>©</span>
-                  <span className="absolute top-1/2 left-0 w-full h-[1.5px] bg-red-500 dark:bg-red-400 transform -rotate-12 -translate-y-1/2"></span>
+                  <span className="absolute top-[45%] left-[-5%] w-[110%] h-0 border-t-[0.15em] border-red-500 dark:border-red-400 transform rotate-[-45deg]"></span>
                 </span>
                 {' '}
                 {new Date().getFullYear()} MasasilaM
               </div>
-              
+
               {/* Footer Links - Gunakan navigate untuk keluar dashboard */}
               <div className="flex items-center gap-4">
                 <button
