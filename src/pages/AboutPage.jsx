@@ -59,7 +59,7 @@ const AboutPage = () => {
             </p>
 
             <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4">
-              Kami berbagi file, mengedarkan pamflet-pamflet buatan sendiri yang kami pungut dari segara internet. Kami menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
+              Kami berbagi file, mengedarkan pamflet-pamflet bikinan sendiri yang kami pungut dari segara internet. Kami menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
             </p>
 
             <p className="text-lg sm:text-xl leading-relaxed text-primary font-semibold italic mb-6">
