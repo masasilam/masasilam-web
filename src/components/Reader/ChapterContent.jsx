@@ -1,5 +1,5 @@
 // ============================================
-// FILE 1: src/components/Reader/ChapterContent.jsx
+// FILE: src/components/Reader/ChapterContent.jsx
 // ============================================
 import { memo, useEffect, useRef } from 'react'
 
@@ -100,6 +100,7 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
   return (
     <div
       ref={contentRef}
+      lang="id"
       className={`chapter-content prose dark:prose-invert max-w-none ${
         readingMode ? 'reading-mode-active' : ''
       }`}

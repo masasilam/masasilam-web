@@ -1,4 +1,6 @@
-// src/pages/ChapterReaderPage.jsx
+// ============================================
+// FILE: src/pages/ChapterReaderPage.jsx
+// ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
@@ -794,6 +796,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300'
               : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
           }`}
+          style={{
+            /* Ensure hyphenation is enabled at wrapper level */
+            WebkitHyphens: 'auto',
+            MozHyphens: 'auto',
+            msHyphens: 'auto',
+            hyphens: 'auto'
+          }}
         >
           <ChapterContent
             htmlContent={memoizedContent}
