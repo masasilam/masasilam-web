@@ -167,8 +167,6 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      <style jsx>{`.scrollbar-hide::-webkit-scrollbar{display:none}`}</style>
     </div>
   )
 }

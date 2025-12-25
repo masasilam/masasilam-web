@@ -1,4 +1,7 @@
-// src/pages/LoginPage.jsx
+// ============================================
+// src/pages/LoginPage.jsx - UPDATED WITH GOOGLE LOGIN
+// ============================================
+
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { authService } from '../services/authService'
@@ -6,6 +9,7 @@ import { useAuth } from '../hooks/useAuth'
 import Input from '../components/Common/Input'
 import Button from '../components/Common/Button'
 import Alert from '../components/Common/Alert'
+import GoogleLoginButton from '../components/Auth/GoogleLoginButton'
 
 const LoginPage = () => {
   const { login } = useAuth()
@@ -17,10 +21,8 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Check if there's a success message from registration
     if (location.state?.message) {
       setSuccessMessage(location.state.message)
-      // Clear the state
       window.history.replaceState({}, document.title)
     }
   }, [location])
@@ -33,7 +35,7 @@ const LoginPage = () => {
 
     try {
       const response = await authService.login(formData)
-      
+
       if (response.data) {
         login(
           {
@@ -44,26 +46,20 @@ const LoginPage = () => {
           response.data.token,
           response.data.refreshToken
         )
-        
+
         navigate('/dasbor')
       }
     } catch (err) {
       console.error('Login error:', err)
-      
-      // Parse error from various sources
+
       let errorMessage = 'Gagal login. Silakan coba lagi.'
-      
+
       if (err.response) {
         const status = err.response.status
         const data = err.response.data
-        
-        // Check for 401 Unauthorized
+
         if (status === 401) {
-          // Backend returns 401 for: wrong credentials OR email not verified
-          // Since we can't distinguish without backend changes, show comprehensive message
           errorMessage = 'Login gagal. Kemungkinan penyebab:\n• Username atau password salah\n• Email belum diverifikasi'
-          setError(errorMessage)
-          return
         } else if (status === 403) {
           errorMessage = 'Akun Anda tidak aktif atau diblokir. Hubungi administrator.'
         } else if (data?.detail) {
@@ -76,11 +72,30 @@ const LoginPage = () => {
       } else if (err.message) {
         errorMessage = err.message
       }
-      
+
       setError(errorMessage)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handler untuk Google login success
+  const handleGoogleSuccess = (result) => {
+    console.log('✅ Google login success in LoginPage', result)
+    setSuccessMessage('Login dengan Google berhasil!')
+    setError('')
+
+    // Navigate to dashboard
+    setTimeout(() => {
+      navigate('/dasbor', { replace: true })
+    }, 500)
+  }
+
+  // Handler untuk Google login error
+  const handleGoogleError = (errorMessage) => {
+    console.error('❌ Google login error in LoginPage:', errorMessage)
+    setError(errorMessage)
+    setSuccessMessage('')
   }
 
   return (
@@ -91,19 +106,16 @@ const LoginPage = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-        {/* Success Message */}
         {successMessage && (
           <div className="mb-4">
             <Alert type="success" message={successMessage} onClose={() => setSuccessMessage('')} />
           </div>
         )}
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4">
             <Alert type="error" message={error} onClose={() => setError('')} />
-            
-            {/* Show helpful info for 401 errors */}
+
             {error.includes('Email belum diverifikasi') && (
               <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
@@ -123,6 +135,27 @@ const LoginPage = () => {
           </div>
         )}
 
+        {/* ========== GOOGLE LOGIN BUTTON ========== */}
+        <div className="mb-6">
+          <GoogleLoginButton
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+          />
+        </div>
+
+        {/* ========== DIVIDER ========== */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+              Atau masuk dengan email
+            </span>
+          </div>
+        </div>
+
+        {/* ========== REGULAR LOGIN FORM ========== */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             label="Username"
