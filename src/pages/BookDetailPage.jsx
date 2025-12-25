@@ -220,6 +220,15 @@ const BookDetailPage = () => {
     }
   }
 
+  const getSourceDomain = (url) => {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.hostname.replace('www.', '')
+    } catch {
+      return url
+    }
+  }
+
   if (loading) return <LoadingSpinner fullScreen />
   if (error || !book) return <div className="min-h-screen flex items-center justify-center"><Alert type="error" message={error || 'Buku tidak ditemukan'} /></div>
 
@@ -247,7 +256,7 @@ const BookDetailPage = () => {
           <span className="text-gray-900 dark:text-white font-medium truncate">{book.title}</span>
         </nav>
 
-        <button onClick={() => navigate('/buku')} 
+        <button onClick={() => navigate('/buku')}
           className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary mb-6 group">
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition" />
           <span className="font-medium">Kembali ke Koleksi Buku</span>
@@ -293,14 +302,14 @@ const BookDetailPage = () => {
               </div>
               {(book.publisher || book.language || book.totalWord || book.edition || book.updatedAt || book.createdAt || book.copyrightStatus || book.source) && (
                 <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3 text-sm">
-                  {book.publisher && <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Penerbit</div><div className="font-medium">{book.publisher}</div></div></div>}
+                  {book.publisher && <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Diterbitkan Ulang Oleh</div><div className="font-medium">{book.publisher}</div></div></div>}
                   {book.language && <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Bahasa</div><div className="font-medium">{book.language}</div></div></div>}
                   {book.totalWord && <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Total Kata</div><div className="font-medium">{book.totalWord.toLocaleString()} kata</div></div></div>}
                   {book.edition && <div className="flex items-center gap-2"><Book className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Edisi</div><div className="font-medium">Edisi {book.edition}</div></div></div>}
-                  {book.updatedAt && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Edisi Terakhir</div><div className="font-medium">{new Date(book.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>}
+                  {book.updatedAt && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Diperbarui</div><div className="font-medium">{new Date(book.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>}
                   {book.createdAt && <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Ditambahkan</div><div className="font-medium">{new Date(book.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>}
                   {book.copyrightStatus && <div className="pt-3 border-t border-gray-200 dark:border-gray-700"><div className="text-gray-500 text-xs">Status Hak Cipta</div><div className="font-medium text-green-600 dark:text-green-400">{book.copyrightStatus}</div></div>}
-                  {book.source && <div className="pt-3 border-t border-gray-200 dark:border-gray-700"><div className="text-gray-500 text-xs mb-1">Sumber Digital</div><a href={book.source} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm break-all flex items-center gap-1"><svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg><span className="truncate">{book.source}</span></a></div>}
+                  {book.source && <div className="pt-3 border-t border-gray-200 dark:border-gray-700"><div className="text-gray-500 text-xs mb-1">Sumber</div><a href={book.source} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm break-all flex items-center gap-1"><svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg><span className="truncate">{getSourceDomain(book.source)}</span></a></div>}
                 </div>
               )}
             </div>
@@ -334,7 +343,7 @@ const BookDetailPage = () => {
             {book.genres && (
               <div className="mb-6">
                 <div className="flex flex-wrap gap-2">
-                    {book.genres.split(',').reverse().map((genre, index) => {
+                    {book.genres.split(',').map((genre, index) => {
                     const genreName = genre.trim()
                     const genreSlug = genreName.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')
                     return <Link key={index} to={`/kategori/${genreSlug}`} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-primary hover:text-white transition">{genreName}</Link>
@@ -345,13 +354,13 @@ const BookDetailPage = () => {
             {book.category && <div className="mb-8"><span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium">{book.category}</span></div>}
             {book.contributors && <div className="mb-8"><h3 className="font-semibold mb-3">Kontributor</h3><p className="text-gray-700 dark:text-gray-300">{book.contributors}</p></div>}
             <section className="mb-8">
-              <h2 className="text-2xl font-bold mb-4">Deskripsi</h2>
-              <div className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+              <h2 className="text-2xl font-bold mb-4">Deskripsi <span className="text-sm font-normal text-gray-500">(Dibuat otomatis)</span></h2>
+              <div className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed text-justify">
                 {book.description || 'Tidak ada deskripsi tersedia.'}
               </div>
             </section>
 
-            {(book.fileFormat || book.fileSize || book.totalPages || book.totalWord || book.publicationYear || book.publishedAt || book.createdAt || book.updatedAt || book.source) && (
+            {(book.fileFormat || book.fileSize || book.totalPages || book.totalWord || book.publicationYear || book.publishedAt || book.createdAt || book.updatedAt || book.source || book.language || book.publisher || book.edition || book.copyrightStatus || book.estimatedReadTime) && (
               <section className="mb-8">
                 <button onClick={() => setShowBookDetails(!showBookDetails)} className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                   <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-gray-500" /><span className="font-semibold">Detail Buku Lengkap</span></div>
@@ -363,17 +372,22 @@ const BookDetailPage = () => {
                       <div className="space-y-3">
                         {book.fileFormat && <div><div className="text-xs text-gray-500 uppercase mb-1">Format File</div><div className="font-medium">{book.fileFormat.toUpperCase()}</div></div>}
                         {book.fileSize && <div><div className="text-xs text-gray-500 uppercase mb-1">Ukuran File</div><div className="font-medium">{(book.fileSize / 1024 / 1024).toFixed(2)} MB</div></div>}
-                        {book.totalPages && <div><div className="text-xs text-gray-500 uppercase mb-1">Total Halaman</div><div className="font-medium">{book.totalPages} halaman</div></div>}
+                        {book.totalPages && <div><div className="text-xs text-gray-500 uppercase mb-1">Total Bab & Subbab</div><div className="font-medium">{book.totalPages} bab & subbab</div></div>}
                         {book.totalWord && <div><div className="text-xs text-gray-500 uppercase mb-1">Total Kata</div><div className="font-medium">{book.totalWord.toLocaleString()} kata</div></div>}
+                        {book.estimatedReadTime && <div><div className="text-xs text-gray-500 uppercase mb-1">Estimasi Waktu Baca</div><div className="font-medium">{book.estimatedReadTime} menit</div></div>}
+                        {book.language && <div><div className="text-xs text-gray-500 uppercase mb-1">Bahasa</div><div className="font-medium">{book.language}</div></div>}
                       </div>
                       <div className="space-y-3">
                         {book.publicationYear && <div><div className="text-xs text-gray-500 uppercase mb-1">Tahun Terbit</div><div className="font-medium">{book.publicationYear}</div></div>}
                         {book.publishedAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Tanggal Terbit</div><div className="font-medium">{new Date(book.publishedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
-                        {book.createdAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Ditambahkan ke Perpustakaan</div><div className="font-medium">{new Date(book.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
+                        {book.publisher && <div><div className="text-xs text-gray-500 uppercase mb-1">Diterbitkan Ulang Oleh</div><div className="font-medium">{book.publisher}</div></div>}
+                        {book.edition && <div><div className="text-xs text-gray-500 uppercase mb-1">Edisi</div><div className="font-medium">Edisi {book.edition}</div></div>}
+                        {book.createdAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Ditambahkan</div><div className="font-medium">{new Date(book.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
                         {book.updatedAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Diperbarui</div><div className="font-medium">{new Date(book.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
                       </div>
                     </div>
-                    {book.source && <div className="pt-4 border-t border-gray-200 dark:border-gray-700"><div className="text-xs text-gray-500 uppercase mb-2">Sumber Digital</div><a href={book.source} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all flex items-center gap-2"><svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>{book.source}</a></div>}
+                    {book.copyrightStatus && <div className="pt-4 border-t border-gray-200 dark:border-gray-700"><div className="text-xs text-gray-500 uppercase mb-1">Status Hak Cipta</div><div className="font-medium text-green-600 dark:text-green-400">{book.copyrightStatus}</div></div>}
+                    {book.source && <div className="pt-4 border-t border-gray-200 dark:border-gray-700"><div className="text-xs text-gray-500 uppercase mb-2">Sumber</div><a href={book.source} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all flex items-center gap-2"><svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>{getSourceDomain(book.source)}</a></div>}
                   </div>
                 )}
               </section>
