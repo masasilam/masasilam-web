@@ -575,13 +575,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     <div className="relative pb-20">
       <style>{hideScrollbarStyle}</style>
 
-      {isTracking && isAuthenticated && (
-        <div className="fixed top-16 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2 z-50 shadow-lg">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-          Tracking
-        </div>
-      )}
-
       {showTTSLoginPrompt && (
         <LoginPromptModal
           icon={Volume2}
