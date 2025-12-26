@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, memo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import bookService from '../services/bookService'
 import BookGrid from '../components/Book/BookGrid'
 import Button from '../components/Common/Button'
 import Input from '../components/Common/Input'
-import { Search, SlidersHorizontal, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Search, SlidersHorizontal, X, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft } from 'lucide-react'
 
 const SORTS = [
   { v: 'updateAt', l: 'Update' }, { v: 'publishedAt', l: 'Terbit' }, { v: 'title', l: 'Judul' },
@@ -54,6 +55,7 @@ const SBtn = memo(({ opt, act, ord, load, onClick }) => (
 ))
 
 const BooksPage = () => {
+  const navigate = useNavigate()
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
@@ -98,6 +100,15 @@ const BooksPage = () => {
   return (
     <div className="min-h-screen py-4 sm:py-8">
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary mb-4 sm:mb-6 group transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm sm:text-base font-medium">Kembali ke Beranda</span>
+        </button>
+
         <header className="mb-6">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2">Koleksi Buku Digital</h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Jelajahi buku-buku berkualitas</p>

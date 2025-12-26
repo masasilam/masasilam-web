@@ -791,10 +791,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
         <div
           lang="id"
-          className={`transition-colors duration-300 rounded-lg my-8 ${
+          className={`transition-colors duration-300 rounded-lg my-8 py-8 ${
             readingMode
-              ? 'bg-[#FFF8DC] px-8 py-12 shadow-inner border-t border-b border-gray-300'
-              : 'border-t border-b border-gray-200 dark:border-gray-800 py-8'
+              ? 'bg-[#FFF8DC] shadow-inner border-t border-b border-gray-300'
+              : 'border-t border-b border-gray-200 dark:border-gray-800'
           }`}
           style={{
             /* Ensure hyphenation is enabled at wrapper level */
