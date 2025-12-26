@@ -1,10 +1,16 @@
 // ============================================
-// src/services/userService.js
+// src/services/userService.js - UPDATED
 // ============================================
 
 import api from './api'
 
 export const userService = {
+  // Get all users (for statistics)
+  getAllUsers: async () => {
+    const response = await api.get('/user')
+    return response.data
+  },
+
   // Get user profile
   getProfile: async () => {
     const response = await api.get('/user/profile')
@@ -21,7 +27,7 @@ export const userService = {
   uploadProfilePicture: async (file) => {
     const formData = new FormData()
     formData.append('file', file)
-    
+
     const response = await api.post('/user/profile-picture', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -78,3 +84,5 @@ export const userService = {
     return response.data
   },
 }
+
+export default userService

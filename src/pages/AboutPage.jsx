@@ -1,10 +1,53 @@
+import { useState, useEffect } from 'react'
 import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail } from 'lucide-react'
+import bookService from '../services/bookService'
+import userService from '../services/userService'
+import LoadingSpinner from '../components/Common/LoadingSpinner'
 
 const AboutPage = () => {
-  const stats = [
-    { icon: Book, value: "10,000+", label: "Koleksi Buku", color: "text-blue-600" },
-    { icon: Users, value: "∞", label: "Pembaca", color: "text-green-600" },
-    { icon: Globe, value: "24/7", label: "Akses Gratis", color: "text-purple-600" },
+  const [stats, setStats] = useState({
+    totalBooks: 0,
+    totalUsers: 0,
+    totalGenres: 0
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [booksRes, genresRes, usersRes] = await Promise.all([
+          bookService.getBooks({ page: 1, limit: 1 }),
+          bookService.getGenres(true),
+          userService.getAllUsers()
+        ])
+
+        const totalBooks = booksRes.data?.total || 0
+        const genresWithBooks = (genresRes.data || []).filter(g => (g.bookCount || 0) >= 1)
+        const totalUsers = usersRes.data?.length || 0
+
+        setStats({
+          totalBooks,
+          totalUsers,
+          totalGenres: genresWithBooks.length
+        })
+      } catch (error) {
+        console.error('Error fetching stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  if (loading) {
+    return <LoadingSpinner fullScreen />
+  }
+
+  const displayStats = [
+    { icon: Book, value: stats.totalBooks.toLocaleString('id-ID'), label: "Koleksi Buku", color: "text-blue-600" },
+    { icon: Users, value: stats.totalUsers.toLocaleString('id-ID'), label: "Pengguna Terdaftar", color: "text-green-600" },
+    { icon: Globe, value: stats.totalGenres.toString(), label: "Genre Berbeda", color: "text-purple-600" },
     { icon: Heart, value: "100%", label: "Gratis Selamanya", color: "text-red-600" }
   ]
 
@@ -74,7 +117,7 @@ const AboutPage = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16">
-          {stats.map((stat, index) => {
+          {displayStats.map((stat, index) => {
             const Icon = stat.icon
             return (
               <div key={index} className="text-center bg-white dark:bg-gray-800 rounded-xl p-6 sm:p-8 shadow-lg hover:shadow-2xl hover:scale-105 transition-all">

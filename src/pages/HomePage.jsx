@@ -53,17 +53,26 @@ const ScrollableBooks = memo(({ books, title, actionText, actionPath }) => {
 
 const HomePage = () => {
   const [books, setBooks] = useState({ popular: [], new: [] })
+  const [stats, setStats] = useState({ totalBooks: 0, totalGenres: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [pop, nw] = await Promise.all([
+        const [pop, nw, genres, allBooks] = await Promise.all([
           bookService.getBooks({ page: 1, limit: 24, sortField: 'viewCount', sortOrder: 'DESC' }),
-          bookService.getBooks({ page: 1, limit: 24, sortField: 'updateAt', sortOrder: 'DESC' })
+          bookService.getBooks({ page: 1, limit: 24, sortField: 'updateAt', sortOrder: 'DESC' }),
+          bookService.getGenres(true),
+          bookService.getBooks({ page: 1, limit: 1 }) // Just to get total count
         ])
         const map = (r) => (r.data?.list || r.data?.data || []).map(b => ({ ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image }))
+
+        // Calculate real stats
+        const totalBooks = allBooks.data?.total || 0
+        const genresWithBooks = (genres.data || []).filter(g => (g.bookCount || 0) >= 1)
+
         setBooks({ popular: map(pop), new: map(nw) })
+        setStats({ totalBooks, totalGenres: genresWithBooks.length })
       } catch (err) {
         // Silent error
       } finally {
@@ -75,10 +84,10 @@ const HomePage = () => {
 
   if (loading) return <LoadingSpinner fullScreen />
 
-  const stats = [
-    { num: '10,000+', label: 'Buku Tersedia' },
-    { num: '50+', label: 'Genre Berbeda' },
-    { num: '100%', label: 'Gratis & Legal' },
+  const displayStats = [
+    { num: stats.totalBooks.toLocaleString('id-ID'), label: 'Buku Tersedia' },
+    { num: stats.totalGenres.toString(), label: 'Genre Berbeda' },
+    { num: '100%', label: 'Gratis' },
     { num: '∞', label: 'Tanpa Batas' }
   ]
 
@@ -108,7 +117,8 @@ const HomePage = () => {
                     <div className="font-serif text-xs sm:text-base lg:text-lg leading-relaxed text-gray-800 dark:text-gray-200 space-y-4 sm:space-y-5">
                       <p>Ada tanganku, sekali akan jemu terkulai,<br/>Mainan cahaya di air hilang bentuk dalam kabut,<br/>Dan suara yang kucintai 'kan berhenti membelai.<br/>Kupahat batu nisan sendiri dan kupagut.</p>
                       <p>Kita—anjing diburu—hanya melihat sebagian dari sandiwara sekarang<br/>Tidak tahu Romeo & Juliet berpeluk di kubur atau di ranjang<br/>Lahir seorang besar dan tenggelam beratus ribu<br/>Keduanya harus dicatet, keduanya dapat tempat.</p>
-                      <p>Dan kita nanti tiada sawan lagi diburu<br/>Jika bedil sudah disimpan, cuma kenangan berdebu;<br/>Kita memburu arti atau diserahkan kepada anak lahir sempat<br/>Karena itu jangan mengerdip, tatap dan penamu asah,<br/>Tulis karena kertas gersang; tenggorokan kering sedikit mau basah!</p>
+                      <p>Dan kita nanti tiada sawan lagi diburu<br/>Jika bedil sudah disimpan, cuma kenangan berdebu;<br/>Kita memburu arti atau diserahkan kepada anak lahir sempat</p>
+                      <p>Karena itu jangan mengerdip, tatap dan penamu asah,<br/>Tulis karena kertas gersang; tenggorokan kering sedikit mau basah!</p>
                     </div>
                   </div>
                 </div>
@@ -142,7 +152,7 @@ const HomePage = () => {
       <section className="bg-gray-100 dark:bg-gray-900 border-y-2 border-primary py-8 sm:py-10" aria-label="Statistik perpustakaan">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 text-center">
-            {stats.map((s, i) => (
+            {displayStats.map((s, i) => (
               <div key={i} className="group hover:scale-105 transition-transform">
                 <div className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-primary transition-colors">{s.num}</div>
                 <div className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider font-semibold">{s.label}</div>
