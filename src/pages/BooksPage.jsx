@@ -100,7 +100,7 @@ const BooksPage = () => {
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
         <header className="mb-6">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2">Koleksi Buku Digital</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Jelajahi ribuan buku berkualitas</p>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Jelajahi buku-buku berkualitas</p>
         </header>
         <div className="mb-4 space-y-3">
           <div className="flex gap-2">

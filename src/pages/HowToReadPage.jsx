@@ -148,7 +148,7 @@ const HowToReadPage = () => {
                 <span className="text-white font-bold text-lg sm:text-xl">2</span>
               </div>
               <h3 className="font-bold text-sm sm:text-base mb-2 text-gray-900 dark:text-white">Pilih Buku</h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Jelajahi ribuan karya klasik berkualitas</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Jelajahi karya-karya klasik berkualitas</p>
             </div>
 
             <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-4 sm:p-6 text-center hover:scale-105 transition-transform">

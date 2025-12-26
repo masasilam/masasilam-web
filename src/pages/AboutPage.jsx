@@ -159,7 +159,7 @@ const AboutPage = () => {
             <ul className="space-y-2 text-sm sm:text-base text-gray-700 dark:text-gray-300">
               <li className="flex items-start gap-2 text-justify">
                 <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                <span>Menyediakan ribuan buku berkualitas secara gratis</span>
+                <span>Menyediakan buku-buku berkualitas secara gratis</span>
               </li>
               <li className="flex items-start gap-2 text-justify">
                 <span className="text-green-600 dark:text-green-400 mt-1">✓</span>

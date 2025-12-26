@@ -185,7 +185,7 @@ const HomePage = () => {
         <div className="container mx-auto px-4 sm:px-6 text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="font-serif text-3xl sm:text-5xl font-light text-gray-900 dark:text-white mb-3 sm:mb-6">Mulai Membaca <span className="italic">Sekarang</span></h2>
-            <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi ribuan karya sastra klasik dari seluruh dunia. Gratis. Legal. Tanpa batas waktu.</p>
+            <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi karya-karya sastra klasik. Gratis. Legal. Tanpa batas waktu.</p>
             <Button size="lg" onClick={() => window.location.href = '/buku'} className="w-full sm:w-auto">Jelajahi Semua Koleksi Buku <ArrowRight className="w-5 h-5 ml-2" /></Button>
           </div>
         </div>
