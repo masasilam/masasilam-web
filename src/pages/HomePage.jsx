@@ -53,28 +53,41 @@ const ScrollableBooks = memo(({ books, title, actionText, actionPath }) => {
 
 const HomePage = () => {
   const [books, setBooks] = useState({ popular: [], new: [] })
-  const [stats, setStats] = useState({ totalBooks: 0, totalGenres: 0 })
+  const [stats, setStats] = useState({
+    totalBooks: 0,
+    totalGenres: 0,
+    totalAuthors: 0
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [pop, nw, genres, allBooks] = await Promise.all([
+        const [pop, nw, genres, allBooks, authors] = await Promise.all([
           bookService.getBooks({ page: 1, limit: 24, sortField: 'viewCount', sortOrder: 'DESC' }),
           bookService.getBooks({ page: 1, limit: 24, sortField: 'updateAt', sortOrder: 'DESC' }),
           bookService.getGenres(true),
-          bookService.getBooks({ page: 1, limit: 1 }) // Just to get total count
+          bookService.getBooks({ page: 1, limit: 1 }),
+          bookService.getAuthors(1, 1) // ✅ Fetch total authors
         ])
-        const map = (r) => (r.data?.list || r.data?.data || []).map(b => ({ ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image }))
+        const map = (r) => (r.data?.list || r.data?.data || []).map(b => ({
+          ...b,
+          cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image
+        }))
 
         // Calculate real stats
         const totalBooks = allBooks.data?.total || 0
         const genresWithBooks = (genres.data || []).filter(g => (g.bookCount || 0) >= 1)
+        const totalAuthors = authors.data?.total || 0
 
         setBooks({ popular: map(pop), new: map(nw) })
-        setStats({ totalBooks, totalGenres: genresWithBooks.length })
+        setStats({
+          totalBooks,
+          totalGenres: genresWithBooks.length,
+          totalAuthors
+        })
       } catch (err) {
-        // Silent error
+        console.error('Error fetching data:', err)
       } finally {
         setLoading(false)
       }
@@ -87,8 +100,8 @@ const HomePage = () => {
   const displayStats = [
     { num: stats.totalBooks.toLocaleString('id-ID'), label: 'Buku Tersedia' },
     { num: stats.totalGenres.toString(), label: 'Genre Berbeda' },
-    { num: '100%', label: 'Gratis' },
-    { num: '∞', label: 'Tanpa Batas' }
+    { num: stats.totalAuthors.toLocaleString('id-ID'), label: 'Penulis' },
+    { num: '∞', label: 'Gratis Tanpa Batas' }
   ]
 
   return (

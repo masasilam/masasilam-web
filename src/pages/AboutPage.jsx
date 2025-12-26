@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail } from 'lucide-react'
+import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Github } from 'lucide-react'
 import bookService from '../services/bookService'
 import userService from '../services/userService'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
@@ -8,27 +8,31 @@ const AboutPage = () => {
   const [stats, setStats] = useState({
     totalBooks: 0,
     totalUsers: 0,
-    totalGenres: 0
+    totalGenres: 0,
+    totalAuthors: 0
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [booksRes, genresRes, usersRes] = await Promise.all([
+        const [booksRes, genresRes, usersRes, authorsRes] = await Promise.all([
           bookService.getBooks({ page: 1, limit: 1 }),
           bookService.getGenres(true),
-          userService.getAllUsers()
+          userService.getAllUsers(),
+          bookService.getAuthors(1, 1)
         ])
 
         const totalBooks = booksRes.data?.total || 0
         const genresWithBooks = (genresRes.data || []).filter(g => (g.bookCount || 0) >= 1)
         const totalUsers = usersRes.data?.length || 0
+        const totalAuthors = authorsRes.data?.total || 0
 
         setStats({
           totalBooks,
           totalUsers,
-          totalGenres: genresWithBooks.length
+          totalGenres: genresWithBooks.length,
+          totalAuthors
         })
       } catch (error) {
         console.error('Error fetching stats:', error)
@@ -48,7 +52,7 @@ const AboutPage = () => {
     { icon: Book, value: stats.totalBooks.toLocaleString('id-ID'), label: "Koleksi Buku", color: "text-blue-600" },
     { icon: Users, value: stats.totalUsers.toLocaleString('id-ID'), label: "Pengguna Terdaftar", color: "text-green-600" },
     { icon: Globe, value: stats.totalGenres.toString(), label: "Genre Berbeda", color: "text-purple-600" },
-    { icon: Heart, value: "100%", label: "Gratis Selamanya", color: "text-red-600" }
+    { icon: Heart, value: stats.totalAuthors.toLocaleString('id-ID'), label: "Penulis", color: "text-red-600" }
   ]
 
   const values = [
@@ -86,26 +90,26 @@ const AboutPage = () => {
             MasasilaM
           </h1>
           <p className="text-lg sm:text-2xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-            Perpustakaan online untuk buku-buku domain publik yang terbengkalai dan terdegradasi
+            Perpustakaan digital untuk buku-buku domain publik yang terbengkalai dan terdegradasi
           </p>
         </div>
 
         {/* Manifesto */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-10 mb-12 sm:mb-16 border-l-4 border-primary">
-          <div className="prose dark:prose-invert max-w-none">
-            <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl px-6 py-6 sm:px-8 sm:py-10 mb-12 sm:mb-16 border-l-4 border-primary">
+          <div>
+            <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
               <strong className="text-primary text-xl">Bukan Kuil Budaya</strong>, lantaran memang tak sebanding dengan perpustakaan Alexandria yang pernah kesohor itu. Tapi di sini, siapa pun juga dapat menemukan buku-buku keren—<em className="text-primary">gratis!</em>
             </p>
 
-            <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4">
-              Dorongan kekecewaan yang amat sangat di kalangan mahasiswa yang bangkrut, para pelajar melarat, dan orang-orang kalah—maka daripada itu—<strong className="text-primary">MasasilaM</strong> didirikan sebagai perpustakaan umum dengan semen selundupan.
+            <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
+              Meski didirikan dengan semen selundupan, <strong className="text-primary">MasasilaM</strong> diharapkan dapat menjadi perpustakaan umum dengan ruang baca nyaman.
             </p>
 
-            <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4">
-              Kami berbagi file, mengedarkan pamflet-pamflet bikinan sendiri yang kami pungut dari segara internet. Kami menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
+            <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
+              Kami merakit dan mengembangkan sistem untuk berbagi file, mengedarkan pamflet-pamflet yang kami pungut dari segara internet, menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
             </p>
 
-            <p className="text-lg sm:text-xl leading-relaxed text-primary font-semibold italic mb-6">
+            <p className="text-lg sm:text-xl leading-relaxed text-primary font-semibold italic mb-6 text-justify">
               Pelaku vandalisme yang menggorok leher sendiri—meneror dengan hukuman yang patut dicontoh.
             </p>
 
@@ -140,7 +144,7 @@ const AboutPage = () => {
               </div>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Visi Kami</h2>
             </div>
-            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
               Menjadikan literasi digital <strong>accessible</strong>, <strong>engaging</strong>, dan <strong>bermakna</strong> untuk semua orang di Indonesia dan dunia.
             </p>
           </div>
@@ -153,15 +157,15 @@ const AboutPage = () => {
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Misi Kami</h2>
             </div>
             <ul className="space-y-2 text-sm sm:text-base text-gray-700 dark:text-gray-300">
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2 text-justify">
                 <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
                 <span>Menyediakan ribuan buku berkualitas secara gratis</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2 text-justify">
                 <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
                 <span>Menghadirkan pengalaman membaca digital superior</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2 text-justify">
                 <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
                 <span>Membangun ekosistem pembaca yang aktif</span>
               </li>
@@ -199,10 +203,57 @@ const AboutPage = () => {
                     </div>
                     <h3 className="font-bold text-lg text-gray-900 dark:text-white">{value.title}</h3>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{value.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-justify">{value.description}</p>
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        {/* Uncopyright Statement */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-10 mb-12 sm:mb-16 border-l-4 border-green-500">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            </div>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              Pernyataan Uncopyright
+            </h2>
+          </div>
+
+          <div className="space-y-4 text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">
+            <p className="text-justify">
+              Halaman hak cipta biasanya hadir untuk memberitahu apa yang tidak boleh dilakukan. Sebaliknya, pernyataan uncopyright ini hadir untuk <strong className="text-green-600 dark:text-green-400">menegaskan kebebasan</strong>.
+            </p>
+
+            <p className="text-justify">
+              Teks dan karya seni di dalam ebook ini diyakini telah berada dalam <strong>domain publik</strong>. Kami meyakini bahwa segala aktivitas non-penulisan yang dilakukan atas karya domain publik—seperti digitalisasi, penyuntingan, atau penataan tipografi—tidak menciptakan hak cipta baru. Tidak seorang pun dapat mengklaim hak milik atas pekerjaan semacam itu.
+            </p>
+
+            <p className="text-justify">
+              Tak sampai di situ. Seluruh <strong>kode sumber</strong> yang membangun MasasilaM—setiap baris kode, setiap desain antarmuka, setiap skrip dan alat bantu—juga dibagikan dengan prinsip yang sama. Platform ini dibangun dengan keyakinan bahwa pengetahuan dapat dikembangkan bersama.
+            </p>
+
+            <p className="text-justify">
+              Meskipun demikian, para kontributor MasasilaM—baik yang menyumbangkan teks, koreksi, kode, atau desain—secara sadar melepaskan hasil kerja mereka di bawah ketentuan{' '}
+              <a
+                href="https://creativecommons.org/publicdomain/zero/1.0/deed.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-600 dark:text-green-400 font-semibold hover:underline transition-all"
+              >
+                CC0 1.0 Universal Public Domain Dedication
+              </a>
+              . Ini adalah penyerahan sepenuhnya segala upaya mereka ke ranah publik.
+            </p>
+
+            <p className="text-justify">
+              Pernyataan ini adalah perwujudan dari <em>produksi nonpasar</em>, sebuah langkah yang menolak &quot;hasrat bergelora untuk menyimpan dan mempertahankan&quot; kepemilikan. Kami percaya bahwa baik konten literer maupun kode teknologi adalah <strong className="text-green-600 dark:text-green-400">warisan bersama umat manusia</strong>.
+            </p>
+
+            <p className="text-justify font-semibold text-gray-900 dark:text-white">
+              Upaya ini dilakukan demi memperkaya khazanah literasi dan teknologi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
+            </p>
           </div>
         </div>
 
@@ -211,7 +262,7 @@ const AboutPage = () => {
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
             Bergabunglah dengan Kami
           </h2>
-          <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto text-justify">
             Membaca adalah hak. Pengetahuan adalah kekuatan. Dan keduanya harus gratis.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -221,6 +272,15 @@ const AboutPage = () => {
             >
               <Book className="w-5 h-5" />
               Mulai Membaca
+            </a>
+            <a
+              href="https://github.com/masasilam"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-base"
+            >
+              <Github className="w-5 h-5" />
+              GitHub
             </a>
             <a
               href="/kontak"

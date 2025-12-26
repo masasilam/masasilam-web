@@ -1,3 +1,4 @@
+// PART 1: Imports, RatingModal, and Component Setup
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Book, BookOpen, Calendar, Clock, Download, Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp, ArrowLeft } from 'lucide-react'
@@ -152,19 +153,30 @@ const BookDetailPage = () => {
     }
   }
 
+  // ✅ FIX: Download now hits backend endpoint
   const handleDownload = async () => {
     if (!book.fileUrl) return alert('File buku tidak tersedia')
     try {
       setDownloadLoading(true)
+      
+      const response = await bookService.downloadBook(bookSlug)
+      const blob = new Blob([response], { type: 'application/epub+zip' })
+      const url = window.URL.createObjectURL(blob)
+      
       const link = document.createElement('a')
-      link.href = book.fileUrl
+      link.href = url
       link.download = `${book.title}.${book.fileFormat || 'epub'}`
-      link.target = '_blank'
       document.body.appendChild(link)
       link.click()
+      
       document.body.removeChild(link)
-    } catch {
-      alert('Gagal mengunduh buku')
+      window.URL.revokeObjectURL(url)
+      
+      await fetchBookDetail()
+      alert('✅ Unduhan dimulai!')
+    } catch (error) {
+      console.error('Download error:', error)
+      alert('❌ Gagal mengunduh buku')
     } finally {
       setDownloadLoading(false)
     }
@@ -245,6 +257,7 @@ const BookDetailPage = () => {
     { value: 0.5, label: '0.5', count: ratingStats?.rating05Count }
   ].filter(r => r.count > 0)
 
+
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -256,13 +269,13 @@ const BookDetailPage = () => {
           <span className="text-gray-900 dark:text-white font-medium truncate">{book.title}</span>
         </nav>
 
-        <button onClick={() => navigate('/buku')}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary mb-6 group">
+        <button onClick={() => navigate('/buku')} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary mb-6 group">
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition" />
           <span className="font-medium">Kembali ke Koleksi Buku</span>
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* SIDEBAR */}
           <aside className="lg:col-span-1">
             <div className="sticky top-24">
               <img src={book.coverImageUrl || 'https://via.placeholder.com/400x600?text=No+Cover'} alt={`Cover buku ${book.title}`} className="w-full rounded-lg shadow-lg" loading="lazy" />
@@ -274,17 +287,17 @@ const BookDetailPage = () => {
                   <Download className="w-5 h-5 mr-2" />{downloadLoading ? 'Mengunduh...' : 'Unduh EPUB'}
                 </Button>
                 <div className="grid grid-cols-4 gap-2">
-                  <Button fullWidth variant="outline" onClick={() => navigate(`/buku/${bookSlug}/daftar-isi`)} className="flex-col py-3" aria-label="Daftar Isi">
+                  <Button fullWidth variant="outline" onClick={() => navigate(`/buku/${bookSlug}/daftar-isi`)} className="flex-col py-3">
                     <Book className="w-5 h-5 mb-1" /><span className="text-xs">Daftar Isi</span>
                   </Button>
-                  <Button fullWidth variant="outline" onClick={handleAddToFavorite} className="flex-col py-3" aria-label="Tambah ke Favorit">
+                  <Button fullWidth variant="outline" onClick={handleAddToFavorite} className="flex-col py-3">
                     <Heart className="w-5 h-5 mb-1" /><span className="text-xs">Favorit</span>
                   </Button>
-                  <Button fullWidth variant={userRating ? "primary" : "outline"} onClick={handleOpenRatingModal} className="flex-col py-3" aria-label="Beri Rating">
+                  <Button fullWidth variant={userRating ? "primary" : "outline"} onClick={handleOpenRatingModal} className="flex-col py-3">
                     <Star className={`w-5 h-5 mb-1 ${userRating ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                     <span className="text-xs">{book.averageRating > 0 ? `${book.averageRating.toFixed(1)}⭐` : 'Beri Rating'}</span>
                   </Button>
-                  <Button fullWidth variant="outline" onClick={handleShare} className="flex-col py-3" aria-label="Bagikan">
+                  <Button fullWidth variant="outline" onClick={handleShare} className="flex-col py-3">
                     <Share2 className="w-5 h-5 mb-1" /><span className="text-xs">Bagikan</span>
                   </Button>
                 </div>
@@ -300,12 +313,11 @@ const BookDetailPage = () => {
                   </div>
                 )}
               </div>
-              {(book.publisher || book.language || book.totalWord || book.edition || book.updatedAt || book.createdAt || book.copyrightStatus || book.source) && (
+              {(book.publisher || book.language || book.totalWord || book.updatedAt || book.createdAt || book.copyrightStatus || book.source) && (
                 <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3 text-sm">
                   {book.publisher && <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Diterbitkan Ulang Oleh</div><div className="font-medium">{book.publisher}</div></div></div>}
                   {book.language && <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Bahasa</div><div className="font-medium">{book.language}</div></div></div>}
                   {book.totalWord && <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Total Kata</div><div className="font-medium">{book.totalWord.toLocaleString()} kata</div></div></div>}
-                  {book.edition && <div className="flex items-center gap-2"><Book className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Edisi</div><div className="font-medium">Edisi {book.edition}</div></div></div>}
                   {book.updatedAt && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Diperbarui</div><div className="font-medium">{new Date(book.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>}
                   {book.createdAt && <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /><div><div className="text-gray-500 text-xs">Ditambahkan</div><div className="font-medium">{new Date(book.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>}
                   {book.copyrightStatus && <div className="pt-3 border-t border-gray-200 dark:border-gray-700"><div className="text-gray-500 text-xs">Status Hak Cipta</div><div className="font-medium text-green-600 dark:text-green-400">{book.copyrightStatus}</div></div>}
@@ -315,6 +327,7 @@ const BookDetailPage = () => {
             </div>
           </aside>
 
+          {/* MAIN CONTENT */}
           <article className="lg:col-span-2">
             <h1 className="text-4xl font-bold mb-2">{book.title}</h1>
             {book.subtitle && <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">{book.subtitle}</p>}
@@ -322,16 +335,25 @@ const BookDetailPage = () => {
               {book.isFeatured && <span className="inline-flex items-center px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-sm font-medium"><Star className="w-4 h-4 mr-1 fill-current" />Featured</span>}
               {book.isActive === false && <span className="inline-flex items-center px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-sm font-medium">Tidak Aktif</span>}
             </div>
+
             {book.authorNames && (
               <div className="flex items-center gap-2 mb-6">
                 <User className="w-5 h-5 text-gray-500" />
-                {book.authorNames.split(',').map((author, index, arr) => {
-                  const authorName = author.trim()
-                  const authorSlug = authorName.toLowerCase().replace(/\s+/g, '-')
-                  return <span key={index}><Link to={`/penulis/${authorSlug}`} className="text-lg hover:text-primary hover:underline">{authorName}</Link>{index < arr.length - 1 && <span className="text-gray-500">, </span>}</span>
-                })}
+                <div className="flex flex-wrap items-center gap-1">
+                  {book.authorNames.split(',').map((author, index, arr) => {
+                    const authorName = author.trim()
+                    const authorSlug = authorName.toLowerCase().replace(/\s+/g, '-')
+                    return (
+                      <span key={index} className="inline-flex items-center">
+                        <Link to={`/penulis/${authorSlug}`} className="text-lg hover:text-primary hover:underline">{authorName}</Link>
+                        {index < arr.length - 1 && <span className="text-gray-500 mx-1">,</span>}
+                      </span>
+                    )
+                  })}
+                </div>
               </div>
             )}
+
             <div className="flex flex-wrap gap-6 mb-6 text-sm text-gray-600 dark:text-gray-400">
               {book.averageRating > 0 && <div className="flex items-center gap-2"><Star className="w-5 h-5 fill-yellow-400 text-yellow-400" /><span className="font-medium">{book.averageRating.toFixed(1)}</span><span className="text-xs">({book.totalRatings} rating)</span></div>}
               <div className="flex items-center gap-2"><Eye className="w-5 h-5" /><span>{book.viewCount || 0} views</span></div>
@@ -340,19 +362,57 @@ const BookDetailPage = () => {
               <div className="flex items-center gap-2"><Clock className="w-5 h-5" /><span>{book.estimatedReadTime} menit</span></div>
               <div className="flex items-center gap-2"><Calendar className="w-5 h-5" /><span>{book.publicationYear}</span></div>
             </div>
+
+            {/* ✅ IMPROVED GENRE UI */}
             {book.genres && (
               <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Genre</h3>
                 <div className="flex flex-wrap gap-2">
-                    {book.genres.split(',').map((genre, index) => {
+                  {book.genres.split(',').map((genre, index) => {
                     const genreName = genre.trim()
                     const genreSlug = genreName.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')
-                    return <Link key={index} to={`/kategori/${genreSlug}`} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm hover:bg-primary hover:text-white transition">{genreName}</Link>
+                    return (
+                      <Link
+                        key={index}
+                        to={`/kategori/${genreSlug}`}
+                        className="group relative px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm font-medium text-blue-700 dark:text-blue-300 hover:shadow-md hover:scale-105 transition-all duration-200"
+                      >
+                        <span className="relative z-10">{genreName}</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-10 rounded-lg transition-opacity" />
+                      </Link>
+                    )
                   })}
                 </div>
               </div>
             )}
-            {book.category && <div className="mb-8"><span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium">{book.category}</span></div>}
-            {book.contributors && <div className="mb-8"><h3 className="font-semibold mb-3">Kontributor</h3><p className="text-gray-700 dark:text-gray-300">{book.contributors}</p></div>}
+
+            {/* ✅ IMPROVED CONTRIBUTORS UI */}
+            {book.contributors && (
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Kontributor</h3>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                  <div className="flex flex-wrap gap-3">
+                    {book.contributors.split(',').map((contributor, index) => {
+                      const parts = contributor.trim().match(/(.+?)\s*\((.+?)\)/)
+                      const name = parts ? parts[1].trim() : contributor.trim()
+                      const role = parts ? parts[2].trim() : ''
+
+                      return (
+                        <div key={index} className="group flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-purple-100 dark:border-purple-900">
+                          <User className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">{name}</span>
+                            {role && <span className="text-xs text-gray-500 dark:text-gray-400">{role}</span>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DESCRIPTION */}
             <section className="mb-8">
               <h2 className="text-2xl font-bold mb-4">Deskripsi <span className="text-sm font-normal text-gray-500">(Dibuat otomatis)</span></h2>
               <div className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed text-justify">
@@ -360,7 +420,8 @@ const BookDetailPage = () => {
               </div>
             </section>
 
-            {(book.fileFormat || book.fileSize || book.totalPages || book.totalWord || book.publicationYear || book.publishedAt || book.createdAt || book.updatedAt || book.source || book.language || book.publisher || book.edition || book.copyrightStatus || book.estimatedReadTime) && (
+            {/* BOOK DETAILS - REMOVED edition & category fields */}
+            {(book.fileFormat || book.fileSize || book.totalPages || book.totalWord || book.publicationYear || book.publishedAt || book.createdAt || book.updatedAt || book.source || book.language || book.publisher || book.copyrightStatus || book.estimatedReadTime) && (
               <section className="mb-8">
                 <button onClick={() => setShowBookDetails(!showBookDetails)} className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                   <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-gray-500" /><span className="font-semibold">Detail Buku Lengkap</span></div>
@@ -381,7 +442,6 @@ const BookDetailPage = () => {
                         {book.publicationYear && <div><div className="text-xs text-gray-500 uppercase mb-1">Tahun Terbit</div><div className="font-medium">{book.publicationYear}</div></div>}
                         {book.publishedAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Tanggal Terbit</div><div className="font-medium">{new Date(book.publishedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
                         {book.publisher && <div><div className="text-xs text-gray-500 uppercase mb-1">Diterbitkan Ulang Oleh</div><div className="font-medium">{book.publisher}</div></div>}
-                        {book.edition && <div><div className="text-xs text-gray-500 uppercase mb-1">Edisi</div><div className="font-medium">Edisi {book.edition}</div></div>}
                         {book.createdAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Ditambahkan</div><div className="font-medium">{new Date(book.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
                         {book.updatedAt && <div><div className="text-xs text-gray-500 uppercase mb-1">Diperbarui</div><div className="font-medium">{new Date(book.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>}
                       </div>
@@ -393,6 +453,7 @@ const BookDetailPage = () => {
               </section>
             )}
 
+            {/* RATING STATS */}
             {ratingStats && ratingStats.totalRatings > 0 && (
               <section className="mb-8">
                 <button onClick={() => setShowRatingStats(!showRatingStats)} className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
@@ -418,6 +479,7 @@ const BookDetailPage = () => {
               </section>
             )}
 
+            {/* REVIEWS */}
             <section className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold">Ulasan Paling Membantu</h2>

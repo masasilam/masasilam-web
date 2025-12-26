@@ -66,8 +66,8 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/buku" className="nav-link">Buku</Link>
-            <Link to="/kategori" className="nav-link">Kategori</Link>
             <Link to="/penulis" className="nav-link">Penulis</Link>
+            <Link to="/kategori" className="nav-link">Kategori</Link>
             
             <button
               onClick={toggleTheme}
@@ -138,8 +138,8 @@ const Header = () => {
           <nav className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex flex-col gap-4">
               <Link to="/buku" className="nav-link">Buku</Link>
-              <Link to="/kategori" className="nav-link">Kategori</Link>
               <Link to="/penulis" className="nav-link">Penulis</Link>
+              <Link to="/kategori" className="nav-link">Kategori</Link>
               {isAuthenticated ? (
                 <>
                   <Link to="/dasbor" className="nav-link">Dashboard</Link>

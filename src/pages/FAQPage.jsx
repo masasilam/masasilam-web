@@ -19,7 +19,7 @@ const FAQPage = () => {
     {
       category: 'general',
       question: 'Apa itu MasasilaM?',
-      answer: 'MasasilaM adalah platform membaca digital yang menyediakan koleksi buku elektronik gratis dengan fitur-fitur canggih seperti anotasi, tracking progress, analytics mendalam, dan komunitas pembaca. Kami fokus pada buku-buku domain publik dan karya dengan lisensi terbuka.'
+      answer: 'MasasilaM adalah platform membaca digital yang menyediakan koleksi buku elektronik gratis dengan fitur-fitur modern seperti anotasi, tracking progress, analytics mendalam, dan komunitas pembaca. Kami fokus pada buku-buku domain publik dan karya dengan lisensi terbuka.'
     },
     {
       category: 'general',

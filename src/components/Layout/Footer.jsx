@@ -21,8 +21,8 @@ const Footer = () => {
             <h3 className="font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Jelajahi</h3>
             <ul className="space-y-2 text-sm">
               <li><Link to="/buku" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Buku</Link></li>
-              <li><Link to="/kategori" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Kategori</Link></li>
               <li><Link to="/penulis" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Penulis</Link></li>
+              <li><Link to="/kategori" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Kategori</Link></li>
               <li><Link to="/buku/terpopuler" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Terpopuler</Link></li>
             </ul>
           </div>
@@ -82,8 +82,8 @@ const Footer = () => {
               <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-sm">Jelajahi</h3>
               <ul className="space-y-2 text-xs">
                 <li><Link to="/buku" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Buku</Link></li>
-                <li><Link to="/kategori" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Kategori</Link></li>
                 <li><Link to="/penulis" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Penulis</Link></li>
+                <li><Link to="/kategori" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Kategori</Link></li>
                 <li><Link to="/buku/terpopuler" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Terpopuler</Link></li>
               </ul>
             </div>
@@ -141,10 +141,7 @@ const Footer = () => {
                 <span className="absolute top-[45%] left-[-5%] w-[110%] h-0 border-t-[0.15em] border-red-500 dark:border-red-400 transform rotate-[-45deg]"></span>
               </span>
               {' '}
-              {new Date().getFullYear()} <span className="font-semibold text-primary">MasasilaM</span>. Perpustakaan digital untuk semua.
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center sm:text-right">
-              Dibuat dengan <span className="text-red-500">❤️</span> untuk para pencinta buku
+              {new Date().getFullYear()} <span className="font-semibold text-primary">MasasilaM</span>. Perpustakaan digital untuk buku-buku domain publik yang terbengkalai dan terdegradasi.
             </p>
           </div>
         </div>

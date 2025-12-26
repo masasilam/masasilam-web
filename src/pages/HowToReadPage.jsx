@@ -63,7 +63,7 @@ const HowToReadPage = () => {
             Panduan Lengkap Membaca di MasasilaM
           </h1>
           <p className="text-base sm:text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-            Platform membaca digital yang intuitif dengan fitur-fitur canggih untuk pengalaman membaca yang produktif dan menyenangkan
+            Platform membaca digital yang intuitif dengan fitur-fitur modern untuk pengalaman membaca yang produktif dan menyenangkan
           </p>
         </div>
 

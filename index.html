@@ -1,17 +1,70 @@
 <!doctype html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/masasilam-logo-inverted.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Platform perpustakaan digital dengan koleksi buku berkualitas untuk semua pembaca" />
-    <title>MasasilaM - Platform Perpustakaan Digital</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/masasilam-logo-inverted.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Platform perpustakaan digital dengan koleksi buku berkualitas untuk semua pembaca" />
+  <title>MasasilaM - Platform Perpustakaan Digital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- 🌙 THEME SCRIPT - Mencegah flash of light theme -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+
+  <!-- 🎨 INLINE CSS - Background langsung sesuai theme -->
+  <style>
+    /* Default light mode */
+    html {
+      background-color: #ffffff;
+    }
+
+    /* Dark mode */
+    html.dark {
+      background-color: #111827; /* gray-900 */
+    }
+
+    body {
+      background-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Loading indicator (opsional) */
+    #root:empty::before {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Hide loading setelah React mount */
+    #root:not(:empty)::before {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
 </html>
