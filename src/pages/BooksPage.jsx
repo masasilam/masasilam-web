@@ -9,7 +9,7 @@ const SORTS = [
   { v: 'updateAt', l: 'Update' }, { v: 'publishedAt', l: 'Terbit' }, { v: 'title', l: 'Judul' },
   { v: 'averageRating', l: 'Rating' }, { v: 'viewCount', l: 'Views' }, { v: 'readCount', l: 'Baca' },
   { v: 'downloadCount', l: 'Download' }, { v: 'estimatedReadTime', l: 'Durasi' }, { v: 'totalWord', l: 'Kata' },
-  { v: 'fileSize', l: 'Size' }, { v: 'totalPages', l: 'Hal' }
+  { v: 'fileSize', l: 'Size' }, { v: 'totalPages', l: 'Bab' }
 ]
 
 const Sel = memo(({ val, onChange, opts, ph }) => (
