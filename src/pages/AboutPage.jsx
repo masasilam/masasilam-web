@@ -271,7 +271,7 @@ const AboutPage = () => {
               Mulai Membaca
             </a>
             <a
-              href="https://github.com/masasilam"
+              href="https://github.com/kajankk"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-base"

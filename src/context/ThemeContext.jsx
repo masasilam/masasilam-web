@@ -1,5 +1,6 @@
 // ============================================
 // src/context/ThemeContext.jsx
+// Default: Dark Mode
 // ============================================
 
 import { createContext, useState, useEffect } from 'react'
@@ -9,9 +10,9 @@ export const ThemeContext = createContext()
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Get theme from localStorage or default to 'light'
+    // Get theme from localStorage or default to 'dark'
     const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME)
-    return savedTheme || 'light'
+    return savedTheme || 'dark' // ← PERUBAHAN: dari 'light' ke 'dark'
   })
 
   useEffect(() => {

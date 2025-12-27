@@ -8,7 +8,7 @@ const Footer = () => {
     { icon: Instagram, label: 'Instagram', url: 'https://instagram.com/masasilam', color: 'hover:text-pink-600' },
     { icon: Youtube, label: 'YouTube', url: 'https://youtube.com/@masasilam', color: 'hover:text-red-600' },
     { icon: Github, label: 'GitHub', url: 'https://github.com/masasilam', color: 'hover:text-gray-900 dark:hover:text-white' },
-    { icon: Mail, label: 'Email', url: 'mailto:info@masasilam.com', color: 'hover:text-primary' }
+    { icon: Mail, label: 'Email', url: 'mailto:support@masasilam.com', color: 'hover:text-primary' }
   ]
 
   return (

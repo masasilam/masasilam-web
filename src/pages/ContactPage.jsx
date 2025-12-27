@@ -29,7 +29,7 @@ const ContactPage = () => {
     {
       icon: Mail,
       title: "Email",
-      details: ["support@masasilam.com", "info@masasilam.com"],
+      details: ["support@masasilam.com"],
       color: "text-blue-600 dark:text-blue-400"
     },
     {
