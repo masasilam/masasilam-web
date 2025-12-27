@@ -46,7 +46,7 @@ const DashboardLayout = () => {
   const bottomMenuItems = useMemo(() => [
     { path: '/', icon: Home, label: 'Beranda', external: true },
     { path: '/buku', icon: BookOpen, label: 'Koleksi Buku', external: true },
-    { path: '/dasbor/pengaturan', icon: Settings, label: 'Pengaturan' },
+    { path: '/dasbor/pengaturan', icon: Settings, label: 'Pengaturan', comingSoon: true },
   ], [])
 
   const isActive = useCallback((path, exact = false) => {
@@ -68,6 +68,10 @@ const DashboardLayout = () => {
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen(prev => !prev)
+  }, [])
+
+  const handleComingSoonClick = useCallback((label) => {
+    alert(`Fitur ${label} segera hadir!`)
   }, [])
 
   return (
@@ -191,6 +195,21 @@ const DashboardLayout = () => {
                 {bottomMenuItems.map((item) => {
                   const Icon = item.icon
 
+                  // Handle coming soon items
+                  if (item.comingSoon) {
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => handleComingSoonClick(item.label)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full text-left touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      >
+                        <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+                        <span className="text-sm">{item.label}</span>
+                      </button>
+                    )
+                  }
+
+                  // Handle external navigation
                   if (item.external) {
                     return (
                       <button
@@ -204,6 +223,7 @@ const DashboardLayout = () => {
                     )
                   }
 
+                  // Handle internal navigation
                   return (
                     <Link
                       key={item.path}

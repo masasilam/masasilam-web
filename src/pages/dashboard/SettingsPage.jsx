@@ -1,7 +1,7 @@
 // src/pages/dashboard/SettingsPage.jsx
 import { useState, useEffect } from 'react'
-import { 
-  User, Mail, Lock, Bell, Eye, Globe, Palette, 
+import {
+  User, Mail, Lock, Bell, Eye, Globe, Palette,
   Download, Trash2, Shield, Moon, Sun, Monitor,
   Save, X
 } from 'lucide-react'
@@ -16,10 +16,10 @@ const Header = () => {
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme()
   const { user } = useAuth()
-  
+
   const [activeTab, setActiveTab] = useState('profile')
   const [saved, setSaved] = useState(false)
-  
+
   // Profile settings
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -124,7 +124,7 @@ const SettingsPage = () => {
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Informasi Profil</h2>
-                
+
                 <div>
                   <label className="block text-sm font-semibold mb-2">Foto Profil</label>
                   <div className="flex items-center gap-4">
@@ -260,7 +260,7 @@ const SettingsPage = () => {
                       <Sun className="w-6 h-6 mx-auto mb-2" />
                       <span className="text-sm">Terang</span>
                     </button>
-                    
+
                     <button
                       onClick={() => setTheme('dark')}
                       className={`p-4 rounded-lg border-2 transition-colors ${
@@ -272,7 +272,7 @@ const SettingsPage = () => {
                       <Moon className="w-6 h-6 mx-auto mb-2" />
                       <span className="text-sm">Gelap</span>
                     </button>
-                    
+
                     <button
                       onClick={() => setTheme('system')}
                       className={`p-4 rounded-lg border-2 transition-colors ${
