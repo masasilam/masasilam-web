@@ -1,5 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://masasilam.com/$1",
+      "permanent": true
+    }
   ]
 }

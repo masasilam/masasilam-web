@@ -29,7 +29,7 @@ const Footer = () => {
 
           {/* Help */}
           <div>
-            <h3 className="font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Bantuan</h3>
+            <h3 className="font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Panduan</h3>
             <ul className="space-y-2 text-sm">
               <li><Link to="/cara-membaca" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Cara Membaca</Link></li>
               <li><Link to="/faq" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</Link></li>
@@ -90,7 +90,7 @@ const Footer = () => {
 
             {/* Help */}
             <div>
-              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-sm">Bantuan</h3>
+              <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-sm">Panduan</h3>
               <ul className="space-y-2 text-xs">
                 <li><Link to="/cara-membaca" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Cara Membaca</Link></li>
                 <li><Link to="/faq" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</Link></li>

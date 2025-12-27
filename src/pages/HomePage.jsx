@@ -177,7 +177,7 @@ const HomePage = () => {
 
       <section className="bg-white dark:bg-gray-800 py-8 sm:py-16">
         <div className="container mx-auto px-4 sm:px-6">
-          <ScrollableBooks books={books.new} title="Buku Terbaru" actionText="Karya klasik yang baru ditambahkan minggu ini" actionPath="/buku/terbaru" />
+          <ScrollableBooks books={books.new} title="Buku Terbaru" actionText="Karya yang baru ditambahkan minggu ini" actionPath="/buku/terbaru" />
         </div>
       </section>
 
@@ -185,8 +185,8 @@ const HomePage = () => {
         <div className="container mx-auto px-4 sm:px-6 text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="font-serif text-3xl sm:text-5xl font-light text-gray-900 dark:text-white mb-3 sm:mb-6">Mulai Membaca <span className="italic">Sekarang</span></h2>
-            <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi karya-karya sastra klasik. Gratis. Legal. Tanpa batas waktu.</p>
-            <Button size="lg" onClick={() => window.location.href = '/buku'} className="w-full sm:w-auto">Jelajahi Semua Koleksi Buku <ArrowRight className="w-5 h-5 ml-2" /></Button>
+            <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-10">Jelajahi karya-karya sastra klasik. <br/>Gratis. Legal. Tanpa batas waktu.</p>
+            <Button size="lg" onClick={() => window.location.href = '/buku'} className="w-full sm:w-auto">Lihat Semua Koleksi Buku <ArrowRight className="w-5 h-5 ml-2" /></Button>
           </div>
         </div>
       </section>
