@@ -1,7 +1,11 @@
-# robots.txt - MasaSilam.com
-# Perpustakaan Digital Domain Publik
+# robots.txt - MasasilaM.com
+# Perpustakaan Digital Domain Publik Indonesia
+# Updated: December 2025
+# Last Modified: 2025-12-28
 
-# Allow all search engines to crawl everything except private areas
+# ============================================
+# GLOBAL RULES - Allow All Good Bots
+# ============================================
 User-agent: *
 Allow: /
 
@@ -12,59 +16,316 @@ Sitemap: https://masasilam.com/sitemap-genres.xml
 Sitemap: https://masasilam.com/sitemap-authors.xml
 Sitemap: https://masasilam.com/sitemap-books.xml
 
-# Block private/authenticated areas
+# ============================================
+# BLOCK PRIVATE/AUTH AREAS
+# ============================================
+# Dashboard (authenticated users only)
 Disallow: /dasbor/
 Disallow: /dasbor
+
+# Auth pages (no need to index)
 Disallow: /masuk
 Disallow: /daftar
 Disallow: /lupa-kata-sandi
 Disallow: /reset-kata-sandi
 Disallow: /verifikasi-email
+Disallow: /auth/
 
-# Block API endpoints (if exposed)
+# ============================================
+# BLOCK API ENDPOINTS
+# ============================================
 Disallow: /api/
 Disallow: /api
 
-# Block search results with query parameters (avoid duplicate content)
-Disallow: /cari?*
-Disallow: /*?*page=*
-Disallow: /*?*sort=*
+# ============================================
+# SEARCH & QUERY PARAMETERS
+# ============================================
+# Block search results (duplicate content)
+Disallow: /cari?
+Disallow: /cari$
 
-# Allow crawling of static assets
+# ALLOW pagination for main pages (CRITICAL!)
+Allow: /buku?page=
+Allow: /buku?*page=*
+Allow: /kategori?page=
+Allow: /kategori?*page=*
+Allow: /penulis?page=
+Allow: /penulis?*page=*
+
+# Block sort/filter combinations (too many duplicate pages)
+Disallow: /*?*sort=*&*
+Disallow: /*?*filter=*&*
+
+# Block common tracking parameters
+Disallow: /*?*utm_*
+Disallow: /*?*fbclid=*
+Disallow: /*?*gclid=*
+Disallow: /*?*ref=*
+
+# ============================================
+# ALLOW STATIC ASSETS
+# ============================================
 Allow: /assets/
 Allow: /images/
 Allow: /covers/
-Allow: *.css
-Allow: *.js
-Allow: *.jpg
-Allow: *.jpeg
-Allow: *.png
-Allow: *.webp
-Allow: *.svg
-Allow: *.gif
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.webp$
+Allow: /*.svg$
+Allow: /*.gif$
+Allow: /*.woff$
+Allow: /*.woff2$
+Allow: /*.ttf$
+Allow: /*.eot$
+Allow: /*.ico$
 
-# Crawl delay (optional, 1 second between requests)
-Crawl-delay: 1
-
-# Specific rules for common bots
+# ============================================
+# GOOGLEBOT (Primary - No Crawl Delay)
+# ============================================
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
+# No crawl-delay for Google (they ignore it anyway)
 
+User-agent: Googlebot-Image
+Allow: /covers/
+Allow: /images/
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.webp$
+Allow: /*.svg$
+
+User-agent: Googlebot-Mobile
+Allow: /
+
+# ============================================
+# BINGBOT (Secondary Search Engine)
+# ============================================
 User-agent: Bingbot
+Allow: /
+Crawl-delay: 0.5
+
+User-agent: msnbot
+Allow: /
+Crawl-delay: 0.5
+
+User-agent: BingPreview
+Allow: /
+
+# ============================================
+# OTHER MAJOR SEARCH ENGINES
+# ============================================
+User-agent: Slurp
 Allow: /
 Crawl-delay: 1
 
-User-agent: Slurp
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 0.5
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Sogou
+Allow: /
+Crawl-delay: 1
+
+# ============================================
+# SEO & ANALYTICS TOOLS (ALLOW with rate limit)
+# ============================================
+# These help you monitor your SEO performance
+User-agent: AhrefsBot
 Allow: /
 Crawl-delay: 2
 
-# Block bad bots (optional)
-User-agent: AhrefsBot
-Disallow: /
-
 User-agent: SemrushBot
-Disallow: /
+Allow: /
+Crawl-delay: 2
+
+User-agent: MJ12bot
+Allow: /
+Crawl-delay: 2
 
 User-agent: DotBot
+Allow: /
+Crawl-delay: 2
+
+User-agent: Screaming Frog SEO Spider
+Allow: /
+
+# ============================================
+# SOCIAL MEDIA CRAWLERS (ALLOW)
+# ============================================
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
+# ============================================
+# ARCHIVE CRAWLERS (ALLOW)
+# ============================================
+User-agent: ia_archiver
+Allow: /
+
+User-agent: archive.org_bot
+Allow: /
+
+# ============================================
+# BLOCK BAD/SCRAPER BOTS
+# ============================================
+# Known aggressive scrapers
+User-agent: SentiBot
 Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: MauiBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: SeekportBot
+Disallow: /
+
+User-agent: MegaIndex
+Disallow: /
+
+# Email harvesters
+User-agent: EmailCollector
+Disallow: /
+
+User-agent: EmailSiphon
+Disallow: /
+
+User-agent: EmailWolf
+Disallow: /
+
+User-agent: ExtractorPro
+Disallow: /
+
+# Content scrapers
+User-agent: WebReaper
+Disallow: /
+
+User-agent: WebCopier
+Disallow: /
+
+User-agent: HTTrack
+Disallow: /
+
+User-agent: Offline Explorer
+Disallow: /
+
+User-agent: WebStripper
+Disallow: /
+
+User-agent: WebSauger
+Disallow: /
+
+User-agent: WebCopier
+Disallow: /
+
+# Vulnerability scanners
+User-agent: Nikto
+Disallow: /
+
+User-agent: sqlmap
+Disallow: /
+
+User-agent: w3af
+Disallow: /
+
+User-agent: Nessus
+Disallow: /
+
+# ============================================
+# AI TRAINING SCRAPERS (Choose your stance)
+# ============================================
+# Block AI training bots to protect content
+# Comment out these lines if you want to allow AI training
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+# ============================================
+# GENERIC SCRAPER PATTERNS (Rate Limited)
+# ============================================
+User-agent: *Bot*
+Crawl-delay: 3
+
+User-agent: *Spider*
+Crawl-delay: 3
+
+User-agent: *Crawler*
+Crawl-delay: 3
+
+User-agent: *Scraper*
+Disallow: /
+
+# ============================================
+# NOTES
+# ============================================
+# 1. Googlebot ignores Crawl-delay directive
+# 2. Social media crawlers need access for rich previews
+# 3. Archive crawlers help preserve public domain content
+# 4. AI training bots are blocked by default (edit if needed)
+# 5. SEO tools are allowed but rate-limited
+# 6. Pagination is explicitly allowed to prevent content loss
+
+# For questions or concerns, contact: support@masasilam.com
