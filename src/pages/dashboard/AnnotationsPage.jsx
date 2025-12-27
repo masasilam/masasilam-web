@@ -106,22 +106,22 @@ const AnnotationsPage = () => {
                       Bab {annotation.chapterNumber}
                     </span>
                   </div>
-                  
+
                   <Link
                     to={`/buku/${annotation.bookSlug}`}
                     className="font-semibold hover:text-primary block mb-2"
                   >
                     {annotation.bookTitle}
                   </Link>
-                  
+
                   {annotation.title && annotation.type === 'note' && (
                     <h3 className="font-medium mb-2">{annotation.title}</h3>
                   )}
-                  
+
                   <p className="text-gray-700 dark:text-gray-300 mb-2">
                     {annotation.content}
                   </p>
-                  
+
                   <p className="text-xs text-gray-500">
                     {new Date(annotation.createdAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
@@ -130,7 +130,7 @@ const AnnotationsPage = () => {
                     })}
                   </p>
                 </div>
-                
+
                 {annotation.bookCover && (
                   <img
                     src={annotation.bookCover}

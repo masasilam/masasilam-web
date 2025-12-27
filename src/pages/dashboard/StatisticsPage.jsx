@@ -21,13 +21,13 @@ const StatisticsPage = () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       console.log('Fetching statistics for period:', period)
       const response = await dashboardService.getStatistics(period)
-      
+
       console.log('Statistics response:', response)
       console.log('Response data:', response?.data)
-      
+
       // PERBAIKAN: Set stats dengan default values jika undefined
       setStats(response?.data || {})
     } catch (error) {
@@ -102,8 +102,8 @@ const StatisticsPage = () => {
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-4 py-2 rounded-lg transition-colors ${
-                period === p 
-                  ? 'bg-primary text-white' 
+                period === p
+                  ? 'bg-primary text-white'
                   : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >

@@ -23,15 +23,15 @@ const ReadingHistoryPage = () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await dashboardService.getReadingHistory(days, page, 20)
-      
+
       console.log('Reading history response:', response) // Debug
       console.log('Response data:', response?.data) // Debug
-      
+
       // PERBAIKAN: Handle multiple response structures
       let activitiesData = []
-      
+
       if (response?.data?.data?.list) {
         // Struktur: response.data.data.list
         activitiesData = response.data.data.list
@@ -45,9 +45,9 @@ const ReadingHistoryPage = () => {
         // Struktur: response.data langsung array
         activitiesData = response.data
       }
-      
+
       console.log('Activities data:', activitiesData) // Debug
-      
+
       setActivities(activitiesData || [])
     } catch (error) {
       console.error('Error:', error)
@@ -117,8 +117,8 @@ const ReadingHistoryPage = () => {
                 setPage(1)
               }}
               className={`px-4 py-2 rounded-lg transition-colors ${
-                days === d 
-                  ? 'bg-primary text-white' 
+                days === d
+                  ? 'bg-primary text-white'
                   : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
@@ -145,11 +145,11 @@ const ReadingHistoryPage = () => {
                   <div className="flex-shrink-0 mt-1">
                     {getActivityIcon(activity?.activityType)}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div className="flex-1">
-                        <Link 
+                        <Link
                           to={`/buku/${activity?.bookSlug || '#'}`}
                           className="font-semibold hover:text-primary"
                         >
@@ -164,7 +164,7 @@ const ReadingHistoryPage = () => {
                           </p>
                         )}
                       </div>
-                      
+
                       {activity?.bookCover && (
                         <img
                           src={activity.bookCover}
@@ -173,7 +173,7 @@ const ReadingHistoryPage = () => {
                         />
                       )}
                     </div>
-                    
+
                     <p className="text-xs text-gray-500">
                       {activity?.timestamp ? formatTimestamp(activity.timestamp) : 'Waktu tidak tersedia'}
                     </p>

@@ -10,7 +10,7 @@ import LoadingSpinner from '../../components/Common/LoadingSpinner'
 
 const VerifyEmailPage = () => {
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState('loading') // loading, success, error
+  const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('')
 
   useEffect(() => {

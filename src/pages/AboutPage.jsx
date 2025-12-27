@@ -102,7 +102,7 @@ const AboutPage = () => {
             </p>
 
             <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-              Meski didirikan dengan semen selundupan, <strong className="text-primary">MasasilaM</strong> diharapkan dapat menjadi perpustakaan umum dengan ruang baca nyaman.
+              Meskipun didirikan dengan semen selundupan, <strong className="text-primary">MasasilaM</strong> diharapkan dapat menjadi perpustakaan umum dengan ruang baca yang nyaman.
             </p>
 
             <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
@@ -223,11 +223,11 @@ const AboutPage = () => {
 
           <div className="space-y-4 text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">
             <p className="text-justify">
-              Halaman hak cipta biasanya hadir untuk memberitahu apa yang tidak boleh dilakukan. Sebaliknya, pernyataan uncopyright ini hadir untuk <strong className="text-green-600 dark:text-green-400">menegaskan kebebasan</strong>.
+              Hak cipta biasanya hadir untuk memberitahu apa yang tidak boleh dilakukan. Sebaliknya, pernyataan uncopyright ini hadir untuk <strong className="text-green-600 dark:text-green-400">menegaskan kebebasan</strong>.
             </p>
 
             <p className="text-justify">
-              Teks dan karya seni di dalam ebook ini diyakini telah berada dalam <strong>domain publik</strong>. Kami meyakini bahwa segala aktivitas non-penulisan yang dilakukan atas karya domain publik—seperti digitalisasi, penyuntingan, atau penataan tipografi—tidak menciptakan hak cipta baru. Tidak seorang pun dapat mengklaim hak milik atas pekerjaan semacam itu.
+              Teks dan karya seni di MasasilaM diyakini telah berada dalam <strong>domain publik</strong>. Kami meyakini bahwa segala aktivitas non-penulisan yang dilakukan atas karya domain publik—seperti digitalisasi, penyuntingan, atau penataan tipografi—tidak menciptakan hak cipta baru. Tidak seorang pun dapat mengklaim hak milik atas pekerjaan semacam itu.
             </p>
 
             <p className="text-justify">
@@ -252,7 +252,7 @@ const AboutPage = () => {
             </p>
 
             <p className="text-justify font-semibold text-gray-900 dark:text-white">
-              Upaya ini dilakukan demi memperkaya khazanah literasi dan teknologi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
+              Upaya ini dilakukan demi memperkaya khazanah literasi dan melek teknologi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
             </p>
           </div>
         </div>
@@ -262,9 +262,6 @@ const AboutPage = () => {
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
             Bergabunglah dengan Kami
           </h2>
-          <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto text-justify">
-            Membaca adalah hak. Pengetahuan adalah kekuatan. Dan keduanya harus gratis.
-          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/buku"
