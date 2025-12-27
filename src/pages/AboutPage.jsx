@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Github } from 'lucide-react'
+import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Github, Instagram } from 'lucide-react'
 import bookService from '../services/bookService'
 import userService from '../services/userService'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
@@ -254,6 +254,21 @@ const AboutPage = () => {
             <p className="text-justify font-semibold text-gray-900 dark:text-white">
               Upaya ini dilakukan demi memperkaya khazanah literasi dan melek teknologi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
             </p>
+          </div>
+        </div>
+
+        {/* Creator Info */}
+        <div className="bg-gradient-to-br from-pink-50 to-purple-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6 sm:p-10 mb-12 sm:mb-16 border-2 border-pink-200 dark:border-pink-700">
+          <div className="text-center">
+            <a
+              href="https://www.instagram.com/fajarte_"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-bold text-lg transition-all hover:shadow-xl hover:scale-105"
+            >
+              <Instagram className="w-6 h-6" />
+              @fajarte_
+            </a>
           </div>
         </div>
 

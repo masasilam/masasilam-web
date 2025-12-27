@@ -31,24 +31,6 @@ const ContactPage = () => {
       title: "Email",
       details: ["support@masasilam.com"],
       color: "text-blue-600 dark:text-blue-400"
-    },
-    {
-      icon: Phone,
-      title: "Telepon",
-      details: ["+62 21 1234 5678", "Senin - Jumat, 09:00 - 17:00 WIB"],
-      color: "text-green-600 dark:text-green-400"
-    },
-    {
-      icon: MapPin,
-      title: "Alamat",
-      details: ["Jakarta, Indonesia", "Perpustakaan Digital MasasilaM"],
-      color: "text-red-600 dark:text-red-400"
-    },
-    {
-      icon: Clock,
-      title: "Jam Operasional",
-      details: ["Support: 24/7", "Live Chat: Senin-Jumat 09:00-17:00"],
-      color: "text-purple-600 dark:text-purple-400"
     }
   ]
 

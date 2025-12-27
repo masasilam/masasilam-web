@@ -222,7 +222,7 @@ const TermsOfServicePage = () => {
                 className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-sm sm:text-base"
               >
                 <Code className="w-5 h-5" />
-                🐙 github.com/masasilam
+                🐙 github.com/kajankk
               </a>
               <a
                 href="mailto:support@masasilam.com"
