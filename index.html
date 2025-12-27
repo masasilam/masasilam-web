@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- 🌙 THEME SCRIPT - Mencegah flash of light theme -->
   <script>
     (function() {
       const theme = localStorage.getItem('theme') || 'light';
@@ -20,16 +19,13 @@
     })();
   </script>
 
-  <!-- 🎨 INLINE CSS - Background langsung sesuai theme -->
   <style>
-    /* Default light mode */
     html {
       background-color: #ffffff;
     }
 
-    /* Dark mode */
     html.dark {
-      background-color: #111827; /* gray-900 */
+      background-color: #111827;
     }
 
     body {
@@ -38,7 +34,6 @@
       padding: 0;
     }
 
-    /* Loading indicator (opsional) */
     #root:empty::before {
       content: '';
       position: fixed;
@@ -57,7 +52,6 @@
       to { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
-    /* Hide loading setelah React mount */
     #root:not(:empty)::before {
       display: none;
     }

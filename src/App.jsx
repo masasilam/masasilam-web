@@ -1,9 +1,9 @@
-// src/App.jsx - FIXED ROUTES WITH GENRE, AUTHORS
+// src/App.jsx
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
+import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 import './styles/index.css'
-
 
 // Layout Components
 import ProtectedRoute from './components/Auth/ProtectedRoute'
@@ -19,7 +19,7 @@ import BookDetailPage from './pages/BookDetailPage'
 import TableOfContentsPage from './pages/TableOfContentsPage'
 import BookReviewsPage from './pages/BookReviewsPage'
 
-// Metadata Pages (NEW)
+// Metadata Pages
 import GenresPage from './pages/GenresPage'
 import GenreDetailPage from './pages/GenreDetailPage'
 import AuthorsPage from './pages/AuthorsPage'
@@ -66,6 +66,7 @@ import MaintenancePage from './pages/MaintenancePage'
 
 function App() {
   const { theme } = useTheme()
+  useGoogleAnalytics()
 
   useEffect(() => {
     document.body.className = theme
@@ -81,27 +82,19 @@ function App() {
         <Route path="/buku/terbaru" element={<PublicLayout><NewBooksPage /></PublicLayout>} />
         <Route path="/buku/rekomendasi" element={<PublicLayout><RecommendedBooksPage /></PublicLayout>} />
         <Route path="/cari" element={<PublicLayout><SearchResultsPage /></PublicLayout>} />
-        
-        {/* ============ METADATA ROUTES (NEW) ============ */}
-        {/* Genre/Category Routes */}
+
+        {/* Metadata Routes */}
         <Route path="/kategori" element={<PublicLayout><GenresPage /></PublicLayout>} />
         <Route path="/kategori/:genreSlug" element={<PublicLayout><GenreDetailPage /></PublicLayout>} />
-        
-        {/* Author Routes */}
         <Route path="/penulis" element={<PublicLayout><AuthorsPage /></PublicLayout>} />
         <Route path="/penulis/:authorSlug" element={<PublicLayout><AuthorDetailPage /></PublicLayout>} />
-        
-        {/* ============ BOOK ROUTES (ORDER MATTERS!) ============ */}
-        {/* Book meta pages - must be exact matches before wildcard */}
+
+        {/* Book Routes */}
         <Route path="/buku/:bookSlug/daftar-isi" element={<PublicLayout><TableOfContentsPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
-        
-        {/* Book detail - must come before chapter wildcard */}
         <Route path="/buku/:bookSlug" element={<PublicLayout><BookDetailPage /></PublicLayout>} />
-        
-        {/* Chapter reading - hierarchical path (CLEAN URLs) */}
         <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />
-        
+
         {/* Static Pages */}
         <Route path="/tentang" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/cara-membaca" element={<PublicLayout><HowToReadPage /></PublicLayout>} />
@@ -109,7 +102,7 @@ function App() {
         <Route path="/kontak" element={<PublicLayout><ContactPage /></PublicLayout>} />
         <Route path="/privasi" element={<PublicLayout><PrivacyPolicyPage /></PublicLayout>} />
         <Route path="/syarat-ketentuan" element={<PublicLayout><TermsOfServicePage /></PublicLayout>} />
-        
+
         {/* Auth */}
         <Route path="/masuk" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/daftar" element={<AuthLayout><RegisterPage /></AuthLayout>} />
@@ -117,7 +110,7 @@ function App() {
         <Route path="/reset-kata-sandi" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/verifikasi-email" element={<AuthLayout><VerifyEmailPage /></AuthLayout>} />
 
-        {/* Protected Dashboard Routes - FIXED SYNTAX */}
+        {/* Protected Dashboard Routes */}
         <Route path="/dasbor" element={
           <ProtectedRoute>
             <DashboardLayout />
