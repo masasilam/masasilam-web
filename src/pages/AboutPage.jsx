@@ -102,11 +102,11 @@ const AboutPage = () => {
             </p>
 
             <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-              Meskipun didirikan dengan semen selundupan, <strong className="text-primary">MasasilaM</strong> diharapkan dapat menjadi perpustakaan umum dengan ruang baca yang nyaman.
+              Biarpun didirikan dengan semen selundupan, <strong className="text-primary">MasasilaM</strong> diharapkan dapat menjadi perpustakaan umum dengan ruang baca yang nyaman.
             </p>
 
             <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-              Kami merakit dan mengembangkan sistem untuk berbagi file, mengedarkan pamflet-pamflet yang kami pungut dari segara internet, menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
+              Di sini kami merakit dan mengembangkan sistem untuk berbagi file, mengedarkan pamflet-pamflet yang kami pungut dari segara internet, menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
             </p>
 
             <p className="text-lg sm:text-xl leading-relaxed text-primary font-semibold italic mb-6 text-justify">
@@ -145,7 +145,7 @@ const AboutPage = () => {
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Visi Kami</h2>
             </div>
             <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
-              Menjadikan literasi digital <strong>accessible</strong>, <strong>engaging</strong>, dan <strong>bermakna</strong> untuk semua orang di Indonesia dan dunia.
+              Menjadikan literasi digital <strong>accessible</strong>, <strong>engaging</strong>, dan <strong>bermakna</strong> untuk semua orang.
             </p>
           </div>
 
@@ -231,7 +231,7 @@ const AboutPage = () => {
             </p>
 
             <p className="text-justify">
-              Tak sampai di situ. Seluruh <strong>kode sumber</strong> yang membangun MasasilaM—setiap baris kode, setiap desain antarmuka, setiap skrip dan alat bantu—juga dibagikan dengan prinsip yang sama. Platform ini dibangun dengan keyakinan bahwa pengetahuan dapat dikembangkan bersama.
+              Seluruh <strong>kode sumber</strong> yang membangun MasasilaM—setiap baris kode, setiap desain antarmuka, setiap skrip dan alat bantu—juga dibagikan dengan prinsip yang sama. Platform ini dibangun dengan keyakinan bahwa pengetahuan dapat dikembangkan bersama.
             </p>
 
             <p className="text-justify">

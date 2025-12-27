@@ -366,7 +366,7 @@ const BookDetailPage = () => {
             {/* ✅ IMPROVED GENRE UI */}
             {book.genres && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Genre</h3>
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Kategori</h3>
                 <div className="flex flex-wrap gap-2">
                   {book.genres.split(',').map((genre, index) => {
                     const genreName = genre.trim()

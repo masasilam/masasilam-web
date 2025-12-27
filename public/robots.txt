@@ -1,0 +1,70 @@
+# robots.txt - MasaSilam.com
+# Perpustakaan Digital Domain Publik
+
+# Allow all search engines to crawl everything except private areas
+User-agent: *
+Allow: /
+
+# Sitemap locations (hosted by backend Spring Boot)
+Sitemap: https://masasilam.com/sitemap.xml
+Sitemap: https://masasilam.com/sitemap-static.xml
+Sitemap: https://masasilam.com/sitemap-genres.xml
+Sitemap: https://masasilam.com/sitemap-authors.xml
+Sitemap: https://masasilam.com/sitemap-books.xml
+
+# Block private/authenticated areas
+Disallow: /dasbor/
+Disallow: /dasbor
+Disallow: /masuk
+Disallow: /daftar
+Disallow: /lupa-kata-sandi
+Disallow: /reset-kata-sandi
+Disallow: /verifikasi-email
+
+# Block API endpoints (if exposed)
+Disallow: /api/
+Disallow: /api
+
+# Block search results with query parameters (avoid duplicate content)
+Disallow: /cari?*
+Disallow: /*?*page=*
+Disallow: /*?*sort=*
+
+# Allow crawling of static assets
+Allow: /assets/
+Allow: /images/
+Allow: /covers/
+Allow: *.css
+Allow: *.js
+Allow: *.jpg
+Allow: *.jpeg
+Allow: *.png
+Allow: *.webp
+Allow: *.svg
+Allow: *.gif
+
+# Crawl delay (optional, 1 second between requests)
+Crawl-delay: 1
+
+# Specific rules for common bots
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
+
+# Block bad bots (optional)
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
