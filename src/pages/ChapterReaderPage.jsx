@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/pages/ChapterReaderPage.jsx
+// FILE: src/pages/ChapterReaderPage.jsx - WITH COMPLETE SEO
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -13,6 +13,13 @@ import useTextSelection from '../hooks/useTextSelection'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
 import { buildChapterUrl } from '../hooks/useChapterNavigation'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
+import SEO from '../components/Common/SEO'
+import {
+  generateChapterStructuredData,
+  generateBreadcrumbStructuredData,
+  combineStructuredData,
+  generateMetaDescription
+} from '../utils/seoHelpers'
 import TTSControlPanel from '../components/Reader/TTSControlPanel'
 import TTSVoiceSetupBanner from '../components/Reader/TTSVoiceSetupBanner'
 import ChapterRating from '../components/Reader/ChapterRating'
@@ -550,6 +557,49 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
   }, [annotations.highlights, chapter?.chapterNumber])
 
+  // ============================================
+  // SEO DATA PREPARATION
+  // ============================================
+  const buildFullChapterPath = (breadcrumbs) => {
+    if (!breadcrumbs || breadcrumbs.length === 0) return ''
+    return breadcrumbs.map(b => b.slug).join('/')
+  }
+
+  const chapterUrl = chapter ? `/buku/${bookSlug}/${buildFullChapterPath(chapter.breadcrumbs)}` : ''
+
+  const breadcrumbs = chapter ? [
+    { name: 'Beranda', url: '/' },
+    { name: chapter.bookTitle, url: `/buku/${bookSlug}` },
+    ...(chapter.breadcrumbs || []).map((crumb, index) => ({
+      name: crumb.title,
+      url: index === chapter.breadcrumbs.length - 1
+        ? '#'
+        : `/buku/${bookSlug}/${buildFullChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`
+    }))
+  ] : []
+
+  // Create book object for structured data
+  const bookForSchema = chapter ? {
+    title: chapter.bookTitle,
+    slug: bookSlug,
+    authorNames: chapter.authorNames || '',
+    authorSlugs: chapter.authorSlugs || ''
+  } : null
+
+  const structuredData = chapter && bookForSchema ? combineStructuredData(
+    generateBreadcrumbStructuredData(breadcrumbs),
+    generateChapterStructuredData(chapter, bookForSchema)
+  ) : null
+
+  const metaDescription = chapter?.htmlContent
+    ? generateMetaDescription(chapter.htmlContent, 160)
+    : `Baca ${chapter?.chapterTitle || 'bab ini'} dari ${chapter?.bookTitle || 'buku'} secara gratis di MasasilaM.`
+
+  const keywords = `${chapter?.bookTitle || ''}, ${chapter?.chapterTitle || ''}, ${chapter?.authorNames || ''}, baca online gratis, buku domain publik`
+
+  // ============================================
+  // RENDER
+  // ============================================
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -560,277 +610,299 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   if (!chapter) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Bab tidak ditemukan</h2>
-          <Link to={`/buku/${bookSlug}`} className="btn-primary">
-            Kembali ke Buku
-          </Link>
+      <>
+        <SEO
+          title="Bab Tidak Ditemukan"
+          description="Halaman bab yang Anda cari tidak tersedia"
+          url={chapterUrl}
+          noindex={true}
+        />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Bab tidak ditemukan</h2>
+            <Link to={`/buku/${bookSlug}`} className="btn-primary">
+              Kembali ke Buku
+            </Link>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="relative pb-20">
-      <style>{hideScrollbarStyle}</style>
-
-      {showTTSLoginPrompt && (
-        <LoginPromptModal
-          icon={Volume2}
-          title="Fitur Text-to-Speech"
-          description="Masuk sekarang untuk mendengarkan bab ini dibacakan!"
-          onClose={() => setShowTTSLoginPrompt(false)}
-          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
-          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
-        />
-      )}
-
-      {showAnnotationLoginPrompt && (
-        <LoginPromptModal
-          icon={Highlighter}
-          title="Fitur Anotasi"
-          description="Masuk sekarang untuk menyimpan anotasi Anda!"
-          onClose={() => setShowAnnotationLoginPrompt(false)}
-          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
-          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
-        />
-      )}
-
-      {showBookmarkLoginPrompt && (
-        <LoginPromptModal
-          icon={Bookmark}
-          title="Fitur Penanda Buku"
-          description="Masuk sekarang untuk menyimpan penanda Anda!"
-          onClose={() => setShowBookmarkLoginPrompt(false)}
-          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
-          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
-        />
-      )}
-
-      {showSearchLoginPrompt && (
-        <LoginPromptModal
-          icon={Search}
-          title="Fitur Pencarian"
-          description="Masuk sekarang untuk mencari kata atau frasa dalam buku ini!"
-          onClose={() => setShowSearchLoginPrompt(false)}
-          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
-          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
-        />
-      )}
-
-      {showExportLoginPrompt && (
-        <LoginPromptModal
-          icon={Search}
-          title="Fitur Ekspor Anotasi"
-          description="Masuk sekarang untuk mengekspor semua catatan dan highlight Anda!"
-          onClose={() => setShowExportLoginPrompt(false)}
-          onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
-          onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
-        />
-      )}
-
-      {showSearchModal && (
-        <SearchInBook
-          bookSlug={bookSlug}
-          onClose={() => setShowSearchModal(false)}
-        />
-      )}
-
-      {showExportModal && (
-        <ExportAnnotations
-          bookSlug={bookSlug}
-          onClose={() => setShowExportModal(false)}
-        />
-      )}
-
-      {footnotePopup && (
-        <FootnotePopup
-          content={footnotePopup.content}
-          onClose={() => setFootnotePopup(null)}
-          onGoToFootnote={handleGoToFootnote}
-          isLocal={footnotePopup.isLocal}
-          sourceChapter={footnotePopup.sourceChapter}
-        />
-      )}
-
-      <SwipeIndicator direction={swipeDirection} />
-
-      {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
-        <nav className="mb-6 text-sm">
-          <ol className="flex items-center gap-2 flex-wrap">
-            <li>
-              <Link to={`/buku/${bookSlug}`} className="text-primary hover:underline">
-                {chapter.bookTitle}
-              </Link>
-            </li>
-            {chapter.breadcrumbs.map((crumb, index) => (
-              <li key={crumb.chapterId} className="flex items-center gap-2">
-                <span className="text-gray-400">/</span>
-                {index === chapter.breadcrumbs.length - 1 ? (
-                  <span className="font-semibold">{crumb.title}</span>
-                ) : (
-                  <Link
-                    to={`/buku/${bookSlug}/${buildChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`}
-                    className="text-primary hover:underline"
-                  >
-                    {crumb.title}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
-      )}
-
-      {isAuthenticated && tts.availableVoices.length > 0 && (
-        <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
-      )}
-
-      {isAuthenticated && tts.isEnabled && showTTSPanel && (
-        <TTSControlPanel
-          isPlaying={tts.isPlaying}
-          progress={tts.progress}
-          rate={tts.rate}
-          pitch={tts.pitch}
-          voiceIndex={tts.voiceIndex}
-          availableVoices={tts.availableVoices}
-          showSettings={tts.showSettings}
-          onTogglePlay={handleTTSToggle}
-          onStop={handleTTSStop}
-          onPrevChapter={handlePrevChapter}
-          onNextChapter={handleNextChapter}
-          onToggleSettings={tts.toggleSettings}
-          onRateChange={(val) => tts.updateSettings({ rate: val })}
-          onPitchChange={(val) => tts.updateSettings({ pitch: val })}
-          onVoiceChange={(val) => tts.updateSettings({ voiceIndex: val })}
-          onApplySettings={handleTTSApplySettings}
-          hasPrevChapter={!!chapter?.previousChapter}
-          hasNextChapter={!!chapter?.nextChapter}
-          onMinimize={() => setShowTTSPanel(false)}
-        />
-      )}
-
-      <BottomToolbar
-        chapter={chapter}
-        isAuthenticated={isAuthenticated}
-        isTTSPlaying={tts.isPlaying}
-        readingMode={readingMode}
-        showTTSPanel={showTTSPanel}
-        onPrevChapter={handlePrevChapter}
-        onNextChapter={handleNextChapter}
-        onTTSToggle={handleTTSToggle}
-        onToggleTTSPanel={handleToggleTTSPanel}
-        onSearchClick={handleSearchClick}
-        onToolbarToggle={() => {
-          if (!isAuthenticated) {
-            setShowAnnotationLoginPrompt(true)
-            return
-          }
-          setShowToolbar(!showToolbar)
-        }}
-        onBookmarkClick={handleAddBookmark}
-        onExportClick={handleExportClick}
-        onReadingModeToggle={() => setReadingMode(!readingMode)}
+    <>
+      <SEO
+        title={`${chapter.chapterTitle || `Bab ${chapter.chapterNumber}`} - ${chapter.bookTitle}`}
+        description={metaDescription}
+        url={chapterUrl}
+        type="article"
+        keywords={keywords}
+        author={chapter.authorNames}
+        publishedTime={chapter.publishedAt}
+        modifiedTime={chapter.updatedAt}
+        structuredData={structuredData}
+        canonical={`https://masasilam.com${chapterUrl}`}
       />
 
-      {selectedText && selectionCoords && (
-        <TextSelectionPopup
-          selectedText={selectedText}
-          coords={selectionCoords}
-          isAuthenticated={isAuthenticated}
-          onClose={clearSelection}
-          onHighlight={handleAddHighlight}
-          onAddNote={handleAddNote}
-          onNavigateToLogin={() => {
-            clearSelection()
-            navigate('/masuk', { state: { from: location.pathname } })
-          }}
-          onMouseDown={(e) => {
-            e.stopPropagation()
-            setIsInteractingWithPopup(true)
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation()
-            setIsInteractingWithPopup(true)
-          }}
-        />
-      )}
+      <div className="relative pb-20">
+        <style>{hideScrollbarStyle}</style>
 
-      {isAuthenticated && showToolbar && (
-        <AnnotationPanel
-          annotations={annotations}
-          currentChapterNumber={chapter.chapterNumber}
-          onClose={() => setShowToolbar(false)}
-          onAnnotationClick={handleAnnotationClick}
-          onDeleteBookmark={handleDeleteBookmark}
-          onDeleteHighlight={handleDeleteHighlight}
-          onDeleteNote={handleDeleteNote}
-        />
-      )}
-
-      <article ref={contentRef}>
-        <header className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">
-            {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
-          {chapter.bookSubtitle && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
-              {chapter.bookSubtitle}
-            </p>
-          )}
-        </header>
-
-        <div
-          lang="id"
-          className={`transition-colors duration-300 rounded-lg my-8 py-8 ${
-            readingMode
-              ? 'bg-[#FFF8DC] shadow-inner border-t border-b border-gray-300'
-              : 'border-t border-b border-gray-200 dark:border-gray-800'
-          }`}
-          style={{
-            /* Ensure hyphenation is enabled at wrapper level */
-            WebkitHyphens: 'auto',
-            MozHyphens: 'auto',
-            msHyphens: 'auto',
-            hyphens: 'auto'
-          }}
-        >
-          <ChapterContent
-            htmlContent={memoizedContent}
-            fontSize={fontSize}
-            readingMode={readingMode}
-            highlights={currentChapterHighlights}
-          />
-        </div>
-
-        {isAuthenticated && (
-          <ChapterStatsWidget
-            bookSlug={bookSlug}
-            chapterNumber={parseInt(chapter.chapterNumber)}
+        {showTTSLoginPrompt && (
+          <LoginPromptModal
+            icon={Volume2}
+            title="Fitur Text-to-Speech"
+            description="Masuk sekarang untuk mendengarkan bab ini dibacakan!"
+            onClose={() => setShowTTSLoginPrompt(false)}
+            onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+            onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
           />
         )}
 
-        <div className="my-8">
-          <ChapterRating
-            bookSlug={bookSlug}
-            chapterNumber={parseInt(chapter.chapterNumber)}
-            chapterTitle={chapter.chapterTitle}
-            isAuthenticated={isAuthenticated}
+        {showAnnotationLoginPrompt && (
+          <LoginPromptModal
+            icon={Highlighter}
+            title="Fitur Anotasi"
+            description="Masuk sekarang untuk menyimpan anotasi Anda!"
+            onClose={() => setShowAnnotationLoginPrompt(false)}
+            onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+            onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
           />
-        </div>
+        )}
 
-        <ReviewsSection
-          reviews={reviews}
+        {showBookmarkLoginPrompt && (
+          <LoginPromptModal
+            icon={Bookmark}
+            title="Fitur Penanda Buku"
+            description="Masuk sekarang untuk menyimpan penanda Anda!"
+            onClose={() => setShowBookmarkLoginPrompt(false)}
+            onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+            onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+          />
+        )}
+
+        {showSearchLoginPrompt && (
+          <LoginPromptModal
+            icon={Search}
+            title="Fitur Pencarian"
+            description="Masuk sekarang untuk mencari kata atau frasa dalam buku ini!"
+            onClose={() => setShowSearchLoginPrompt(false)}
+            onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+            onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+          />
+        )}
+
+        {showExportLoginPrompt && (
+          <LoginPromptModal
+            icon={Search}
+            title="Fitur Ekspor Anotasi"
+            description="Masuk sekarang untuk mengekspor semua catatan dan highlight Anda!"
+            onClose={() => setShowExportLoginPrompt(false)}
+            onLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+            onRegister={() => navigate('/daftar', { state: { from: location.pathname } })}
+          />
+        )}
+
+        {showSearchModal && (
+          <SearchInBook
+            bookSlug={bookSlug}
+            onClose={() => setShowSearchModal(false)}
+          />
+        )}
+
+        {showExportModal && (
+          <ExportAnnotations
+            bookSlug={bookSlug}
+            onClose={() => setShowExportModal(false)}
+          />
+        )}
+
+        {footnotePopup && (
+          <FootnotePopup
+            content={footnotePopup.content}
+            onClose={() => setFootnotePopup(null)}
+            onGoToFootnote={handleGoToFootnote}
+            isLocal={footnotePopup.isLocal}
+            sourceChapter={footnotePopup.sourceChapter}
+          />
+        )}
+
+        <SwipeIndicator direction={swipeDirection} />
+
+        {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
+          <nav className="mb-6 text-sm" aria-label="Breadcrumb">
+            <ol className="flex items-center gap-2 flex-wrap">
+              <li>
+                <Link to={`/buku/${bookSlug}`} className="text-primary hover:underline">
+                  {chapter.bookTitle}
+                </Link>
+              </li>
+              {chapter.breadcrumbs.map((crumb, index) => (
+                <li key={crumb.chapterId} className="flex items-center gap-2">
+                  <span className="text-gray-400">/</span>
+                  {index === chapter.breadcrumbs.length - 1 ? (
+                    <span className="font-semibold">{crumb.title}</span>
+                  ) : (
+                    <Link
+                      to={`/buku/${bookSlug}/${buildChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`}
+                      className="text-primary hover:underline"
+                    >
+                      {crumb.title}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+
+        {isAuthenticated && tts.availableVoices.length > 0 && (
+          <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
+        )}
+
+        {isAuthenticated && tts.isEnabled && showTTSPanel && (
+          <TTSControlPanel
+            isPlaying={tts.isPlaying}
+            progress={tts.progress}
+            rate={tts.rate}
+            pitch={tts.pitch}
+            voiceIndex={tts.voiceIndex}
+            availableVoices={tts.availableVoices}
+            showSettings={tts.showSettings}
+            onTogglePlay={handleTTSToggle}
+            onStop={handleTTSStop}
+            onPrevChapter={handlePrevChapter}
+            onNextChapter={handleNextChapter}
+            onToggleSettings={tts.toggleSettings}
+            onRateChange={(val) => tts.updateSettings({ rate: val })}
+            onPitchChange={(val) => tts.updateSettings({ pitch: val })}
+            onVoiceChange={(val) => tts.updateSettings({ voiceIndex: val })}
+            onApplySettings={handleTTSApplySettings}
+            hasPrevChapter={!!chapter?.previousChapter}
+            hasNextChapter={!!chapter?.nextChapter}
+            onMinimize={() => setShowTTSPanel(false)}
+          />
+        )}
+
+        <BottomToolbar
+          chapter={chapter}
           isAuthenticated={isAuthenticated}
-          onAddReview={handleAddReview}
-          onLikeReview={handleLikeReview}
-          onReplyToReview={handleReplyToReview}
-          onNavigateToLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          isTTSPlaying={tts.isPlaying}
+          readingMode={readingMode}
+          showTTSPanel={showTTSPanel}
+          onPrevChapter={handlePrevChapter}
+          onNextChapter={handleNextChapter}
+          onTTSToggle={handleTTSToggle}
+          onToggleTTSPanel={handleToggleTTSPanel}
+          onSearchClick={handleSearchClick}
+          onToolbarToggle={() => {
+            if (!isAuthenticated) {
+              setShowAnnotationLoginPrompt(true)
+              return
+            }
+            setShowToolbar(!showToolbar)
+          }}
+          onBookmarkClick={handleAddBookmark}
+          onExportClick={handleExportClick}
+          onReadingModeToggle={() => setReadingMode(!readingMode)}
         />
-      </article>
-    </div>
+
+        {selectedText && selectionCoords && (
+          <TextSelectionPopup
+            selectedText={selectedText}
+            coords={selectionCoords}
+            isAuthenticated={isAuthenticated}
+            onClose={clearSelection}
+            onHighlight={handleAddHighlight}
+            onAddNote={handleAddNote}
+            onNavigateToLogin={() => {
+              clearSelection()
+              navigate('/masuk', { state: { from: location.pathname } })
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              setIsInteractingWithPopup(true)
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation()
+              setIsInteractingWithPopup(true)
+            }}
+          />
+        )}
+
+        {isAuthenticated && showToolbar && (
+          <AnnotationPanel
+            annotations={annotations}
+            currentChapterNumber={chapter.chapterNumber}
+            onClose={() => setShowToolbar(false)}
+            onAnnotationClick={handleAnnotationClick}
+            onDeleteBookmark={handleDeleteBookmark}
+            onDeleteHighlight={handleDeleteHighlight}
+            onDeleteNote={handleDeleteNote}
+          />
+        )}
+
+        <article ref={contentRef}>
+          <header className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
+            {chapter.bookSubtitle && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
+                {chapter.bookSubtitle}
+              </p>
+            )}
+          </header>
+
+          <div
+            lang="id"
+            className={`transition-colors duration-300 rounded-lg my-8 py-8 ${
+              readingMode
+                ? 'bg-[#FFF8DC] shadow-inner border-t border-b border-gray-300'
+                : 'border-t border-b border-gray-200 dark:border-gray-800'
+            }`}
+            style={{
+              WebkitHyphens: 'auto',
+              MozHyphens: 'auto',
+              msHyphens: 'auto',
+              hyphens: 'auto'
+            }}
+          >
+            <ChapterContent
+              htmlContent={memoizedContent}
+              fontSize={fontSize}
+              readingMode={readingMode}
+              highlights={currentChapterHighlights}
+            />
+          </div>
+
+          {isAuthenticated && (
+            <ChapterStatsWidget
+              bookSlug={bookSlug}
+              chapterNumber={parseInt(chapter.chapterNumber)}
+            />
+          )}
+
+          <div className="my-8">
+            <ChapterRating
+              bookSlug={bookSlug}
+              chapterNumber={parseInt(chapter.chapterNumber)}
+              chapterTitle={chapter.chapterTitle}
+              isAuthenticated={isAuthenticated}
+            />
+          </div>
+
+          <ReviewsSection
+            reviews={reviews}
+            isAuthenticated={isAuthenticated}
+            onAddReview={handleAddReview}
+            onLikeReview={handleLikeReview}
+            onReplyToReview={handleReplyToReview}
+            onNavigateToLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          />
+        </article>
+      </div>
+    </>
   )
 }
 

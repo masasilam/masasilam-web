@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/PopularBooksPage.jsx - FIXED
+// src/pages/PopularBooksPage.jsx - WITH COMPLETE SEO
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -7,6 +7,12 @@ import { Link } from 'react-router-dom'
 import bookService from '../services/bookService'
 import BookGrid from '../components/Book/BookGrid'
 import Button from '../components/Common/Button'
+import SEO from '../components/Common/SEO'
+import {
+  generateCollectionPageStructuredData,
+  generateBreadcrumbStructuredData,
+  combineStructuredData
+} from '../utils/seoHelpers'
 import { ChevronRight, TrendingUp } from 'lucide-react'
 
 const PopularBooksPage = () => {
@@ -14,6 +20,7 @@ const PopularBooksPage = () => {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalBooks, setTotalBooks] = useState(0)
 
   useEffect(() => {
     fetchPopularBooks()
@@ -22,18 +29,16 @@ const PopularBooksPage = () => {
   const fetchPopularBooks = async () => {
     try {
       setLoading(true)
-      
-      // ✅ FIXED: Backend expects 'viewCount' not 'view_count'
+
       const response = await bookService.getBooks({
         page: currentPage,
         limit: 24,
-        sortField: 'viewCount', // ✅ Sesuai dengan allowedSortFields di backend
+        sortField: 'viewCount',
         sortOrder: 'DESC',
       })
-      
-      console.log('📊 Popular Books Response:', response)
-      
+
       setBooks(response.data?.data || [])
+      setTotalBooks(response.data?.total || 0)
       setTotalPages(Math.ceil((response.data?.total || 0) / 24))
     } catch (error) {
       console.error('❌ Error fetching popular books:', error)
@@ -42,84 +47,122 @@ const PopularBooksPage = () => {
     }
   }
 
+  // SEO Data
+  const breadcrumbs = [
+    { name: 'Beranda', url: '/' },
+    { name: 'Buku', url: '/buku' },
+    { name: 'Terpopuler', url: '#' }
+  ]
+
+  const structuredData = combineStructuredData(
+    generateBreadcrumbStructuredData(breadcrumbs),
+    generateCollectionPageStructuredData('books', books, currentPage, totalBooks, 24)
+  )
+
+  const pageUrl = currentPage > 1 ? `/buku/terpopuler?page=${currentPage}` : '/buku/terpopuler'
+  const prevUrl = currentPage > 1 ? (currentPage === 2 ? '/buku/terpopuler' : `/buku/terpopuler?page=${currentPage - 1}`) : null
+  const nextUrl = currentPage < totalPages ? `/buku/terpopuler?page=${currentPage + 1}` : null
+
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4">
-        {/* ============ BREADCRUMB ============ */}
-        <nav className="flex items-center gap-2 text-sm mb-6">
-          <Link 
-            to="/" 
-            className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-          >
-            Beranda
-          </Link>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <Link 
-            to="/buku" 
-            className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-          >
-            Buku
-          </Link>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-900 dark:text-white font-medium">
-            Terpopuler
-          </span>
-        </nav>
+    <>
+      <SEO
+        title="Buku Terpopuler - Paling Banyak Dibaca"
+        description={`Jelajahi ${totalBooks} buku terpopuler yang paling banyak dibaca oleh pengguna MasasilaM. Temukan buku-buku favorit komunitas pembaca kami.`}
+        url={pageUrl}
+        type="website"
+        keywords="buku populer, buku terpopuler, buku paling dibaca, trending books, buku favorit"
+        structuredData={structuredData}
+        prevUrl={prevUrl}
+        nextUrl={nextUrl}
+        canonical={`https://masasilam.com${pageUrl}`}
+      />
 
-        {/* ============ HEADER ============ */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-              <TrendingUp className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold">Buku Terpopuler</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Buku paling banyak dibaca oleh pengguna MasasilaM
-              </p>
-            </div>
-          </div>
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto px-4">
+          {/* ============ BREADCRUMB ============ */}
+          <nav className="flex items-center gap-2 text-sm mb-6" aria-label="Breadcrumb">
+            <Link
+              to="/"
+              className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+            >
+              Beranda
+            </Link>
+            <ChevronRight className="w-4 h-4 text-gray-400" aria-hidden="true" />
+            <Link
+              to="/buku"
+              className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+            >
+              Buku
+            </Link>
+            <ChevronRight className="w-4 h-4 text-gray-400" aria-hidden="true" />
+            <span className="text-gray-900 dark:text-white font-medium">
+              Terpopuler
+            </span>
+          </nav>
 
-          {/* Stats Badge */}
-          {!loading && books.length > 0 && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-sm">
-              <TrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-              <span className="text-gray-700 dark:text-gray-300">
-                Menampilkan {books.length} buku terpopuler
+          {/* ============ HEADER ============ */}
+          <header className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+                <TrendingUp className="w-8 h-8 text-orange-600 dark:text-orange-400" aria-hidden="true" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold">Buku Terpopuler</h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Buku paling banyak dibaca oleh pengguna MasasilaM
+                </p>
+              </div>
+            </div>
+
+            {/* Stats Badge */}
+            {!loading && books.length > 0 && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-sm">
+                <TrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400" aria-hidden="true" />
+                <span className="text-gray-700 dark:text-gray-300">
+                  Menampilkan {books.length} dari {totalBooks} buku terpopuler
+                </span>
+              </div>
+            )}
+          </header>
+
+          {/* ============ BOOKS GRID ============ */}
+          <BookGrid books={books} loading={loading} />
+
+          {/* ============ PAGINATION ============ */}
+          {totalPages > 1 && (
+            <nav className="mt-12 flex justify-center gap-2" aria-label="Navigasi halaman">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(1, prev - 1))
+                  window.scrollTo(0, 0)
+                }}
+                disabled={currentPage === 1 || loading}
+                aria-label="Halaman sebelumnya"
+              >
+                Sebelumnya
+              </Button>
+
+              <span className="flex items-center px-4 text-sm text-gray-600 dark:text-gray-400" aria-current="page">
+                Halaman {currentPage} dari {totalPages}
               </span>
-            </div>
+
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(totalPages, prev + 1))
+                  window.scrollTo(0, 0)
+                }}
+                disabled={currentPage === totalPages || loading}
+                aria-label="Halaman berikutnya"
+              >
+                Selanjutnya
+              </Button>
+            </nav>
           )}
         </div>
-
-        {/* ============ BOOKS GRID ============ */}
-        <BookGrid books={books} loading={loading} />
-
-        {/* ============ PAGINATION ============ */}
-        {totalPages > 1 && (
-          <div className="mt-12 flex justify-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || loading}
-            >
-              Sebelumnya
-            </Button>
-            
-            <span className="flex items-center px-4 text-sm text-gray-600 dark:text-gray-400">
-              Halaman {currentPage} dari {totalPages}
-            </span>
-
-            <Button
-              variant="secondary"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || loading}
-            >
-              Selanjutnya
-            </Button>
-          </div>
-        )}
       </div>
-    </div>
+    </>
   )
 }
 
