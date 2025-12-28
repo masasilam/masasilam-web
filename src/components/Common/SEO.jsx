@@ -44,7 +44,7 @@ const SEO = ({
   const siteUrl = 'https://masasilam.com'
   const siteName = 'MasasilaM'
   const defaultTitle = 'MasasilaM - Perpustakaan Digital Buku Domain Publik'
-  const defaultDescription = 'Perpustakaan digital gratis untuk buku klasik domain publik Indonesia. Akses ribuan buku dengan fitur smart reading, bookmark, dan highlight.'
+  const defaultDescription = 'Perpustakaan digital gratis untuk buku klasik domain publik. Akses buku-buku dengan fitur smart reading, bookmark, dan highlight.'
   const defaultImage = `${siteUrl}/og-image.jpg`
 
   // Process Title

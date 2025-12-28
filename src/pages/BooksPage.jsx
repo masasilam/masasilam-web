@@ -4,6 +4,8 @@ import bookService from '../services/bookService'
 import BookGrid from '../components/Book/BookGrid'
 import Button from '../components/Common/Button'
 import Input from '../components/Common/Input'
+import SEO from '../components/Common/SEO'
+import { generateCollectionPageStructuredData, generateBreadcrumbStructuredData } from '../utils/seoHelpers'
 import { Search, SlidersHorizontal, X, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft } from 'lucide-react'
 
 const SORTS = [
@@ -60,6 +62,7 @@ const BooksPage = () => {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalBooks, setTotalBooks] = useState(0)
   const [sortField, setSortField] = useState('updateAt')
   const [sortOrder, setSortOrder] = useState('DESC')
   const [showAdv, setShowAdv] = useState(false)
@@ -72,7 +75,9 @@ const BooksPage = () => {
       const params = { page: currentPage, limit: 12, sortField, sortOrder, ...Object.fromEntries(Object.entries(crit).filter(([_, v]) => v)) }
       const res = await bookService.getBooks(params)
       setBooks(res.data?.data || [])
-      setTotalPages(Math.ceil((res.data?.total || 0) / 12))
+      const total = res.data?.total || 0
+      setTotalBooks(total)
+      setTotalPages(Math.ceil(total / 12))
     } catch (e) {
       console.error('Error:', e)
       setBooks([])
@@ -82,7 +87,6 @@ const BooksPage = () => {
   }, [currentPage, sortField, sortOrder, crit])
 
   useEffect(() => { fetch() }, [fetch])
-  useEffect(() => { document.title = crit.searchTitle ? `${crit.searchTitle} - Koleksi Buku` : 'Koleksi Buku Digital' }, [crit.searchTitle])
 
   const handleSort = useCallback((f) => {
     if (sortField === f) {
@@ -97,55 +101,98 @@ const BooksPage = () => {
   const handleApply = useCallback(() => { setCurrentPage(1); fetch() }, [fetch])
   const handleReset = useCallback(() => { setCrit({ searchTitle: '', searchInBook: '', authorName: '', contributor: '', genre: '', minChapters: '', maxChapters: '', minFileSize: '', maxFileSize: '', publicationYearFrom: '', publicationYearTo: '', difficultyLevel: '', fileFormat: '', isFeatured: '', languageId: '', minRating: '', minViewCount: '', minReadCount: '' }); setCurrentPage(1); setTimeout(fetch, 100) }, [fetch])
 
-  return (
-    <div className="min-h-screen py-4 sm:py-8">
-      <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary mb-4 sm:mb-6 group transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm sm:text-base font-medium">Kembali ke Beranda</span>
-        </button>
+  // Generate SEO data
+  const breadcrumbs = [
+    { name: 'Beranda', url: '/' },
+    { name: 'Koleksi Buku', url: '#' }
+  ]
 
-        <header className="mb-6">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2">Koleksi Buku Digital</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Jelajahi buku-buku berkualitas</p>
-        </header>
-        <div className="mb-4 space-y-3">
-          <div className="flex gap-2">
-            <Input type="text" placeholder="Cari judul..." value={crit.searchTitle} onChange={(e) => handleChange('searchTitle', e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApply()} />
-            <Button variant="primary" onClick={handleApply}><Search className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Cari</span></Button>
-            <Button variant={showSort ? 'primary' : 'secondary'} onClick={() => setShowSort(!showSort)}><ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Urutkan</span></Button>
-            <Button variant={showAdv ? 'primary' : 'secondary'} onClick={() => setShowAdv(!showAdv)}><SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Filter</span></Button>
-          </div>
-          {showSort && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Urutkan:</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">{sortOrder === 'DESC' ? '↓' : '↑'}</span>
-                  <button onClick={() => setShowSort(false)} className="text-gray-500 hover:text-gray-700" aria-label="Close"><X className="w-4 h-4" /></button>
+  const collectionSchema = generateCollectionPageStructuredData(
+    'books',
+    books.map(b => ({ ...b, slug: b.slug || b.id })),
+    currentPage,
+    totalBooks,
+    12
+  )
+
+  const breadcrumbSchema = generateBreadcrumbStructuredData(breadcrumbs)
+
+  const pageTitle = crit.searchTitle
+    ? `${crit.searchTitle} - Koleksi Buku`
+    : `Koleksi Buku Digital - Halaman ${currentPage}`
+
+  const pageDescription = crit.searchTitle
+    ? `Hasil pencarian "${crit.searchTitle}" - Temukan buku yang Anda cari di perpustakaan digital kami`
+    : `Jelajahi ${totalBooks.toLocaleString('id-ID')} buku digital gratis. Halaman ${currentPage} dari ${totalPages}. Baca buku klasik domain publik dengan fitur smart reading.`
+
+  const pageUrl = currentPage > 1 ? `/buku?page=${currentPage}` : '/buku'
+  const prevUrl = currentPage > 1 ? (currentPage === 2 ? '/buku' : `/buku?page=${currentPage - 1}`) : null
+  const nextUrl = currentPage < totalPages ? `/buku?page=${currentPage + 1}` : null
+
+  return (
+    <>
+      <SEO
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        type="website"
+        keywords="koleksi buku, perpustakaan digital, buku gratis, domain publik, baca buku online"
+        structuredData={[collectionSchema, breadcrumbSchema]}
+        prevUrl={prevUrl}
+        nextUrl={nextUrl}
+      />
+
+      <div className="min-h-screen py-4 sm:py-8">
+        <div className="container mx-auto px-3 sm:px-4 max-w-7xl">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary mb-4 sm:mb-6 group transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm sm:text-base font-medium">Kembali ke Beranda</span>
+          </button>
+
+          <header className="mb-6">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">Koleksi Buku Digital</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Jelajahi {totalBooks.toLocaleString('id-ID')} buku berkualitas
+            </p>
+          </header>
+
+          <div className="mb-4 space-y-3">
+            <div className="flex gap-2">
+              <Input type="text" placeholder="Cari judul..." value={crit.searchTitle} onChange={(e) => handleChange('searchTitle', e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApply()} />
+              <Button variant="primary" onClick={handleApply}><Search className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Cari</span></Button>
+              <Button variant={showSort ? 'primary' : 'secondary'} onClick={() => setShowSort(!showSort)}><ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Urutkan</span></Button>
+              <Button variant={showAdv ? 'primary' : 'secondary'} onClick={() => setShowAdv(!showAdv)}><SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Filter</span></Button>
+            </div>
+            {showSort && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Urutkan:</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{sortOrder === 'DESC' ? '↓' : '↑'}</span>
+                    <button onClick={() => setShowSort(false)} className="text-gray-500 hover:text-gray-700" aria-label="Close"><X className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {SORTS.map(o => <SBtn key={o.v} opt={o} act={sortField === o.v} ord={sortOrder} load={loading} onClick={() => handleSort(o.v)} />)}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {SORTS.map(o => <SBtn key={o.v} opt={o} act={sortField === o.v} ord={sortOrder} load={loading} onClick={() => handleSort(o.v)} />)}
-              </div>
-            </div>
+            )}
+          </div>
+          {showAdv && <Filt crit={crit} onChange={handleChange} onApply={handleApply} onReset={handleReset} onClose={() => setShowAdv(false)} />}
+          <BookGrid books={books} loading={loading} />
+          {totalPages > 1 && (
+            <nav className="mt-8 flex justify-center gap-2" aria-label="Pagination">
+              <Button variant="secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || loading}>Prev</Button>
+              <span className="flex items-center px-3 text-xs text-gray-600 dark:text-gray-400">{currentPage}/{totalPages}</span>
+              <Button variant="secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || loading}>Next</Button>
+            </nav>
           )}
         </div>
-        {showAdv && <Filt crit={crit} onChange={handleChange} onApply={handleApply} onReset={handleReset} onClose={() => setShowAdv(false)} />}
-        <BookGrid books={books} loading={loading} />
-        {totalPages > 1 && (
-          <nav className="mt-8 flex justify-center gap-2" aria-label="Pagination">
-            <Button variant="secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || loading}>Prev</Button>
-            <span className="flex items-center px-3 text-xs text-gray-600 dark:text-gray-400">{currentPage}/{totalPages}</span>
-            <Button variant="secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || loading}>Next</Button>
-          </nav>
-        )}
       </div>
-    </div>
+    </>
   )
 }
 
