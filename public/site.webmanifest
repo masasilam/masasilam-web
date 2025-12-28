@@ -1,7 +1,7 @@
 {
   "name": "MasasilaM",
   "short_name": "MasasilaM",
-  "description": "Perpustakaan Digital Domain Publik Indonesia",
+  "description": "Perpustakaan Digital Buku Domain Publik",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

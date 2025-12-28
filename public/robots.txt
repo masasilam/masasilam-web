@@ -15,6 +15,7 @@ Sitemap: https://masasilam.com/sitemap-static.xml
 Sitemap: https://masasilam.com/sitemap-genres.xml
 Sitemap: https://masasilam.com/sitemap-authors.xml
 Sitemap: https://masasilam.com/sitemap-books.xml
+Sitemap: https://masasilam.com/sitemap-chapters.xml
 
 # ============================================
 # BLOCK PRIVATE/AUTH AREAS
@@ -63,6 +64,18 @@ Disallow: /*?*gclid=*
 Disallow: /*?*ref=*
 
 # ============================================
+# PERFORMANCE OPTIMIZATION
+# ============================================
+# Block access to asset query parameters (prevent duplicate indexing)
+Disallow: /*.css?*
+Disallow: /*.js?*
+Disallow: /*.jpg?*
+Disallow: /*.jpeg?*
+Disallow: /*.png?*
+Disallow: /*.webp?*
+Disallow: /*.svg?*
+
+# ============================================
 # ALLOW STATIC ASSETS
 # ============================================
 Allow: /assets/
@@ -87,6 +100,9 @@ Allow: /*.ico$
 # ============================================
 User-agent: Googlebot
 Allow: /
+# Allow Google to see CSS/JS for rendering
+Allow: /*.css
+Allow: /*.js
 # No crawl-delay for Google (they ignore it anyway)
 
 User-agent: Googlebot-Image
@@ -327,5 +343,6 @@ Disallow: /
 # 4. AI training bots are blocked by default (edit if needed)
 # 5. SEO tools are allowed but rate-limited
 # 6. Pagination is explicitly allowed to prevent content loss
+# 7. Asset query parameters blocked to prevent duplicate indexing
 
 # For questions or concerns, contact: support@masasilam.com

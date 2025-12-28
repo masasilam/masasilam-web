@@ -1,4 +1,4 @@
-// ============================================
+//============================================
 // src/components/Common/LoadingSpinner.jsx
 // ============================================
 
@@ -12,9 +12,9 @@ const LoadingSpinner = ({ fullScreen = false, size = 'md' }) => {
   const spinner = (
     <div className="flex justify-center items-center">
       <div
-        className={`${sizeClasses[size]} border-t-blue-500 border-r-transparent border-b-blue-700 border-l-transparent rounded-full`}
+        className={`${sizeClasses[size]} border-amber-500/20 border-t-amber-500 rounded-full`}
         style={{
-          animation: 'spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite',
+          animation: 'spin 1s linear infinite',
         }}
       />
     </div>
@@ -22,10 +22,10 @@ const LoadingSpinner = ({ fullScreen = false, size = 'md' }) => {
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center z-50">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex flex-col justify-center items-center z-50">
         <div className="flex flex-col items-center justify-center">
           {spinner}
-          <p className="mt-4 text-white font-medium">Loading...</p>
+          <p className="mt-4 text-white font-medium animate-pulse">Loading...</p>
         </div>
       </div>
     )

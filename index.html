@@ -1,28 +1,24 @@
 <!doctype html>
-<html lang="id" prefix="og: https://ogp.me/ns#">
+<html lang="id" prefix="og: https://ogp.me/ns#" class="dark">
 <head>
   <!-- Essential Meta Tags -->
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
 
-  <!-- Primary Meta Tags -->
-  <title>MasasilaM - Perpustakaan Digital Domain Publik Indonesia</title>
-  <meta name="title" content="MasasilaM - Perpustakaan Digital Domain Publik Indonesia" />
-  <meta name="description" content="Perpustakaan digital untuk buku-buku domain publik yang terbengkalai. Akses gratis ribuan buku klasik Indonesia tanpa batas. Fitur smart reading, bookmark, highlight, dan reading analytics." />
-  <meta name="keywords" content="perpustakaan digital, perpustakaan online, buku gratis, domain publik, buku klasik Indonesia, literasi digital, baca buku online, MasasilaM, CC0, uncopyright, public domain books" />
+  <!-- Primary Meta Tags - Will be replaced by React Helmet -->
+  <title>MasasilaM - Perpustakaan Digital Buku Domain Publik</title>
+  <meta name="title" content="MasasilaM - Perpustakaan Digital Buku Domain Publik" />
+  <meta name="description" content="Perpustakaan digital gratis untuk buku klasik. Akses buku-buku domain publik dengan smart reading, bookmark, dan highlight." />
+  <meta name="keywords" content="perpustakaan digital Indonesia, perpustakaan digital, buku gratis, domain publik, buku klasik, literasi digital, MasasilaM" />
   <meta name="author" content="MasasilaM - KajanK" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-  <meta name="googlebot" content="index, follow" />
-  <meta name="bingbot" content="index, follow" />
 
   <!-- Geo Tags -->
   <meta name="geo.region" content="ID" />
   <meta name="geo.placename" content="Indonesia" />
-  <meta name="geo.position" content="-7.237174;112.601917" />
-  <meta name="ICBM" content="-7.237174, 112.601917" />
 
-  <!-- Language & Locale -->
+  <!-- Language -->
   <meta name="language" content="Indonesian" />
   <meta http-equiv="content-language" content="id" />
 
@@ -31,187 +27,70 @@
 
   <!-- Favicon & App Icons -->
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
   <link rel="manifest" href="/site.webmanifest" />
   <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#f59e0b" />
   <meta name="msapplication-TileColor" content="#f59e0b" />
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 
   <!-- Mobile App Meta Tags -->
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="MasasilaM" />
-  <meta name="application-name" content="MasasilaM" />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://masasilam.com/" />
   <meta property="og:site_name" content="MasasilaM" />
-  <meta property="og:title" content="MasasilaM - Perpustakaan Digital Domain Publik Indonesia" />
-  <meta property="og:description" content="Perpustakaan digital untuk buku-buku domain publik yang terbengkalai. Akses gratis ribuan buku klasik Indonesia tanpa batas dengan fitur smart reading." />
+  <meta property="og:title" content="MasasilaM - Perpustakaan Digital Buku Domain Publik" />
+  <meta property="og:description" content="Perpustakaan digital gratis untuk buku klasik. Akses buku-buku domain publik dengan smart reading." />
   <meta property="og:image" content="https://masasilam.com/og-image.jpg" />
-  <meta property="og:image:secure_url" content="https://masasilam.com/og-image.jpg" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="MasasilaM - Perpustakaan Digital Domain Publik" />
   <meta property="og:locale" content="id_ID" />
-  <meta property="og:locale:alternate" content="en_US" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://masasilam.com/" />
-  <meta name="twitter:title" content="MasasilaM - Perpustakaan Digital Domain Publik Indonesia" />
-  <meta name="twitter:description" content="Perpustakaan digital untuk buku-buku domain publik yang terbengkalai. Akses gratis ribuan buku klasik Indonesia tanpa batas." />
+  <meta name="twitter:title" content="MasasilaM - Perpustakaan Digital Buku Domain Publik" />
+  <meta name="twitter:description" content="Perpustakaan digital gratis untuk buku klasik." />
   <meta name="twitter:image" content="https://masasilam.com/twitter-card.jpg" />
-  <meta name="twitter:image:alt" content="MasasilaM - Perpustakaan Digital Domain Publik" />
-  <meta name="twitter:site" content="@masasilam" />
-
-  <!-- Additional Social -->
-  <meta property="instagram:site" content="@fajarte_" />
 
   <!-- Security Headers -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
   <meta name="referrer" content="no-referrer-when-downgrade" />
 
   <!-- DNS Prefetch & Preconnect -->
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
   <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-  <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
 
-  <!-- Preload Critical Assets -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" />
-
-  <!-- Google Analytics 4 (GA4) -->
+  <!-- Google Analytics 4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z6VFRV9H6G"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-Z6VFRV9H6G', {
       'send_page_view': false,
-      'site_speed_sample_rate': 100,
-      'anonymize_ip': true,
-      'cookie_flags': 'SameSite=None;Secure'
-    });
-
-    // Enhanced measurement with custom dimensions
-    gtag('config', 'G-Z6VFRV9H6G', {
-      'custom_map': {
-        'dimension1': 'book_title',
-        'dimension2': 'author_name',
-        'dimension3': 'genre',
-        'dimension4': 'reading_progress',
-        'metric1': 'reading_time'
-      }
+      'anonymize_ip': true
     });
   </script>
 
-  <!-- Structured Data (JSON-LD) -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebSite",
-          "@id": "https://masasilam.com/#website",
-          "url": "https://masasilam.com/",
-          "name": "MasasilaM",
-          "description": "Perpustakaan digital untuk buku-buku domain publik yang terbengkalai dan terdegradasi",
-          "publisher": {
-            "@id": "https://masasilam.com/#organization"
-          },
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": {
-              "@type": "EntryPoint",
-              "urlTemplate": "https://masasilam.com/cari?q={search_term_string}"
-            },
-            "query-input": "required name=search_term_string"
-          },
-          "inLanguage": "id-ID"
-        },
-        {
-          "@type": "Organization",
-          "@id": "https://masasilam.com/#organization",
-          "name": "MasasilaM",
-          "url": "https://masasilam.com/",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://masasilam.com/masasilam-logo-inverted.svg",
-            "width": 512,
-            "height": 512
-          },
-          "description": "Perpustakaan digital untuk buku-buku domain publik yang terbengkalai dan terdegradasi. Gratis, legal, tanpa batas.",
-          "foundingDate": "2025",
-          "founder": {
-            "@type": "Person",
-            "name": "KajanK",
-            "sameAs": "https://www.instagram.com/fajarte_"
-          },
-          "sameAs": [
-            "https://www.instagram.com/fajarte_",
-            "https://github.com/kajankk"
-          ],
-          "contactPoint": {
-            "@type": "ContactPoint",
-            "contactType": "Customer Service",
-            "url": "https://masasilam.com/kontak",
-            "availableLanguage": ["Indonesian"]
-          },
-          "areaServed": {
-            "@type": "Country",
-            "name": "Indonesia"
-          },
-          "knowsAbout": [
-            "Perpustakaan Digital",
-            "Literasi Digital",
-            "Domain Publik",
-            "Buku Gratis",
-            "Buku Gratis Indonesia",
-            "CC0 License",
-            "Uncopyright",
-            "Public Domain Books"
-          ]
-        },
-        {
-          "@type": "WebPage",
-          "@id": "https://masasilam.com/#webpage",
-          "url": "https://masasilam.com/",
-          "name": "MasasilaM - Perpustakaan Digital Domain Publik Indonesia",
-          "isPartOf": {
-            "@id": "https://masasilam.com/#website"
-          },
-          "about": {
-            "@id": "https://masasilam.com/#organization"
-          },
-          "description": "Perpustakaan digital untuk buku-buku domain publik yang terbengkalai. Akses gratis ribuan buku klasik Indonesia tanpa batas.",
-          "inLanguage": "id-ID",
-          "potentialAction": {
-            "@type": "ReadAction",
-            "target": ["https://masasilam.com/"]
-          }
-        }
-      ]
-    }
-  </script>
-
-  <!-- Theme Detection Script -->
+  <!-- Theme Detection Script - BEFORE CRITICAL CSS -->
   <script>
     (function() {
-      const theme = localStorage.getItem('theme') || 'light';
+      const theme = localStorage.getItem('theme') || 'dark';
       if (theme === 'dark') {
         document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
       }
     })();
   </script>
@@ -219,12 +98,12 @@
   <!-- Critical CSS -->
   <style>
     html {
-      background-color: #ffffff;
+      background-color: #111827;
       scroll-behavior: smooth;
     }
 
-    html.dark {
-      background-color: #111827;
+    html:not(.dark) {
+      background-color: #ffffff;
     }
 
     body {
@@ -236,7 +115,7 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Loading Spinner */
+    /* Loading Spinner - Orange (Brand Color) */
     #root:empty::before {
       content: '';
       position: fixed;
@@ -260,14 +139,14 @@
       display: none;
     }
 
-    /* Prevent FOUC (Flash of Unstyled Content) */
+    /* Prevent FOUC */
     #root:empty {
       min-height: 100vh;
-      background-color: #ffffff;
+      background-color: #111827;
     }
 
-    html.dark #root:empty {
-      background-color: #111827;
+    html:not(.dark) #root:empty {
+      background-color: #ffffff;
     }
 
     /* Accessibility: Skip to main content */
@@ -303,7 +182,7 @@
   </style>
 </head>
 <body>
-<!-- Skip to Main Content (Accessibility) -->
+<!-- Skip to Main Content -->
 <a href="#main-content" class="sr-only">Skip to main content</a>
 
 <!-- Main App Root -->
@@ -314,7 +193,7 @@
 
 <!-- Noscript Fallback -->
 <noscript>
-  <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+  <div style="text-align: center; padding: 50px; font-family: sans-serif; background: #111827; color: white; min-height: 100vh;">
     <h1>JavaScript Required</h1>
     <p>MasasilaM memerlukan JavaScript untuk berfungsi dengan baik.</p>
     <p>Silakan aktifkan JavaScript di browser Anda.</p>
