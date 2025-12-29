@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Github, Instagram } from 'lucide-react'
+import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Github, Instagram, X } from 'lucide-react'
 import bookService from '../services/bookService'
 import userService from '../services/userService'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
@@ -76,6 +76,38 @@ const AboutPage = () => {
     "✅ Export annotations dalam berbagai format",
     "✅ Search in book dengan context preview",
     "✅ Social features (review, rating, diskusi)"
+  ]
+
+  // Social media links - sama dengan yang di Footer
+  const socialLinks = [
+    {
+      icon: X,
+      label: 'X',
+      url: 'https://x.com/masasilamdotcom',
+      bgColor: 'bg-gray-900 dark:bg-gray-700',
+      hoverColor: 'hover:bg-gray-800 dark:hover:bg-gray-600'
+    },
+    {
+      icon: Instagram,
+      label: 'Instagram',
+      url: 'https://instagram.com/masasilamdotcom',
+      bgColor: 'bg-gradient-to-br from-purple-600 to-pink-600',
+      hoverColor: 'hover:from-purple-700 hover:to-pink-700'
+    },
+    {
+      icon: Github,
+      label: 'GitHub',
+      url: 'https://github.com/kajankk',
+      bgColor: 'bg-gray-900 dark:bg-gray-700',
+      hoverColor: 'hover:bg-gray-800 dark:hover:bg-gray-600'
+    },
+    {
+      icon: Mail,
+      label: 'Email',
+      url: 'mailto:support@masasilam.com',
+      bgColor: 'bg-primary',
+      hoverColor: 'hover:bg-amber-600'
+    }
   ]
 
   // Generate SEO data
@@ -301,50 +333,46 @@ const AboutPage = () => {
             </div>
           </div>
 
-          {/* Creator Info */}
-          <div className="bg-gradient-to-br from-pink-50 to-purple-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6 sm:p-10 mb-12 sm:mb-16 border-2 border-pink-200 dark:border-pink-700">
-            <div className="text-center">
-              <a
-                href="https://www.instagram.com/fajarte_"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-bold text-lg transition-all hover:shadow-xl hover:scale-105"
-              >
-                <Instagram className="w-6 h-6" />
-                @fajarte_
-              </a>
-            </div>
-          </div>
-
           {/* CTA */}
           <div className="bg-gradient-to-br from-amber-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-8 sm:p-12 border-2 border-amber-200 dark:border-amber-700 shadow-2xl text-center">
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-6 text-gray-900 dark:text-white">
               Bergabunglah dengan Kami
             </h2>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+            {/* Primary CTA */}
+            <div className="mb-8">
               <a
                 href="/buku"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary hover:bg-amber-600 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-base"
+                className="inline-flex items-center justify-center gap-2 px-10 py-5 bg-primary hover:bg-amber-600 text-white rounded-xl font-bold transition-all hover:shadow-xl text-lg transform hover:scale-105"
               >
-                <Book className="w-5 h-5" />
-                Mulai Membaca
+                <Book className="w-6 h-6" />
+                Mulai Membaca Sekarang
               </a>
-              <a
-                href="https://github.com/kajankk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-base"
-              >
-                <Github className="w-5 h-5" />
-                GitHub
-              </a>
-              <a
-                href="/kontak"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition-all hover:shadow-lg text-base"
-              >
-                <Mail className="w-5 h-5" />
-                Hubungi Kami
-              </a>
+            </div>
+
+            {/* Social Media Links */}
+            <div className="border-t-2 border-amber-200 dark:border-amber-700 pt-8">
+              <p className="text-gray-700 dark:text-gray-300 mb-4 font-semibold">
+                Ikuti kami di sosial media
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {socialLinks.map((social, index) => {
+                  const Icon = social.icon
+                  return (
+                    <a
+                      key={index}
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-2 px-6 py-3 ${social.bgColor} ${social.hoverColor} text-white rounded-lg font-semibold transition-all hover:shadow-lg transform hover:scale-105`}
+                      aria-label={social.label}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="text-sm">{social.label}</span>
+                    </a>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>

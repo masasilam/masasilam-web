@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Facebook, Twitter, Instagram, Youtube, Mail, Github } from 'lucide-react'
+import { X, Instagram, Mail, Github } from 'lucide-react'
 
 const Footer = () => {
   const socialLinks = [
-//     { icon: Facebook, label: 'Facebook', url: 'https://facebook.com/masasilam', color: 'hover:text-blue-600' },
-//     { icon: Twitter, label: 'Twitter', url: 'https://twitter.com/masasilam', color: 'hover:text-sky-500' },
-    { icon: Instagram, label: 'Instagram', url: 'https://instagram.com/fajarte_', color: 'hover:text-pink-600' },
-//     { icon: Youtube, label: 'YouTube', url: 'https://youtube.com/@masasilam', color: 'hover:text-red-600' },
+    { icon: X, label: 'X', url: 'https://x.com/masasilamdotcom', color: 'hover:text-gray-900 dark:hover:text-white' },
+    { icon: Instagram, label: 'Instagram', url: 'https://instagram.com/masasilamdotcom', color: 'hover:text-pink-600' },
     { icon: Github, label: 'GitHub', url: 'https://github.com/kajankk', color: 'hover:text-gray-900 dark:hover:text-white' },
     { icon: Mail, label: 'Email', url: 'mailto:support@masasilam.com', color: 'hover:text-primary' }
   ]

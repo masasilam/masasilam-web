@@ -1,5 +1,5 @@
 // ============================================
-// src/components/Book/BookCard.jsx - ENHANCED WITH COMPLETE STATS
+// src/components/Book/BookCard.jsx - RESPONSIVE OPTIMIZED
 // ============================================
 
 import { Link } from 'react-router-dom'
@@ -22,65 +22,65 @@ const BookCard = ({ book }) => {
       </div>
 
       {/* Book Info */}
-      <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+      <div className="p-3 sm:p-4">
+        {/* Title - Word wrap enabled, no truncation */}
+        <h3 className="font-semibold text-sm sm:text-base lg:text-lg mb-2 leading-snug group-hover:text-primary transition-colors break-words hyphens-auto">
           {book.title}
         </h3>
-        
+
+        {/* Author - Single line with ellipsis */}
         {(book.authorNames || book.authors) && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 truncate">
             {book.authorNames || book.authors}
           </p>
         )}
 
-        {/* Stats - Enhanced with more data */}
-        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
+        {/* Stats - Responsive sizing */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-gray-500 dark:text-gray-500">
           {/* Average Rating */}
           {book.averageRating > 0 && (
             <div className="flex items-center gap-1">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-              <span>{book.averageRating.toFixed(1)}</span>
+              <span className="text-xs">{book.averageRating.toFixed(1)}</span>
               {(book.totalRatings > 0 || book.ratingCount > 0) && (
-                <span className="text-gray-400">({book.totalRatings || book.ratingCount})</span>
+                <span className="hidden sm:inline text-gray-400 text-xs">
+                  ({book.totalRatings || book.ratingCount})
+                </span>
               )}
             </div>
           )}
 
-          {/* View Count */}
+          {/* View Count - Always show */}
           <div className="flex items-center gap-1">
             <Eye className="w-3 h-3" />
-            <span>{book.viewCount || 0}</span>
+            <span className="text-xs">{book.viewCount || 0}</span>
           </div>
 
-          {/* Download Count */}
-          {(book.downloadCount > 0 || book.downloadCount === 0) && (
-            <div className="flex items-center gap-1">
-              <Download className="w-3 h-3" />
-              <span>{book.downloadCount || 0}</span>
-            </div>
-          )}
+          {/* Read Count - Always show */}
+          <div className="flex items-center gap-1">
+            <BookOpen className="w-3 h-3" />
+            <span className="text-xs">{book.readCount || 0}</span>
+          </div>
 
-          {/* Read Count */}
-          {book.readCount > 0 && (
-            <div className="flex items-center gap-1">
-              <BookOpen className="w-3 h-3" />
-              <span>{book.readCount}</span>
-            </div>
-          )}
+          {/* Download Count - Always show */}
+          <div className="flex items-center gap-1">
+            <Download className="w-3 h-3" />
+            <span className="text-xs">{book.downloadCount || 0}</span>
+          </div>
 
-          {/* Total Comments/Reviews */}
-          {book.totalComments > 0 && (
-            <div className="flex items-center gap-1">
-              <MessageCircle className="w-3 h-3" />
-              <span>{book.totalComments}</span>
-            </div>
-          )}
-
-          {/* Estimated Read Time */}
+          {/* Estimated Read Time - Always show */}
           {book.estimatedReadTime && (
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>{book.estimatedReadTime} menit</span>
+              <span className="text-xs">{book.estimatedReadTime}m</span>
+            </div>
+          )}
+
+          {/* Total Comments - Only show if > 0 */}
+          {book.totalComments > 0 && (
+            <div className="hidden lg:flex items-center gap-1">
+              <MessageCircle className="w-3 h-3" />
+              <span className="text-xs">{book.totalComments}</span>
             </div>
           )}
         </div>
