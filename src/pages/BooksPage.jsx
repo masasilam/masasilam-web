@@ -155,7 +155,7 @@ const BooksPage = () => {
           <header className="mb-6">
             <h1 className="text-2xl sm:text-4xl font-bold mb-2">Koleksi Buku Digital</h1>
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              Jelajahi {totalBooks.toLocaleString('id-ID')} buku berkualitas
+              Jelajahi {totalBooks.toLocaleString('id-ID')} buku domain publik
             </p>
           </header>
 
