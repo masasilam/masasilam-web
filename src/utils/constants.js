@@ -2,9 +2,12 @@
 // src/utils/constants.js
 // ============================================
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-export const APP_NAME = import.meta.env.VITE_APP_NAME
-export const APP_DESCRIPTION = import.meta.env.VITE_APP_DESCRIPTION
+import config from '../config/env'
+
+// Use centralized config instead of direct import.meta.env
+export const API_BASE_URL = config.apiBaseUrl
+export const APP_NAME = config.appName
+export const APP_DESCRIPTION = config.appDescription
 
 export const ROUTES = {
   HOME: '/',

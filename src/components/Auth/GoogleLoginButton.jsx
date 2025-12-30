@@ -1,12 +1,12 @@
 // ============================================
 // src/components/Auth/GoogleLoginButton.jsx
-// RESPONSIVE VERSION - No width warnings
 // ============================================
 
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { authService } from '../../services/authService'
 import { useNavigate } from 'react-router-dom'
+import config from '../../config/env'
 
 const GoogleLoginButton = ({
   onSuccess,
@@ -42,10 +42,10 @@ const GoogleLoginButton = ({
         return
       }
 
-      const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-                               'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'
+      // Use centralized config
+      const GOOGLE_CLIENT_ID = config.googleClientId
 
-      if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE')) {
+      if (!GOOGLE_CLIENT_ID) {
         console.error('❌ VITE_GOOGLE_CLIENT_ID not configured in .env file')
         return
       }
@@ -83,7 +83,9 @@ const GoogleLoginButton = ({
       // Google accepts width between 200-400px
       const buttonWidth = Math.min(Math.max(containerWidth, 200), 400)
 
-      console.log('🔵 Rendering Google button:', buttonWidth + 'px')
+      if (config.isDevelopment) {
+        console.log('🔵 Rendering Google button:', buttonWidth + 'px')
+      }
 
       try {
         window.google.accounts.id.renderButton(
@@ -91,7 +93,7 @@ const GoogleLoginButton = ({
           {
             theme: 'outline',
             size: 'large',
-            width: buttonWidth, // Dynamic pixel value
+            width: buttonWidth,
             text: 'continue_with',
             shape: 'rectangular',
             logo_alignment: 'left',
