@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/pages/ChapterReaderPage.jsx - WITH COMPLETE SEO
+// FILE: src/pages/ChapterReaderPage.jsx - FIXED VERSION
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -142,6 +142,19 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     selectionCoords,
     clearSelection
   } = useTextSelection(contentRef, isInteractingWithPopup)
+
+  // ✅ FIX: Reset isInteractingWithPopup ketika chapter berubah
+  useEffect(() => {
+    setIsInteractingWithPopup(false)
+    clearSelection()
+  }, [fullChapterPath, chapter?.chapterNumber])
+
+  // ✅ FIX: Reset isInteractingWithPopup ketika popup ditutup
+  useEffect(() => {
+    if (!selectedText) {
+      setIsInteractingWithPopup(false)
+    }
+  }, [selectedText])
 
   const handleTTSToggle = () => {
     if (!isAuthenticated) {
@@ -811,11 +824,21 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             selectedText={selectedText}
             coords={selectionCoords}
             isAuthenticated={isAuthenticated}
-            onClose={clearSelection}
-            onHighlight={handleAddHighlight}
-            onAddNote={handleAddNote}
+            onClose={() => {
+              clearSelection()
+              setIsInteractingWithPopup(false)
+            }}
+            onHighlight={(color) => {
+              handleAddHighlight(color)
+              setIsInteractingWithPopup(false)
+            }}
+            onAddNote={(noteContent) => {
+              handleAddNote(noteContent)
+              setIsInteractingWithPopup(false)
+            }}
             onNavigateToLogin={() => {
               clearSelection()
+              setIsInteractingWithPopup(false)
               navigate('/masuk', { state: { from: location.pathname } })
             }}
             onMouseDown={(e) => {

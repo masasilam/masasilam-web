@@ -1,6 +1,3 @@
-// ============================================
-// FILE 2: src/hooks/useTextSelection.js
-// ============================================
 import { useState, useEffect } from 'react'
 
 const useTextSelection = (contentRef, isInteractingWithPopup) => {
@@ -77,16 +74,32 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
           endOffset
         })
 
+        // Perbaikan perhitungan posisi popup
         const rect = range.getBoundingClientRect()
         const popupHeight = 400
+        const popupWidth = 320 // Width popup dari TextSelectionPopup
         const spaceBelow = window.innerHeight - rect.bottom
         const spaceAbove = rect.top
         const showAbove = spaceAbove > spaceBelow || spaceBelow < popupHeight
 
+        // Hitung posisi top
         const top = showAbove
           ? rect.top + window.scrollY - popupHeight - 10
           : rect.bottom + window.scrollY + 10
-        const left = rect.left + (rect.width / 2)
+
+        // Hitung posisi left dengan mempertimbangkan batas layar
+        const centerX = rect.left + (rect.width / 2)
+        let left = centerX
+
+        // Cek jika popup melewati batas kanan layar
+        if (centerX + (popupWidth / 2) > window.innerWidth) {
+          left = window.innerWidth - (popupWidth / 2) - 10
+        }
+
+        // Cek jika popup melewati batas kiri layar
+        if (centerX - (popupWidth / 2) < 0) {
+          left = (popupWidth / 2) + 10
+        }
 
         setSelectionCoords({ top, left })
       } else if (!isInteractingWithPopup && !isInForm) {
