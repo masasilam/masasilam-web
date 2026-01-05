@@ -1,5 +1,5 @@
 /* ================================================================
-   EPUB READER STYLES FOR MasasilaM - HYPHENATION FIXED
+   EPUB READER STYLES FOR MasasilaM - COMPLETE VERSION
    Path: src/styles/epub-styles.css
    ================================================================ */
 
@@ -38,6 +38,9 @@
 
   /* Language hint for browser */
   -webkit-locale: "id";
+
+  background-color: #fff;
+  color: #111;
 }
 
 /* ================================================================
@@ -120,83 +123,7 @@
 }
 
 /* ================================================================
-   3️⃣ HALAMAN KHUSUS - TITLEPAGE, COLOPHON, IMPRINT, UNCOPYRIGHT
-   ================================================================ */
-
-/* Titlepage */
-.chapter-content .titlepage {
-  text-align: center;
-  padding: 0.25em;
-  max-width: 38em;
-  margin: 0.25em auto;
-  min-height: 70vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.chapter-content .titlepage h1 {
-  font-size: 2em;
-  font-weight: 700;
-  margin: 2.5em 0 0.25em 0;
-}
-
-.chapter-content .titlepage .subtitle {
-  font-size: 1.4em;
-  font-weight: 600;
-  margin: 0.5em 0 2em 0;
-  text-align: center;
-}
-
-.chapter-content .titlepage h2 {
-  font-size: 1.3em;
-  font-weight: 650;
-  margin: 2.5em 0 0.25em 0;
-}
-
-.chapter-content .titlepage h3 {
-  font-size: 1.2em;
-  font-weight: 600;
-  margin: 2.5em 0 0.25em 0;
-}
-
-/* Chapter, Colophon, Imprint, Uncopyright */
-.chapter-content .chapter,
-.chapter-content .colophon,
-.chapter-content .imprint,
-.chapter-content .uncopyright {
-  padding: 0.25em;
-  max-width: 38em;
-  margin: 0.25em auto;
-}
-
-/* Colophon */
-.chapter-content .colophon p {
-  text-indent: 0;
-}
-
-.chapter-content .colophon > p:first-of-type {
-  text-align: center;
-}
-
-.chapter-content .colophon,
-.chapter-content .imprint,
-.chapter-content .uncopyright {
-  text-align: justify;
-}
-
-.chapter-content .colophon img,
-.chapter-content .imprint img {
-  max-width: 150px !important;
-  max-height: 150px !important;
-  width: auto;
-  height: auto;
-  margin: 1em auto 2em auto !important;
-  object-fit: contain;
-}
-
-/* ================================================================
-   4️⃣ PUISI (POEM) - NO hyphenation
+   3️⃣ ELEMEN KHUSUS TEKS - PUISI
    ================================================================ */
 .chapter-content .poem {
   margin: 2em 0;
@@ -285,29 +212,79 @@
 }
 
 /* ================================================================
-   5️⃣ DAFTAR, KUTIPAN, DAN FORMAT TEKS LAINNYA
+   4️⃣ DAFTAR, KUTIPAN, DAN FORMAT TEKS LAINNYA
    ================================================================ */
+
+/* CRITICAL: Force override Tailwind/Prose dengan !important */
 .chapter-content ol,
 .chapter-content ul {
-  margin: 0;
+  margin: 0 !important;
+  padding-left: 2.5em !important;
   text-align: justify;
   -webkit-hyphens: auto !important;
   hyphens: auto !important;
+  list-style-position: outside !important;
+  display: block !important;
 }
 
+/* Force list markers to show */
+.chapter-content ol {
+  list-style-type: decimal !important;
+}
+
+.chapter-content ol[type="A"] {
+  list-style-type: upper-alpha !important;
+}
+
+.chapter-content ol[type="a"] {
+  list-style-type: lower-alpha !important;
+}
+
+.chapter-content ol[type="I"] {
+  list-style-type: upper-roman !important;
+}
+
+.chapter-content ol[type="i"] {
+  list-style-type: lower-roman !important;
+}
+
+.chapter-content ol[type="1"] {
+  list-style-type: decimal !important;
+}
+
+.chapter-content ul {
+  list-style-type: disc !important;
+}
+
+.chapter-content li {
+  margin: 0 !important;
+  padding-left: 0.3em !important;
+  display: list-item !important;
+}
+
+/* Remove any ::before pseudo-elements from prose */
+.chapter-content ol > li::before,
+.chapter-content ul > li::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Dash list (custom style) */
 .chapter-content ul.dash-list {
-  list-style: none;
-  padding-left: 1.5em;
-  margin: 0;
+  list-style: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
 }
 
 .chapter-content ul.dash-list li {
-  text-indent: -0.7em;
-  margin: 0;
+  text-indent: -0.7em !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
 }
 
 .chapter-content ul.dash-list li::before {
-  content: "– ";
+  content: "– " !important;
+  display: inline !important;
 }
 
 /* Kutipan & teks */
@@ -385,6 +362,110 @@
 }
 
 /* ================================================================
+   5️⃣ NAVIGASI, HALAMAN ISI & HALAMAN KHUSUS
+   ================================================================ */
+.chapter-content nav {
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+}
+
+.chapter-content nav h1 {
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content nav ol,
+.chapter-content nav li {
+  list-style: none;
+  margin: 0;
+  text-align: left;
+  text-indent: 0;
+}
+
+.chapter-content nav a {
+  text-decoration: none;
+  display: block;
+  line-height: 1.6;
+  padding: 0.2em 0;
+  -webkit-hyphens: none !important;
+  hyphens: none !important;
+}
+
+.chapter-content nav a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+/* Titlepage */
+.chapter-content .titlepage {
+  text-align: center;
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chapter-content .titlepage h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 2.5em 0 0.25em 0;
+}
+
+/* Subtitle khusus untuk titlepage */
+.chapter-content .titlepage .subtitle {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0 2em 0;
+  text-align: center;
+}
+
+.chapter-content .titlepage h2 {
+  font-size: 1.3em;
+  font-weight: 650;
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content .titlepage h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 2.5em 0 0.25em 0;
+}
+
+/* Chapter, Colophon, Imprint, Uncopyright */
+.chapter-content .chapter,
+.chapter-content .colophon,
+.chapter-content .imprint,
+.chapter-content .uncopyright {
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+}
+
+/* Colophon */
+.chapter-content .colophon p {
+  text-indent: 0;
+}
+
+.chapter-content .colophon > p:first-of-type {
+  text-align: center;
+}
+
+.chapter-content .colophon,
+.chapter-content .imprint,
+.chapter-content .uncopyright {
+  text-align: justify;
+}
+
+.chapter-content .info-box p,
+.chapter-content .info-box p:first-of-type {
+  text-align: left !important;
+  text-indent: 0 !important;
+}
+
+/* ================================================================
    6️⃣ GAMBAR & TATA LETAK RESPONSIF
    ================================================================ */
 .chapter-content img {
@@ -394,6 +475,16 @@
   margin: 0 auto;
 }
 
+/* Gambar inline di tengah teks */
+.chapter-content .image-inline {
+  display: inline;
+  vertical-align: middle;
+  height: 2em;
+  width: auto;
+  margin: 0 0.3em;
+}
+
+/* Gambar dengan caption */
 .chapter-content .image-with-caption {
   margin: 2em auto;
   text-align: center;
@@ -411,6 +502,20 @@
   line-height: 1.4;
 }
 
+/* Logo di colophon/imprint */
+.chapter-content section.colophon img,
+.chapter-content section.imprint img,
+.chapter-content .colophon img,
+.chapter-content .imprint img {
+  max-width: 150px !important;
+  max-height: 150px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto 2em auto !important;
+  object-fit: contain;
+}
+
+/* Gambar/ornamen di chapter */
 .chapter-content .image-small {
   max-width: 120px !important;
   max-height: 120px !important;
@@ -642,12 +747,6 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.chapter-content .info-box p,
-.chapter-content .info-box p:first-of-type {
-  text-align: left !important;
-  text-indent: 0 !important;
-}
-
 .chapter-content .info-box p {
   text-align: left !important;
   text-indent: 0 !important;
@@ -742,9 +841,37 @@
 }
 
 /* ================================================================
+   🎯 FORMULA LIST - RESPONSIVE
+   ================================================================ */
+.formula-list {
+  margin-left: 2em;
+  max-width: 30em;
+}
+
+.formula-list p {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.5em 1em;
+  align-items: baseline;
+}
+
+@media screen and (max-width: 600px) {
+  .formula-list {
+    margin-left: 0.5em;
+  }
+
+  .formula-list p {
+    grid-template-columns: auto auto 1fr;
+    gap: 0.3em 0.5em;
+    font-size: 0.9em;
+  }
+}
+
+/* ================================================================
    🔟 MODE GELAP
    ================================================================ */
 .dark .chapter-content {
+  background-color: #121212;
   color: #e0e0e0;
 }
 
@@ -770,6 +897,10 @@
   background-color: #1e1e1e;
 }
 
+.dark .chapter-content code {
+  background-color: #1e1e1e;
+}
+
 .dark .chapter-content .info-box {
   background-color: #2d2d2d;
   border: 1px solid #555;
@@ -777,12 +908,21 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.dark .chapter-content .note::before {
+.dark .chapter-content .note::before,
+.dark .chapter-content .poem .note::before,
+.dark .chapter-content .blockquote .note::before,
+.dark .chapter-content .letter .note::before,
+.dark .chapter-content .dialog .note::before {
   border-top-color: #666;
 }
 
 .dark .chapter-content img {
   filter: invert(1);
+}
+
+.dark .chapter-content .image-inline {
+  filter: invert(1);
+  opacity: 0.9;
 }
 
 .dark .chapter-content img.photo,
@@ -818,7 +958,7 @@
     margin: 0.25em auto;
     max-width: 90%;
   }
-  
+
   .chapter-content .indent {
     margin-left: 1em;
   }
@@ -917,4 +1057,153 @@
 
 .dark .chapter-content sup a {
   color: #60a5fa;
+}
+
+/* ================================================================
+   1️⃣3️⃣ READING MODE FIXES
+   ================================================================ */
+
+/* Base reading mode styles */
+.reading-mode-bg {
+  background-color: #FFF8DC !important;
+}
+
+/* Override all dark mode colors when reading mode is active */
+.reading-mode-bg .chapter-content {
+  background-color: #FFF8DC !important;
+  color: #2d2d2d !important;
+}
+
+/* Headers in reading mode */
+.reading-mode-bg .chapter-content h1,
+.reading-mode-bg .chapter-content h2,
+.reading-mode-bg .chapter-content h3,
+.reading-mode-bg .chapter-content h4,
+.reading-mode-bg .chapter-content h5,
+.reading-mode-bg .chapter-content h6 {
+  color: #1a1a1a !important;
+}
+
+/* Paragraphs and text in reading mode */
+.reading-mode-bg .chapter-content p,
+.reading-mode-bg .chapter-content span,
+.reading-mode-bg .chapter-content div,
+.reading-mode-bg .chapter-content li {
+  color: #2d2d2d !important;
+}
+
+/* Links in reading mode */
+.reading-mode-bg .chapter-content a {
+  color: #0066cc !important;
+}
+
+/* Blockquotes in reading mode */
+.reading-mode-bg .chapter-content blockquote {
+  background-color: #f9f6f0 !important;
+  color: #444 !important;
+  border-left-color: #999 !important;
+}
+
+/* Info boxes in reading mode */
+.reading-mode-bg .chapter-content .info-box {
+  background-color: #f5f0e8 !important;
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Notes in reading mode */
+.reading-mode-bg .chapter-content .note {
+  color: #555 !important;
+}
+
+.reading-mode-bg .chapter-content .note::before {
+  border-top-color: #999 !important;
+}
+
+.reading-mode-bg .chapter-content .note p {
+  color: #555 !important;
+}
+
+/* Letters in reading mode */
+.reading-mode-bg .chapter-content .letter {
+  background-color: #f9f6f0 !important;
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+}
+
+/* Code and pre in reading mode */
+.reading-mode-bg .chapter-content pre,
+.reading-mode-bg .chapter-content code {
+  background-color: #f5f0e8 !important;
+  color: #2d2d2d !important;
+}
+
+/* Tables in reading mode */
+.reading-mode-bg .chapter-content table {
+  color: #2d2d2d !important;
+}
+
+.reading-mode-bg .chapter-content th {
+  background-color: #f5f0e8 !important;
+  color: #1a1a1a !important;
+  border-color: #d4c5b0 !important;
+}
+
+.reading-mode-bg .chapter-content td {
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+}
+
+/* Separators and ornaments in reading mode */
+.reading-mode-bg .chapter-content p.separator,
+.reading-mode-bg .chapter-content p.ornament,
+.reading-mode-bg .chapter-content p.divider,
+.reading-mode-bg .chapter-content .scene-break {
+  color: #999 !important;
+}
+
+/* Image captions in reading mode */
+.reading-mode-bg .chapter-content .image-caption {
+  color: #666 !important;
+}
+
+/* Images in reading mode - NEVER invert */
+.reading-mode-bg .chapter-content img {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Strong/emphasis in reading mode */
+.reading-mode-bg .chapter-content strong,
+.reading-mode-bg .chapter-content b {
+  color: #1a1a1a !important;
+}
+
+.reading-mode-bg .chapter-content em,
+.reading-mode-bg .chapter-content i {
+  color: #2d2d2d !important;
+}
+
+/* Dialog in reading mode */
+.reading-mode-bg .chapter-content .dialog .speaker {
+  color: #1a1a1a !important;
+}
+
+/* Poem in reading mode */
+.reading-mode-bg .chapter-content .poem {
+  color: #2d2d2d !important;
+}
+
+.reading-mode-bg .chapter-content .poem .author {
+  color: #1a1a1a !important;
+}
+
+/* Epigraph in reading mode */
+.reading-mode-bg .chapter-content .epigraph {
+  color: #444 !important;
+}
+
+.reading-mode-bg .chapter-content .epigraph cite {
+  color: #555 !important;
 }

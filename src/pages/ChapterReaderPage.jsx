@@ -881,7 +881,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             lang="id"
             className={`transition-colors duration-300 rounded-lg my-8 py-8 ${
               readingMode
-                ? 'bg-[#FFF8DC] shadow-inner border-t border-b border-gray-300'
+                ? 'reading-mode-bg shadow-inner border-t border-b border-gray-300'
                 : 'border-t border-b border-gray-200 dark:border-gray-800'
             }`}
             style={{

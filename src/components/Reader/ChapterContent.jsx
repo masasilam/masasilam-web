@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/components/Reader/ChapterContent.jsx
+// FILE: src/components/Reader/ChapterContent.jsx - CLEAN VERSION
 // ============================================
 import { memo, useEffect, useRef } from 'react'
 
@@ -10,18 +10,58 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
     return text.replace(/\s+/g, ' ').trim()
   }
 
+  // Force list styles after render
+  useEffect(() => {
+    if (!contentRef.current) return
+
+    const container = contentRef.current
+
+    // Force list styles with !important
+    const allOls = container.querySelectorAll('ol')
+
+    allOls.forEach((ol) => {
+      const type = ol.getAttribute('type')
+
+      // Use setProperty with !important flag
+      ol.style.setProperty('display', 'block', 'important')
+      ol.style.setProperty('padding-left', '2.5em', 'important')
+      ol.style.setProperty('list-style-position', 'outside', 'important')
+
+      if (type === 'A') {
+        ol.style.setProperty('list-style-type', 'upper-alpha', 'important')
+      } else if (type === 'a') {
+        ol.style.setProperty('list-style-type', 'lower-alpha', 'important')
+      } else if (type === 'I') {
+        ol.style.setProperty('list-style-type', 'upper-roman', 'important')
+      } else if (type === 'i') {
+        ol.style.setProperty('list-style-type', 'lower-roman', 'important')
+      } else {
+        ol.style.setProperty('list-style-type', 'decimal', 'important')
+      }
+    })
+
+    const allLis = container.querySelectorAll('li')
+    allLis.forEach((li) => {
+      li.style.setProperty('display', 'list-item', 'important')
+      li.style.setProperty('padding-left', '0.3em', 'important')
+    })
+  }, [htmlContent])
+
+  // Handle highlights
   useEffect(() => {
     if (!contentRef.current || !highlights || highlights.length === 0) return
 
     const container = contentRef.current
     const existingMarks = container.querySelectorAll('mark.highlight-mark')
-    existingMarks.forEach(mark => {
+
+    existingMarks.forEach((mark) => {
       const textNode = document.createTextNode(mark.textContent)
       mark.parentNode.replaceChild(textNode, mark)
     })
+
     container.normalize()
 
-    highlights.forEach(highlight => {
+    highlights.forEach((highlight) => {
       const { id, highlightedText, color, startPosition, endPosition } = highlight
       const text = normalizeText(highlightedText)
       const start = parseInt(startPosition)
@@ -47,7 +87,7 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
         let node
         const nodesToHighlight = []
 
-        while (node = walker.nextNode()) {
+        while ((node = walker.nextNode())) {
           const nodeText = normalizeText(node.textContent)
           const nodeLength = nodeText.length
           const nodeStart = currentPos
@@ -92,7 +132,7 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
 
         container.normalize()
       } catch (error) {
-        // Highlight gagal, skip
+        console.error('Highlight error:', error)
       }
     })
   }, [highlights])
@@ -101,7 +141,7 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
     <div
       ref={contentRef}
       lang="id"
-      className={`chapter-content prose dark:prose-invert max-w-none ${
+      className={`chapter-content max-w-none ${
         readingMode ? 'reading-mode-active' : ''
       }`}
       style={{
