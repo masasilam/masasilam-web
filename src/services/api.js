@@ -1,5 +1,5 @@
 // ============================================
-// src/services/api.js
+// src/services/api.js - FIXED ERROR FORMAT
 // ============================================
 
 import axios from 'axios'
@@ -109,25 +109,19 @@ api.interceptors.response.use(
           console.error(`HTTP Error ${status}`)
       }
 
-      return Promise.reject({
-        status,
-        message: data?.message || data?.error || `HTTP Error ${status}`,
-        data: data
-      })
+      // ✅ PERBAIKAN: Kembalikan error asli axios, JANGAN ubah formatnya
+      // Biarkan LoginPage yang handle error message
+      return Promise.reject(error)
     } else if (error.request) {
       console.error('Network error - no response received')
-      return Promise.reject({
-        status: 0,
-        message: 'Network error - please check your connection',
-        data: null
-      })
+
+      // Untuk network error, buat format yang mirip axios error
+      const networkError = new Error('Network error - please check your connection')
+      networkError.request = error.request
+      return Promise.reject(networkError)
     } else {
       console.error('Request setup error:', error.message)
-      return Promise.reject({
-        status: -1,
-        message: error.message,
-        data: null
-      })
+      return Promise.reject(error)
     }
   }
 )

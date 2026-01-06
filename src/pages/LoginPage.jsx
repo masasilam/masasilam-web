@@ -51,6 +51,12 @@ const LoginPage = () => {
       }
     } catch (err) {
       console.error('Login error:', err)
+      console.error('Error details:', {
+        hasResponse: !!err.response,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      })
 
       let errorMessage = 'Gagal login. Silakan coba lagi.'
 
@@ -58,19 +64,46 @@ const LoginPage = () => {
         const status = err.response.status
         const data = err.response.data
 
-        if (status === 401) {
-          errorMessage = 'Login gagal. Kemungkinan penyebab:\n• Username atau password salah\n• Email belum diverifikasi'
-        } else if (status === 403) {
-          errorMessage = 'Akun Anda tidak aktif atau diblokir. Hubungi administrator.'
-        } else if (data?.detail) {
-          errorMessage = data.detail
+        // Prioritaskan pesan dari backend, tapi terjemahkan ke Indonesia
+        if (data?.detail) {
+          // Terjemahkan pesan backend umum ke Indonesia
+          const translatedMessages = {
+            'Invalid credentials': 'Username atau password salah',
+            'Invalid credentials.': 'Username atau password salah',
+            'Unauthorized': 'Akses tidak diizinkan',
+            'Unauthorized access': 'Akses tidak diizinkan',
+            'Unauthorized access.': 'Akses tidak diizinkan',
+            'Email not verified': 'Email belum diverifikasi',
+            'Email not verified.': 'Email belum diverifikasi',
+            'Account is disabled': 'Akun tidak aktif',
+            'Account is disabled.': 'Akun tidak aktif',
+            'Account is locked': 'Akun terkunci',
+            'Account is locked.': 'Akun terkunci',
+            'User not found': 'Pengguna tidak ditemukan',
+            'User not found.': 'Pengguna tidak ditemukan'
+          }
+          errorMessage = translatedMessages[data.detail] || data.detail
         } else if (data?.message) {
           errorMessage = data.message
-        } else if (err.message) {
-          errorMessage = err.message
+        } else if (status === 401) {
+          errorMessage = 'Username atau password salah'
+        } else if (status === 403) {
+          errorMessage = 'Akun tidak aktif atau diblokir. Silakan hubungi administrator'
+        } else if (status === 400) {
+          errorMessage = 'Data login tidak valid. Periksa kembali username dan password Anda'
+        } else if (status === 404) {
+          errorMessage = 'Endpoint login tidak ditemukan. Hubungi administrator'
+        } else if (status === 500) {
+          errorMessage = 'Terjadi kesalahan server. Silakan coba lagi nanti'
+        } else if (status === 503) {
+          errorMessage = 'Layanan sedang dalam pemeliharaan. Silakan coba lagi nanti'
+        } else {
+          errorMessage = `Terjadi kesalahan (${status}). Silakan coba lagi`
         }
+      } else if (err.request) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda'
       } else if (err.message) {
-        errorMessage = err.message
+        errorMessage = `Terjadi kesalahan: ${err.message}`
       }
 
       setError(errorMessage)

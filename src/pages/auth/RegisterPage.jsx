@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/auth/RegisterPage.jsx - WITH GOOGLE SIGN UP
+// src/pages/auth/RegisterPage.jsx - WITH DESCRIPTIVE ERROR MESSAGES
 // ============================================
 
 import { useState } from 'react'
@@ -82,14 +82,74 @@ const RegisterPage = () => {
       } else {
         setApiError('Registrasi gagal. Silakan coba lagi.')
       }
-    } catch (error) {
-      if (error.message) {
-        setApiError(error.message)
-      } else if (error.response?.data?.detail) {
-        setApiError(error.response.data.detail)
-      } else {
-        setApiError('Gagal mendaftar. Username atau email mungkin sudah digunakan.')
+    } catch (err) {
+      console.error('Register error:', err)
+      console.error('Error details:', {
+        hasResponse: !!err.response,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      })
+
+      let errorMessage = 'Gagal mendaftar. Silakan coba lagi.'
+
+      if (err.response) {
+        const status = err.response.status
+        const data = err.response.data
+
+        // Prioritaskan pesan dari backend, tapi terjemahkan ke Indonesia
+        if (data?.detail) {
+          // Terjemahkan pesan backend umum ke Indonesia
+          const translatedMessages = {
+            'Data already exists': 'Username atau email sudah digunakan',
+            'Data already exists.': 'Username atau email sudah digunakan',
+            'Username already exists': 'Username sudah digunakan',
+            'Username already exists.': 'Username sudah digunakan',
+            'Email already exists': 'Email sudah terdaftar',
+            'Email already exists.': 'Email sudah terdaftar',
+            'Username already taken': 'Username sudah digunakan',
+            'Username already taken.': 'Username sudah digunakan',
+            'Email already registered': 'Email sudah terdaftar',
+            'Email already registered.': 'Email sudah terdaftar',
+            'Invalid email format': 'Format email tidak valid',
+            'Invalid email format.': 'Format email tidak valid',
+            'Password too weak': 'Password terlalu lemah',
+            'Password too weak.': 'Password terlalu lemah',
+            'Username too short': 'Username terlalu pendek',
+            'Username too short.': 'Username terlalu pendek',
+            'Invalid username': 'Username tidak valid',
+            'Invalid username.': 'Username tidak valid',
+            'Request failed with status code 409': 'Username atau email sudah digunakan',
+            'Conflict': 'Username atau email sudah digunakan'
+          }
+          errorMessage = translatedMessages[data.detail] || data.detail
+        } else if (data?.message) {
+          errorMessage = data.message
+        } else if (status === 409) {
+          errorMessage = 'Username atau email sudah digunakan. Silakan gunakan yang lain'
+        } else if (status === 400) {
+          errorMessage = 'Data tidak valid. Periksa kembali informasi yang Anda masukkan'
+        } else if (status === 422) {
+          errorMessage = 'Format data tidak sesuai. Periksa kembali semua field'
+        } else if (status === 500) {
+          errorMessage = 'Terjadi kesalahan server. Silakan coba lagi nanti'
+        } else if (status === 503) {
+          errorMessage = 'Layanan sedang dalam pemeliharaan. Silakan coba lagi nanti'
+        } else {
+          errorMessage = `Terjadi kesalahan (${status}). Silakan coba lagi`
+        }
+      } else if (err.request) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda'
+      } else if (err.message) {
+        // Handle pesan error langsung
+        if (err.message.includes('409')) {
+          errorMessage = 'Username atau email sudah digunakan. Silakan gunakan yang lain'
+        } else {
+          errorMessage = `Terjadi kesalahan: ${err.message}`
+        }
       }
+
+      setApiError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -197,6 +257,35 @@ const RegisterPage = () => {
         {apiError && (
           <div className="mb-4">
             <Alert type="error" message={apiError} onClose={() => setApiError('')} />
+
+            {/* Tambahan info untuk error tertentu */}
+            {apiError.includes('Username') && apiError.includes('sudah') && (
+              <div className="mt-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <p className="text-sm font-semibold text-orange-900 dark:text-orange-200 mb-2">
+                  💡 Tips Memilih Username
+                </p>
+                <ul className="text-sm text-orange-800 dark:text-orange-300 space-y-1 list-disc list-inside">
+                  <li>Gunakan kombinasi huruf dan angka</li>
+                  <li>Hindari karakter spesial</li>
+                  <li>Minimal 3 karakter</li>
+                </ul>
+              </div>
+            )}
+
+            {apiError.includes('Email') && apiError.includes('sudah') && (
+              <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  Email ini sudah terdaftar. Apakah Anda sudah punya akun?{' '}
+                  <Link to="/masuk" className="font-medium underline hover:no-underline">
+                    Masuk di sini
+                  </Link>
+                  {' '}atau{' '}
+                  <Link to="/lupa-kata-sandi" className="font-medium underline hover:no-underline">
+                    reset password
+                  </Link>
+                </p>
+              </div>
+            )}
           </div>
         )}
 
