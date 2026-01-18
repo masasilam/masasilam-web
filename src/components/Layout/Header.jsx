@@ -41,9 +41,9 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img 
+            <img
               src="/masasilam-logo.svg"
-              alt="masasilam Logo" 
+              alt="masasilam Logo"
               className="h-10 w-auto object-contain dark:invert"
             />
           </Link>
@@ -68,7 +68,7 @@ const Header = () => {
             <Link to="/buku" className="nav-link">Buku</Link>
             <Link to="/penulis" className="nav-link">Penulis</Link>
             <Link to="/kategori" className="nav-link">Kategori</Link>
-            
+
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

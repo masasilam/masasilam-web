@@ -95,13 +95,6 @@ const AboutPage = () => {
       hoverColor: 'hover:from-purple-700 hover:to-pink-700'
     },
     {
-      icon: Github,
-      label: 'GitHub',
-      url: 'https://github.com/kajankk',
-      bgColor: 'bg-gray-900 dark:bg-gray-700',
-      hoverColor: 'hover:bg-gray-800 dark:hover:bg-gray-600'
-    },
-    {
       icon: Mail,
       label: 'Email',
       url: 'mailto:support@masasilam.com',
@@ -293,7 +286,7 @@ const AboutPage = () => {
                 <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Pernyataan Uncopyright
+                Manifesto
               </h2>
             </div>
 
@@ -307,11 +300,7 @@ const AboutPage = () => {
               </p>
 
               <p className="text-justify">
-                Seluruh <strong>kode sumber</strong> yang membangun MasasilaM—setiap baris kode, setiap desain antarmuka, setiap skrip dan alat bantu—juga dibagikan dengan prinsip yang sama. Platform ini dibangun dengan keyakinan bahwa pengetahuan dapat dikembangkan bersama.
-              </p>
-
-              <p className="text-justify">
-                Meskipun demikian, para kontributor MasasilaM—baik yang menyumbangkan teks, koreksi, kode, atau desain—secara sadar melepaskan hasil kerja mereka di bawah ketentuan{' '}
+                Terlepas dari itu, para kontributor MasasilaM—baik yang menyumbangkan teks, koreksi, kode, atau desain—secara sadar melepaskan hasil kerja mereka di bawah ketentuan{' '}
                 <a
                   href="https://creativecommons.org/publicdomain/zero/1.0/deed.id"
                   target="_blank"
@@ -324,11 +313,11 @@ const AboutPage = () => {
               </p>
 
               <p className="text-justify">
-                Pernyataan ini adalah perwujudan dari <em>produksi nonpasar</em>, sebuah langkah yang menolak &quot;hasrat bergelora untuk menyimpan dan mempertahankan&quot; kepemilikan. Kami percaya bahwa baik konten literer maupun kode teknologi adalah <strong className="text-green-600 dark:text-green-400">warisan bersama umat manusia</strong>.
+                Pernyataan ini adalah perwujudan dari <em>produksi nonpasar</em>, sebuah langkah yang menolak &quot;hasrat bergelora untuk menyimpan dan mempertahankan&quot; kepemilikan.
               </p>
 
               <p className="text-justify font-semibold text-gray-900 dark:text-white">
-                Upaya ini dilakukan demi memperkaya khazanah literasi dan melek teknologi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
+                Upaya ini dilakukan demi memperkaya khazanah literasi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
               </p>
             </div>
           </div>

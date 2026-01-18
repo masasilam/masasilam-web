@@ -5,7 +5,6 @@ const Footer = () => {
   const socialLinks = [
     { icon: X, label: 'X', url: 'https://x.com/masasilamdotcom', color: 'hover:text-gray-900 dark:hover:text-white' },
     { icon: Instagram, label: 'Instagram', url: 'https://instagram.com/masasilamdotcom', color: 'hover:text-pink-600' },
-    { icon: Github, label: 'GitHub', url: 'https://github.com/kajankk', color: 'hover:text-gray-900 dark:hover:text-white' },
     { icon: Mail, label: 'Email', url: 'mailto:support@masasilam.com', color: 'hover:text-primary' }
   ]
 

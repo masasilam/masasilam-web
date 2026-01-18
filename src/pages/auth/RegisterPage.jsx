@@ -200,7 +200,7 @@ const RegisterPage = () => {
             <div className="flex items-start">
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold mr-3 flex-shrink-0 mt-0.5">1</span>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                Buka inbox email dan cari email dari <strong>naskah.org</strong>
+                Buka inbox email dan cari email dari <strong>masasilam.com</strong>
               </p>
             </div>
             <div className="flex items-start">

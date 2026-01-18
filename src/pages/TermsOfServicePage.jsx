@@ -216,15 +216,6 @@ const TermsOfServicePage = () => {
             </ul>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <a
-                href="https://github.com/kajankk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-sm sm:text-base"
-              >
-                <Code className="w-5 h-5" />
-                🐙 github
-              </a>
-              <a
                 href="mailto:support@masasilam.com"
                 className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition-all hover:shadow-lg text-sm sm:text-base"
               >
