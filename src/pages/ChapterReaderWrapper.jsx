@@ -1,6 +1,6 @@
-// src/pages/ChapterReaderWrapper.jsx
-import { useState } from 'react'
-import { useParams, useLocation, Navigate } from 'react-router-dom'
+// src/pages/ChapterReaderWrapper.jsx - WITH PERSISTENT SETTINGS
+import { useState, useEffect } from 'react'
+import { useParams, useLocation } from 'react-router-dom'
 import ReaderLayout from '../components/Layout/ReaderLayout'
 import ChapterReaderPage from './ChapterReaderPage'
 import BookDetailPage from './BookDetailPage'
@@ -9,9 +9,26 @@ import PublicLayout from '../components/Layout/PublicLayout'
 const ChapterReaderWrapper = () => {
   const params = useParams()
   const location = useLocation()
-  const [fontSize, setFontSize] = useState(16)
-  const [contentWidth, setContentWidth] = useState('normal')
+
+  // ✅ Load from localStorage on mount
+  const [fontSize, setFontSize] = useState(() => {
+    return parseInt(localStorage.getItem('reader-font-size')) || 16
+  })
+
+  const [contentWidth, setContentWidth] = useState(() => {
+    return localStorage.getItem('reader-content-width') || 'normal'
+  })
+
   const [readingProgress, setReadingProgress] = useState(0)
+
+  // ✅ Save to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('reader-font-size', fontSize.toString())
+  }, [fontSize])
+
+  useEffect(() => {
+    localStorage.setItem('reader-content-width', contentWidth)
+  }, [contentWidth])
 
   const bookSlug = params.bookSlug
   

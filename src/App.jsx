@@ -59,6 +59,7 @@ import StatisticsPage from './pages/dashboard/StatisticsPage'
 import CalendarPage from './pages/dashboard/CalendarPage'
 import AchievementsPage from './pages/dashboard/AchievementsPage'
 import GoalsPage from './pages/dashboard/GoalsPage'
+import AdminBooksPage from './pages/dashboard/AdminBooksPage'
 
 // Error Pages
 import NotFoundPage from './pages/NotFoundPage'
@@ -125,6 +126,7 @@ function App() {
           <Route path="pencapaian" element={<AchievementsPage />} />
           <Route path="target" element={<GoalsPage />} />
           <Route path="pengaturan" element={<SettingsPage />} />
+          <Route path="buku" element={<AdminBooksPage />} />
         </Route>
         
         {/* Error Pages */}

@@ -5,16 +5,16 @@
 import { X, Highlighter, Check, Lock } from 'lucide-react'
 import { useState } from 'react'
 
-const TextSelectionPopup = ({ 
-  selectedText, 
-  coords, 
+const TextSelectionPopup = ({
+  selectedText,
+  coords,
   isAuthenticated,
-  onClose, 
-  onHighlight, 
+  onClose,
+  onHighlight,
   onAddNote,
   onNavigateToLogin,
   onMouseDown,
-  onTouchStart 
+  onTouchStart
 }) => {
   const [highlightColor, setHighlightColor] = useState('#FFEB3B')
   const [noteContent, setNoteContent] = useState('')
@@ -54,34 +54,34 @@ const TextSelectionPopup = ({
               <label className="block text-xs font-medium mb-2">Warna Highlight</label>
               <div className="flex gap-2 justify-center">
                 {['#FFEB3B', '#4CAF50', '#2196F3', '#FF9800', '#F44336'].map(color => (
-                  <button 
-                    key={color} 
-                    onClick={() => setHighlightColor(color)} 
+                  <button
+                    key={color}
+                    onClick={() => setHighlightColor(color)}
                     className="w-8 h-8 rounded-full border-2"
-                    style={{ 
-                      backgroundColor: color, 
-                      borderColor: highlightColor === color ? '#000' : 'transparent' 
-                    }} 
+                    style={{
+                      backgroundColor: color,
+                      borderColor: highlightColor === color ? '#000' : 'transparent'
+                    }}
                   />
                 ))}
               </div>
             </div>
-            <button 
-              onClick={() => onHighlight(highlightColor)} 
+            <button
+              onClick={() => onHighlight(highlightColor)}
               className="w-full py-2 bg-primary text-white rounded-lg text-sm mb-3"
             >
               <Highlighter className="w-4 h-4 inline mr-1" /> Highlight
             </button>
             <div className="pt-3 border-t">
-              <textarea 
-                value={noteContent} 
+              <textarea
+                value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
-                placeholder="Tambahkan catatan..." 
-                className="w-full p-2 border rounded text-sm mb-2 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600" 
-                rows="2" 
+                placeholder="Tambahkan catatan..."
+                className="w-full p-2 border rounded text-sm mb-2 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                rows="2"
               />
-              <button 
-                onClick={handleAddNote} 
+              <button
+                onClick={handleAddNote}
                 className="w-full py-2 bg-green-600 text-white rounded-lg text-sm"
               >
                 <Check className="w-4 h-4 inline mr-1" /> Simpan Catatan

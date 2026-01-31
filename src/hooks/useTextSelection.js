@@ -74,31 +74,34 @@ const useTextSelection = (contentRef, isInteractingWithPopup) => {
           endOffset
         })
 
-        // Perbaikan perhitungan posisi popup
+        // ✅ PERBAIKAN: Gunakan getBoundingClientRect() tanpa menambahkan scrollY
         const rect = range.getBoundingClientRect()
         const popupHeight = 400
-        const popupWidth = 320 // Width popup dari TextSelectionPopup
+        const popupWidth = 320
+        const padding = 10
+
+        // Hitung posisi vertikal relatif terhadap viewport
         const spaceBelow = window.innerHeight - rect.bottom
         const spaceAbove = rect.top
-        const showAbove = spaceAbove > spaceBelow || spaceBelow < popupHeight
+        const showAbove = spaceBelow < popupHeight && spaceAbove > spaceBelow
 
-        // Hitung posisi top
+        // ✅ FIXED: Gunakan posisi fixed, jadi tidak perlu scrollY
         const top = showAbove
-          ? rect.top + window.scrollY - popupHeight - 10
-          : rect.bottom + window.scrollY + 10
+          ? rect.top - popupHeight - padding
+          : rect.bottom + padding
 
-        // Hitung posisi left dengan mempertimbangkan batas layar
+        // Hitung posisi horizontal (center of selection)
         const centerX = rect.left + (rect.width / 2)
         let left = centerX
 
-        // Cek jika popup melewati batas kanan layar
-        if (centerX + (popupWidth / 2) > window.innerWidth) {
-          left = window.innerWidth - (popupWidth / 2) - 10
-        }
+        // Batasi agar tidak keluar viewport
+        const minLeft = (popupWidth / 2) + padding
+        const maxLeft = window.innerWidth - (popupWidth / 2) - padding
 
-        // Cek jika popup melewati batas kiri layar
-        if (centerX - (popupWidth / 2) < 0) {
-          left = (popupWidth / 2) + 10
+        if (left < minLeft) {
+          left = minLeft
+        } else if (left > maxLeft) {
+          left = maxLeft
         }
 
         setSelectionCoords({ top, left })

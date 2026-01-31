@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/pages/ChapterReaderPage.jsx - FIXED VERSION
+// FILE: src/pages/ChapterReaderPage.jsx
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -877,14 +877,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             )}
           </header>
 
+          {/* ✅ FIX V3: Wrapper dengan background color yang konsisten untuk mode normal dan mode baca */}
           <div
             lang="id"
-            className={`transition-colors duration-300 rounded-lg my-8 py-8 ${
+            className={`transition-colors duration-300 rounded-lg my-8 mx-auto ${
               readingMode
-                ? 'reading-mode-bg shadow-inner border-t border-b border-gray-300'
-                : 'border-t border-b border-gray-200 dark:border-gray-800'
+                ? 'reading-mode-bg shadow-inner border border-gray-300'
+                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800'
             }`}
             style={{
+              maxWidth: '42em',
+              padding: '2em',
               WebkitHyphens: 'auto',
               MozHyphens: 'auto',
               msHyphens: 'auto',

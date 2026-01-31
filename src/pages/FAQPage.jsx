@@ -69,7 +69,7 @@ const FAQPage = () => {
     {
       category: 'reading',
       question: 'Apakah saya bisa download buku?',
-      answer: 'Ya! Klik tombol "Download" di halaman detail buku untuk download dalam format EPUB original. File dapat dibuka di aplikasi pembaca seperti Google Play Books, Apple Books, atau Calibre.'
+      answer: 'Ya! Klik tombol "Download" di halaman detail buku untuk download dalam format EPUB original. File dapat dibuka di aplikasi pembaca EPUB seperti Calibre. Untuk membaca di handphone atau tablet Android, kami sangat menyarankan aplikasi Lithium.'
     },
     {
       category: 'reading',

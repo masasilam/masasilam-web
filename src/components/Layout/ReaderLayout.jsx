@@ -1,4 +1,4 @@
-// src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC FIXED
+// src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC FIXED + PERSISTENT SETTINGS
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard } from 'lucide-react'
@@ -84,6 +84,11 @@ const ReaderLayout = ({
     setFontSize(16)
     setFontFamily('serif')
     setContentWidth('normal')
+
+    // ✅ Clear localStorage to ensure settings persist after reload
+    localStorage.setItem('reader-font-size', '16')
+    localStorage.setItem('reader-font-family', 'serif')
+    localStorage.setItem('reader-content-width', 'normal')
   }
 
   return (
@@ -334,7 +339,7 @@ const ReaderLayout = ({
                             contentWidth === width.value
                               ? 'bg-primary text-white border-primary'
                               : 'border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
+                          }`}
                         >
                           {width.label}
                         </button>

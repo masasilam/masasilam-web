@@ -7,6 +7,7 @@ import {
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
+import { BookPlus } from 'lucide-react'
 
 const DashboardLayout = () => {
   const location = useLocation()
@@ -32,16 +33,30 @@ const DashboardLayout = () => {
     }
   }, [sidebarOpen])
 
-  const menuItems = useMemo(() => [
-    { path: '/dasbor', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-    { path: '/dasbor/perpustakaan', icon: Library, label: 'Perpustakaan' },
-    { path: '/dasbor/riwayat', icon: History, label: 'Riwayat' },
-    { path: '/dasbor/anotasi', icon: Highlighter, label: 'Anotasi' },
-    { path: '/dasbor/statistik', icon: BarChart3, label: 'Statistik' },
-    { path: '/dasbor/kalender', icon: Calendar, label: 'Kalender' },
-    { path: '/dasbor/pencapaian', icon: Award, label: 'Pencapaian' },
-    { path: '/dasbor/target', icon: Target, label: 'Target' },
-  ], [])
+    const menuItems = useMemo(() => {
+      const items = [
+        { path: '/dasbor', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+        { path: '/dasbor/perpustakaan', icon: Library, label: 'Perpustakaan' },
+        { path: '/dasbor/riwayat', icon: History, label: 'Riwayat' },
+        { path: '/dasbor/anotasi', icon: Highlighter, label: 'Anotasi' },
+        { path: '/dasbor/statistik', icon: BarChart3, label: 'Statistik' },
+        { path: '/dasbor/kalender', icon: Calendar, label: 'Kalender' },
+        { path: '/dasbor/pencapaian', icon: Award, label: 'Pencapaian' },
+        { path: '/dasbor/target', icon: Target, label: 'Target' },
+      ]
+
+      // Add admin menu for ADMIN users
+      if (user?.roles?.includes('ADMIN')) {
+        items.push({
+          path: '/dasbor/buku',
+          icon: BookPlus,
+          label: 'Kelola Buku',
+          adminOnly: true
+        })
+      }
+
+      return items
+    }, [user])
 
   const bottomMenuItems = useMemo(() => [
     { path: '/', icon: Home, label: 'Beranda', external: true },

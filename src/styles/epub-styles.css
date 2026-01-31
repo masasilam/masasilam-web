@@ -1,6 +1,9 @@
 /* ================================================================
-   EPUB READER STYLES FOR MasasilaM - COMPLETE VERSION
+   EPUB READER STYLES FOR MasasilaM - FIXED VERSION V2
    Path: src/styles/epub-styles.css
+
+   ✅ FIX: Konsistensi lebar area buku antara mode normal dan mode baca
+   ✅ FIX V2: Hapus max-width dari .chapter-content, biarkan wrapper yang kontrol
    ================================================================ */
 
 /* ================================================================
@@ -10,9 +13,10 @@
   font-family: "Minion Pro", "Adobe Garamond Pro", "Garamond", "Times New Roman", "Liberation Serif", serif;
   font-size: 1em;
   line-height: 1.5;
+  /* ✅ FIXED V3: Kembalikan max-width untuk memberi ruang dari tepi wrapper */
   max-width: 38em;
   margin: 0 auto;
-  padding: 0.25em;
+  padding: 0;
   text-align: justify;
 
   /* ✅ CRITICAL: Enhanced hyphenation support */
@@ -39,8 +43,9 @@
   /* Language hint for browser */
   -webkit-locale: "id";
 
-  background-color: #fff;
-  color: #111;
+  /* ✅ FIXED V4: Hapus background-color, biarkan transparan mengikuti wrapper */
+  /* background-color: #fff; */
+  /* color: #111; */
 }
 
 /* ================================================================
@@ -365,9 +370,9 @@
    5️⃣ NAVIGASI, HALAMAN ISI & HALAMAN KHUSUS
    ================================================================ */
 .chapter-content nav {
-  padding: 0.25em;
+  padding: 0;
   max-width: 38em;
-  margin: 0.25em auto;
+  margin: 0 auto;
 }
 
 .chapter-content nav h1 {
@@ -399,9 +404,9 @@
 /* Titlepage */
 .chapter-content .titlepage {
   text-align: center;
-  padding: 0.25em;
+  padding: 0;
   max-width: 38em;
-  margin: 0.25em auto;
+  margin: 0 auto;
   min-height: 70vh;
   display: flex;
   flex-direction: column;
@@ -439,9 +444,9 @@
 .chapter-content .colophon,
 .chapter-content .imprint,
 .chapter-content .uncopyright {
-  padding: 0.25em;
+  padding: 0;
   max-width: 38em;
-  margin: 0.25em auto;
+  margin: 0 auto;
 }
 
 /* Colophon */
@@ -870,9 +875,10 @@
 /* ================================================================
    🔟 MODE GELAP
    ================================================================ */
+/* ✅ FIXED V4: Hapus background-color dari .chapter-content di dark mode */
 .dark .chapter-content {
-  background-color: #121212;
-  color: #e0e0e0;
+  /* background-color: #121212; */
+  /* color: #e0e0e0; */
 }
 
 .dark .chapter-content blockquote {
@@ -1068,9 +1074,10 @@
   background-color: #FFF8DC !important;
 }
 
+/* ✅ FIXED V4: Hapus override background dari .chapter-content, biarkan inherit dari wrapper */
 /* Override all dark mode colors when reading mode is active */
 .reading-mode-bg .chapter-content {
-  background-color: #FFF8DC !important;
+  /* background-color: #FFF8DC !important; */
   color: #2d2d2d !important;
 }
 
