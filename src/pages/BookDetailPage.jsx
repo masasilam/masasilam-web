@@ -380,15 +380,40 @@ const BookDetailPage = () => {
               </div>
 
               {book.authorNames && (
-                <div className="flex items-center gap-2 mb-6">
-                  <User className="w-5 h-5 text-gray-500" />
+                <div className="flex items-center gap-3 mb-6">
+                  {/* Author Photos */}
+                  <div className="flex -space-x-2">
+                    {book.authorPhotoUrls && book.authorPhotoUrls.split(',').map((photoUrl, index) => {
+                      const url = photoUrl.trim()
+                      const authorName = book.authorNames.split(',')[index]?.trim() || 'Author'
+                      return url ? (
+                        <img
+                          key={index}
+                          src={url}
+                          alt={authorName}
+                          className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                          }}
+                        />
+                      ) : null
+                    })}
+                    {(!book.authorPhotoUrls || book.authorPhotoUrls.split(',').every(url => !url.trim())) && (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Author Names */}
                   <div className="flex flex-wrap items-center gap-1">
                     {book.authorNames.split(',').map((author, index, arr) => {
                       const authorName = author.trim()
                       const authorSlug = authorName.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-')
                       return (
                         <span key={index} className="inline-flex items-center">
-                          <Link to={`/penulis/${authorSlug}`} className="text-lg hover:text-primary hover:underline">{authorName}</Link>
+                          <Link to={`/penulis/${authorSlug}`} className="text-lg font-medium hover:text-primary hover:underline">{authorName}</Link>
                           {index < arr.length - 1 && <span className="text-gray-500 mx-1">,</span>}
                         </span>
                       )

@@ -1,9 +1,9 @@
 /* ================================================================
-   EPUB READER STYLES FOR MasasilaM - FIXED VERSION V2
+   EPUB READER STYLES FOR MasasilaM - OPTIMIZED SPACING VERSION
    Path: src/styles/epub-styles.css
 
-   ✅ FIX: Konsistensi lebar area buku antara mode normal dan mode baca
-   ✅ FIX V2: Hapus max-width dari .chapter-content, biarkan wrapper yang kontrol
+   ✅ FIX: Optimasi spacing dengan max-width yang lebih besar untuk .chapter-content
+   ✅ Konsistensi lebar area buku antara mode normal dan mode baca
    ================================================================ */
 
 /* ================================================================
@@ -13,8 +13,8 @@
   font-family: "Minion Pro", "Adobe Garamond Pro", "Garamond", "Times New Roman", "Liberation Serif", serif;
   font-size: 1em;
   line-height: 1.5;
-  /* ✅ FIXED V3: Kembalikan max-width untuk memberi ruang dari tepi wrapper */
-  max-width: 38em;
+  /* ✅ OPTIMIZED: Max-width diperbesar dari 38em ke 39.5em untuk mengurangi spacing kiri-kanan */
+  max-width: 39.5em;
   margin: 0 auto;
   padding: 0;
   text-align: justify;
@@ -42,10 +42,6 @@
 
   /* Language hint for browser */
   -webkit-locale: "id";
-
-  /* ✅ FIXED V4: Hapus background-color, biarkan transparan mengikuti wrapper */
-  /* background-color: #fff; */
-  /* color: #111; */
 }
 
 /* ================================================================
@@ -371,7 +367,7 @@
    ================================================================ */
 .chapter-content nav {
   padding: 0;
-  max-width: 38em;
+  max-width: 39.5em;
   margin: 0 auto;
 }
 
@@ -405,7 +401,7 @@
 .chapter-content .titlepage {
   text-align: center;
   padding: 0;
-  max-width: 38em;
+  max-width: 39.5em;
   margin: 0 auto;
   min-height: 70vh;
   display: flex;
@@ -445,7 +441,7 @@
 .chapter-content .imprint,
 .chapter-content .uncopyright {
   padding: 0;
-  max-width: 38em;
+  max-width: 39.5em;
   margin: 0 auto;
 }
 
@@ -875,12 +871,6 @@
 /* ================================================================
    🔟 MODE GELAP
    ================================================================ */
-/* ✅ FIXED V4: Hapus background-color dari .chapter-content di dark mode */
-.dark .chapter-content {
-  /* background-color: #121212; */
-  /* color: #e0e0e0; */
-}
-
 .dark .chapter-content blockquote {
   border-left-color: #666;
 }
@@ -1074,10 +1064,8 @@
   background-color: #FFF8DC !important;
 }
 
-/* ✅ FIXED V4: Hapus override background dari .chapter-content, biarkan inherit dari wrapper */
 /* Override all dark mode colors when reading mode is active */
 .reading-mode-bg .chapter-content {
-  /* background-color: #FFF8DC !important; */
   color: #2d2d2d !important;
 }
 

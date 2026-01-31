@@ -1,5 +1,6 @@
 // ============================================
 // FILE: src/pages/ChapterReaderPage.jsx
+// ✅ FIXED: Mengurangi padding wrapper dari 2em ke 1.25em
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -566,9 +567,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return chapter.htmlContent
   }, [chapter?.htmlContent])
 
-  const currentChapterHighlights = useMemo(() => {
-    return annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
-  }, [annotations.highlights, chapter?.chapterNumber])
+    const currentChapterHighlights = useMemo(() => {
+      return annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
+    }, [annotations.highlights, chapter?.chapterNumber])
+
+    const currentChapterNotes = useMemo(() => {
+      return annotations.notes.filter(n => n.chapterNumber === parseInt(chapter?.chapterNumber))
+    }, [annotations.notes, chapter?.chapterNumber])
 
   // ============================================
   // SEO DATA PREPARATION
@@ -877,7 +882,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             )}
           </header>
 
-          {/* ✅ FIX V3: Wrapper dengan background color yang konsisten untuk mode normal dan mode baca */}
+          {/* ✅ FIX: Wrapper dengan padding yang lebih kecil (1.25em) */}
           <div
             lang="id"
             className={`transition-colors duration-300 rounded-lg my-8 mx-auto ${
@@ -887,7 +892,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             }`}
             style={{
               maxWidth: '42em',
-              padding: '2em',
+              padding: '1.25em',
               WebkitHyphens: 'auto',
               MozHyphens: 'auto',
               msHyphens: 'auto',
@@ -899,6 +904,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               fontSize={fontSize}
               readingMode={readingMode}
               highlights={currentChapterHighlights}
+              notes={currentChapterNotes}
             />
           </div>
 

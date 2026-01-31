@@ -1,9 +1,9 @@
 // ============================================
-// FILE: src/components/Reader/ChapterContent.jsx - CLEAN VERSION
+// FILE: src/components/Reader/ChapterContent.jsx - MULTI-PARAGRAPH SUPPORT
 // ============================================
 import { memo, useEffect, useRef } from 'react'
 
-const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = [] }) => {
+const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = [], notes = [] }) => {
   const contentRef = useRef(null)
 
   const normalizeText = (text) => {
@@ -16,13 +16,9 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
 
     const container = contentRef.current
 
-    // Force list styles with !important
     const allOls = container.querySelectorAll('ol')
-
     allOls.forEach((ol) => {
       const type = ol.getAttribute('type')
-
-      // Use setProperty with !important flag
       ol.style.setProperty('display', 'block', 'important')
       ol.style.setProperty('padding-left', '2.5em', 'important')
       ol.style.setProperty('list-style-position', 'outside', 'important')
@@ -47,95 +43,310 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
     })
   }, [htmlContent])
 
-  // Handle highlights
+  // Handle highlights AND notes
   useEffect(() => {
-    if (!contentRef.current || !highlights || highlights.length === 0) return
+    if (!contentRef.current) return
 
     const container = contentRef.current
-    const existingMarks = container.querySelectorAll('mark.highlight-mark')
 
-    existingMarks.forEach((mark) => {
-      const textNode = document.createTextNode(mark.textContent)
-      mark.parentNode.replaceChild(textNode, mark)
-    })
+    // ALWAYS remove existing marks first (important for cleanup)
+    // Use a more robust cleanup method
+    const cleanupMarks = () => {
+      const existingMarks = container.querySelectorAll('mark.highlight-mark, mark.note-mark')
+      existingMarks.forEach((mark) => {
+        const parent = mark.parentNode
+        if (parent) {
+          // Move all child nodes out of the mark
+          while (mark.firstChild) {
+            parent.insertBefore(mark.firstChild, mark)
+          }
+          // Remove the empty mark element
+          parent.removeChild(mark)
+        }
+      })
 
+      // Also check for any orphaned marks without class
+      const allMarks = container.querySelectorAll('mark')
+      allMarks.forEach((mark) => {
+        // Only remove marks with our data attributes
+        if (mark.hasAttribute('data-highlight-id') || mark.hasAttribute('data-note-id')) {
+          const parent = mark.parentNode
+          if (parent) {
+            while (mark.firstChild) {
+              parent.insertBefore(mark.firstChild, mark)
+            }
+            parent.removeChild(mark)
+          }
+        }
+      })
+    }
+
+    cleanupMarks()
     container.normalize()
 
+    // If no annotations, just return after cleanup
+    if ((!highlights || highlights.length === 0) && (!notes || notes.length === 0)) {
+      return
+    }
+
+    // Build text position map
+    const { textNodes, fullText } = buildTextNodeMap(container)
+
+    // Process highlights with position-based approach
     highlights.forEach((highlight) => {
       const { id, highlightedText, color, startPosition, endPosition } = highlight
-      const text = normalizeText(highlightedText)
       const start = parseInt(startPosition)
       const end = parseInt(endPosition)
 
-      if (!text || isNaN(start) || isNaN(end) || start < 0 || end <= start) return
+      if (isNaN(start) || isNaN(end) || start < 0 || end <= start) return
 
-      try {
-        const walker = document.createTreeWalker(
-          container,
-          NodeFilter.SHOW_TEXT,
-          {
-            acceptNode: (node) => {
-              if (node.parentElement?.closest('mark, script, style')) {
-                return NodeFilter.FILTER_REJECT
-              }
-              return NodeFilter.FILTER_ACCEPT
-            }
-          }
-        )
+      // Make colors lighter for better readability
+      let lighterColor = color || '#FFEB3B'
+      const colorMap = {
+        '#FFEB3B': '#FFF9C4', // Yellow - lighter
+        '#4CAF50': '#C8E6C9', // Green - lighter
+        '#2196F3': '#BBDEFB', // Blue - lighter
+        '#FF9800': '#FFE0B2', // Orange - lighter
+        '#F44336': '#FFCDD2'  // Red - lighter
+      }
+      lighterColor = colorMap[color] || lighterColor
 
-        let currentPos = 0
-        let node
-        const nodesToHighlight = []
+      applyAnnotationByPosition(textNodes, fullText, {
+        id,
+        start,
+        end,
+        color: lighterColor,
+        type: 'highlight',
+        expectedText: normalizeText(highlightedText)
+      })
+    })
 
-        while ((node = walker.nextNode())) {
-          const nodeText = normalizeText(node.textContent)
-          const nodeLength = nodeText.length
-          const nodeStart = currentPos
-          const nodeEnd = currentPos + nodeLength
+    // Process notes
+    notes.forEach((note) => {
+      const { id, selectedText } = note
 
-          if (end > nodeStart && start < nodeEnd) {
-            const overlapStart = Math.max(0, start - nodeStart)
-            const overlapEnd = Math.min(nodeLength, end - nodeStart)
-            nodesToHighlight.push({ node, overlapStart, overlapEnd })
-          }
+      if (!selectedText || !selectedText.trim()) return
 
-          currentPos = nodeEnd + 1
-        }
+      const text = normalizeText(selectedText)
 
-        nodesToHighlight.forEach(({ node, overlapStart, overlapEnd }) => {
-          const range = document.createRange()
+      // Try to find the note text in fullText
+      const searchText = text.toLowerCase()
+      const fullTextLower = fullText.toLowerCase()
+      const index = fullTextLower.indexOf(searchText)
 
-          const actualStart = Math.min(overlapStart, node.textContent.length)
-          const actualEnd = Math.min(overlapEnd, node.textContent.length)
-
-          if (actualEnd > actualStart) {
-            range.setStart(node, actualStart)
-            range.setEnd(node, actualEnd)
-
-            const mark = document.createElement('mark')
-            mark.className = 'highlight-mark'
-            mark.style.backgroundColor = color || '#FFEB3B'
-            mark.style.padding = '2px 0'
-            mark.style.borderRadius = '2px'
-            mark.style.transition = 'all 0.2s'
-            mark.setAttribute('data-highlight-id', id)
-
-            try {
-              range.surroundContents(mark)
-            } catch (e) {
-              const contents = range.extractContents()
-              mark.appendChild(contents)
-              range.insertNode(mark)
-            }
-          }
+      if (index !== -1) {
+        applyAnnotationByPosition(textNodes, fullText, {
+          id,
+          start: index,
+          end: index + text.length,
+          color: '#E9D5FF',
+          type: 'note',
+          expectedText: text
         })
-
-        container.normalize()
-      } catch (error) {
-        console.error('Highlight error:', error)
       }
     })
-  }, [highlights])
+
+    container.normalize()
+  }, [highlights, notes])
+
+  // Build a map of all text nodes with their positions
+  const buildTextNodeMap = (container) => {
+    const textNodes = []
+    let fullText = ''
+
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          if (node.parentElement?.closest('script, style')) {
+            return NodeFilter.FILTER_REJECT
+          }
+          return NodeFilter.FILTER_ACCEPT
+        }
+      }
+    )
+
+    let node
+    while ((node = walker.nextNode())) {
+      const text = node.textContent
+      const startPos = fullText.length
+      const endPos = startPos + text.length
+
+      textNodes.push({
+        node,
+        startPos,
+        endPos,
+        text
+      })
+
+      fullText += text
+    }
+
+    return { textNodes, fullText }
+  }
+
+  // Apply annotation using position-based approach
+  const applyAnnotationByPosition = (textNodes, fullText, annotation) => {
+    const { id, start, end, color, type, expectedText } = annotation
+
+    try {
+      const normalizedExpected = normalizeText(expectedText)
+      let adjustedStart = start
+      let adjustedEnd = end
+
+      // Find the actual position of the expected text in fullText
+      // This handles discrepancies between backend and frontend text extraction
+      const searchWindow = fullText.substring(Math.max(0, start - 50), Math.min(fullText.length, end + 50))
+      const normalizedWindow = normalizeText(searchWindow)
+      const expectedIndex = normalizedWindow.toLowerCase().indexOf(normalizedExpected.toLowerCase())
+
+      if (expectedIndex !== -1) {
+        // Calculate actual positions based on where we found the text
+        const windowStart = Math.max(0, start - 50)
+
+        // Map back from normalized to actual positions
+        let actualStartInWindow = 0
+        let actualEndInWindow = 0
+        let normalizedPos = 0
+
+        for (let i = 0; i < searchWindow.length && normalizedPos <= expectedIndex + normalizedExpected.length; i++) {
+          if (normalizedPos === expectedIndex) {
+            actualStartInWindow = i
+          }
+          if (normalizedPos === expectedIndex + normalizedExpected.length) {
+            actualEndInWindow = i
+            break
+          }
+
+          // Count position in normalized text
+          const char = searchWindow[i]
+          if (!/\s/.test(char)) {
+            normalizedPos++
+          } else if (i > 0 && !/\s/.test(searchWindow[i - 1])) {
+            normalizedPos++
+          }
+        }
+
+        // If we didn't find the end, use the rest of the match
+        if (actualEndInWindow === 0) {
+          actualEndInWindow = actualStartInWindow + normalizedExpected.length
+        }
+
+        adjustedStart = windowStart + actualStartInWindow
+        adjustedEnd = windowStart + actualEndInWindow
+
+        // Extend to include trailing punctuation
+        while (adjustedEnd < fullText.length && /[.,;:!?)\]]/.test(fullText[adjustedEnd])) {
+          adjustedEnd++
+        }
+
+      } else {
+        // Fallback: just extend end to include punctuation
+        while (adjustedEnd < fullText.length && /[.,;:!?)\]]/.test(fullText[adjustedEnd])) {
+          adjustedEnd++
+        }
+      }
+
+      // Verify the final extracted text
+      const extractedText = normalizeText(fullText.substring(adjustedStart, adjustedEnd))
+
+      if (extractedText !== normalizedExpected) {
+        // Last resort: try to find the exact text anywhere in a reasonable range
+        const largeWindow = fullText.substring(Math.max(0, start - 100), Math.min(fullText.length, end + 100))
+        const exactIndex = largeWindow.toLowerCase().indexOf(normalizedExpected.toLowerCase())
+
+        if (exactIndex !== -1) {
+          const windowStart = Math.max(0, start - 100)
+          adjustedStart = windowStart + exactIndex
+          adjustedEnd = adjustedStart + normalizedExpected.length
+
+          // Extend to include trailing punctuation
+          while (adjustedEnd < fullText.length && /[.,;:!?)\]]/.test(fullText[adjustedEnd])) {
+            adjustedEnd++
+          }
+
+          console.log(`Position corrected for ${type} ${id}: [${start},${end}] → [${adjustedStart},${adjustedEnd}]`)
+        } else {
+          console.warn(`Could not find exact match for ${type} ${id}:`, {
+            expected: normalizedExpected.substring(0, 100) + '...',
+            found: extractedText.substring(0, 100) + '...'
+          })
+        }
+      }
+
+      // Find all text nodes that overlap with [adjustedStart, adjustedEnd]
+      const affectedNodes = textNodes.filter(({ startPos, endPos }) =>
+        endPos > adjustedStart && startPos < adjustedEnd
+      )
+
+      if (affectedNodes.length === 0) {
+        console.warn(`No nodes found for ${type} ${id}`)
+        return
+      }
+
+      // Apply mark to each affected node
+      affectedNodes.forEach(({ node, startPos, endPos }) => {
+        // Calculate the overlap within this specific node
+        const nodeStart = Math.max(0, adjustedStart - startPos)
+        const nodeEnd = Math.min(node.textContent.length, adjustedEnd - startPos)
+
+        if (nodeEnd > nodeStart) {
+          applyMarkToNode(node, nodeStart, nodeEnd, id, color, type)
+        }
+      })
+
+    } catch (error) {
+      console.error(`Error applying ${type}:`, error)
+    }
+  }
+
+  // Apply mark to a portion of a text node
+  const applyMarkToNode = (node, startOffset, endOffset, id, color, type) => {
+    try {
+      // Skip if already marked
+      if (node.parentElement?.closest('mark')) {
+        return
+      }
+
+      const range = document.createRange()
+      range.setStart(node, startOffset)
+      range.setEnd(node, endOffset)
+
+      const mark = createMarkElement(id, color, type)
+
+      try {
+        range.surroundContents(mark)
+      } catch (e) {
+        // Fallback: extract and wrap
+        const contents = range.extractContents()
+        mark.appendChild(contents)
+        range.insertNode(mark)
+      }
+    } catch (error) {
+      console.error('Error applying mark to node:', error)
+    }
+  }
+
+  // Create mark element with consistent styling
+  const createMarkElement = (id, color, type) => {
+    const mark = document.createElement('mark')
+    mark.className = type === 'highlight' ? 'highlight-mark' : 'note-mark'
+    mark.style.backgroundColor = color
+    mark.style.padding = '2px 0'
+    mark.style.borderRadius = '2px'
+    mark.style.transition = 'all 0.2s'
+    mark.setAttribute(`data-${type}-id`, id)
+
+    // Add visual distinction for notes
+    if (type === 'note') {
+      mark.style.borderBottom = '2px dotted #9333EA'
+      mark.style.cursor = 'help'
+      mark.title = 'Catatan tersedia'
+    }
+
+    return mark
+  }
 
   return (
     <div
