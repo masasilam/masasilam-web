@@ -1,6 +1,5 @@
 // ============================================
-// FILE: src/pages/ChapterReaderPage.jsx
-// ✅ FIXED: Mengurangi padding wrapper dari 2em ke 1.25em
+// FILE: src/pages/ChapterReaderPage.jsx - REMOVED CHAPTER STATS
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -8,7 +7,6 @@ import { chapterService } from '../services/chapterService'
 import { useTTS } from '../hooks/useTTS'
 import { useReadingTracker } from '../hooks/useReadingTracker'
 import useChapterNavigation from '../hooks/useChapterNavigation'
-import useSwipeGesture from '../hooks/useSwipeGesture'
 import useFootnoteHandler from '../hooks/useFootnoteHandler'
 import useTextSelection from '../hooks/useTextSelection'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
@@ -28,9 +26,8 @@ import SearchInBook from '../components/Reader/SearchInBook'
 import ExportAnnotations from '../components/Reader/ExportAnnotations'
 import LoginPromptModal from '../components/Reader/LoginPromptModal'
 import FootnotePopup from '../components/Reader/FootnotePopup'
-import ChapterStatsWidget from '../components/Reader/ChapterStatsWidget'
+// ✅ REMOVED: import ChapterStatsWidget
 import ChapterContent from '../components/Reader/ChapterContent'
-import SwipeIndicator from '../components/Reader/SwipeIndicator'
 import TextSelectionPopup from '../components/Reader/TextSelectionPopup'
 import BottomToolbar from '../components/Reader/BottomToolbar'
 import AnnotationPanel from '../components/Reader/AnnotationPanel'
@@ -47,10 +44,20 @@ const hideScrollbarStyle = `
     scrollbar-width: none;
   }
 
-  /* Enhanced hyphenation support */
+  /* ✅ ENHANCED HYPHENATION - Applied globally */
+  html {
+    -webkit-hyphens: auto !important;
+    -moz-hyphens: auto !important;
+    -ms-hyphens: auto !important;
+    hyphens: auto !important;
+  }
+
   .chapter-content,
   .chapter-content p,
-  .chapter-content blockquote {
+  .chapter-content blockquote,
+  .chapter-content li,
+  .chapter-content td,
+  .chapter-content th {
     -webkit-hyphens: auto !important;
     -moz-hyphens: auto !important;
     -ms-hyphens: auto !important;
@@ -61,12 +68,22 @@ const hideScrollbarStyle = `
     overflow-wrap: break-word !important;
     word-break: normal !important;
 
-    /* Hyphenation limits */
-    -webkit-hyphenate-limit-before: 2;
-    -webkit-hyphenate-limit-after: 3;
-    -webkit-hyphenate-limit-chars: 5 2 2;
-    hyphenate-limit-chars: 5 2 2;
-    hyphenate-limit-lines: 2;
+    /* Hyphenation limits - more aggressive for Indonesian */
+    -webkit-hyphenate-limit-before: 2 !important;
+    -webkit-hyphenate-limit-after: 2 !important;
+    -webkit-hyphenate-limit-chars: 6 2 2 !important;
+    hyphenate-limit-chars: 6 2 2 !important;
+    hyphenate-limit-lines: 2 !important;
+
+    /* Allow breaking long words */
+    -webkit-hyphenate-limit-zone: 8% !important;
+  }
+
+  /* Ensure justified text works well with hyphens */
+  .chapter-content.text-justify p,
+  .chapter-content.text-justify blockquote {
+    text-align: justify !important;
+    text-justify: inter-word !important;
   }`
 
 const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
@@ -78,7 +95,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const isAuthenticated = !!localStorage.getItem('token')
   const tts = useTTS()
 
-  // ✅ ALL STATE DECLARATIONS FIRST
   const [chapter, setChapter] = useState(null)
   const [loading, setLoading] = useState(true)
   const [annotations, setAnnotations] = useState({ bookmarks: [], highlights: [], notes: [] })
@@ -110,7 +126,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const fullChapterPath = chapterPath || ''
   const stopTTSOnUnmount = useRef(true)
 
-  // ✅ THEN HOOKS THAT DEPEND ON STATE (after chapter is declared)
   const { isTracking } = useReadingTracker(bookSlug, chapter, isAuthenticated)
 
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(
@@ -122,13 +137,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         tts.stop()
       }
     }
-  )
-
-  const { swipeDirection } = useSwipeGesture(
-    contentRef,
-    chapter,
-    handleNextChapter,
-    handlePrevChapter
   )
 
   const { footnotePopup, setFootnotePopup, handleGoToFootnote } = useFootnoteHandler(
@@ -144,13 +152,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     clearSelection
   } = useTextSelection(contentRef, isInteractingWithPopup)
 
-  // ✅ FIX: Reset isInteractingWithPopup ketika chapter berubah
   useEffect(() => {
     setIsInteractingWithPopup(false)
     clearSelection()
   }, [fullChapterPath, chapter?.chapterNumber])
 
-  // ✅ FIX: Reset isInteractingWithPopup ketika popup ditutup
   useEffect(() => {
     if (!selectedText) {
       setIsInteractingWithPopup(false)
@@ -290,6 +296,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           }
           window.history.replaceState({}, document.title)
         }, 800)
+      } else if (location.state?.noteId && contentRef.current) {
+        setTimeout(() => {
+          const noteElement = contentRef.current.querySelector(`mark[data-note-id="${location.state.noteId}"]`)
+          if (noteElement) {
+            noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            noteElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'
+            setTimeout(() => {
+              noteElement.style.boxShadow = ''
+            }, 2000)
+          }
+          window.history.replaceState({}, document.title)
+        }, 800)
       } else if (location.state?.scrollTo !== undefined) {
         setTimeout(() => {
           window.scrollTo({ top: location.state.scrollTo, behavior: 'smooth' })
@@ -409,11 +427,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       return
     }
     if (!noteContent.trim()) return
+    if (!selectedText || !selectionRange) return
+
     try {
       await chapterService.addNote(bookSlug, parseInt(chapter.chapterNumber), {
         content: noteContent,
-        selectedText: selectedText || '',
-        position: window.scrollY
+        selectedText: selectedText,
+        startPosition: selectionRange.startOffset,
+        endPosition: selectionRange.endOffset
       })
       clearSelection()
       setShowToolbar(false)
@@ -519,7 +540,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     setShowToolbar(false)
 
     if (annotation.chapterNumber === parseInt(chapter?.chapterNumber)) {
-      if (annotation.highlightedText && contentRef.current) {
+      if (annotation.highlightedText && !annotation.content && contentRef.current) {
         setTimeout(() => {
           const highlightElement = contentRef.current.querySelector(`mark[data-highlight-id="${annotation.id}"]`)
           if (highlightElement) {
@@ -531,6 +552,22 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             return
           }
         }, 100)
+        return
+      }
+
+      if (annotation.content && annotation.selectedText && contentRef.current) {
+        setTimeout(() => {
+          const noteElement = contentRef.current.querySelector(`mark[data-note-id="${annotation.id}"]`)
+          if (noteElement) {
+            noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            noteElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'
+            setTimeout(() => {
+              noteElement.style.boxShadow = ''
+            }, 2000)
+            return
+          }
+        }, 100)
+        return
       }
 
       const position = parseInt(annotation.position) || 0
@@ -540,8 +577,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       if (annotation.chapterSlug) {
         const targetUrl = buildChapterUrl(bookSlug, annotation.chapterSlug)
 
-        if (annotation.highlightedText) {
+        if (annotation.highlightedText && !annotation.content) {
           navigate(targetUrl, { state: { highlightId: annotation.id } })
+        } else if (annotation.content && annotation.selectedText) {
+          navigate(targetUrl, { state: { noteId: annotation.id } })
         } else {
           const position = parseInt(annotation.position) || 0
           navigate(targetUrl, { state: { scrollTo: position } })
@@ -567,17 +606,14 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return chapter.htmlContent
   }, [chapter?.htmlContent])
 
-    const currentChapterHighlights = useMemo(() => {
-      return annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
-    }, [annotations.highlights, chapter?.chapterNumber])
+  const currentChapterHighlights = useMemo(() => {
+    return annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber))
+  }, [annotations.highlights, chapter?.chapterNumber])
 
-    const currentChapterNotes = useMemo(() => {
-      return annotations.notes.filter(n => n.chapterNumber === parseInt(chapter?.chapterNumber))
-    }, [annotations.notes, chapter?.chapterNumber])
+  const currentChapterNotes = useMemo(() => {
+    return annotations.notes.filter(n => n.chapterNumber === parseInt(chapter?.chapterNumber))
+  }, [annotations.notes, chapter?.chapterNumber])
 
-  // ============================================
-  // SEO DATA PREPARATION
-  // ============================================
   const buildFullChapterPath = (breadcrumbs) => {
     if (!breadcrumbs || breadcrumbs.length === 0) return ''
     return breadcrumbs.map(b => b.slug).join('/')
@@ -596,7 +632,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }))
   ] : []
 
-  // Create book object for structured data
   const bookForSchema = chapter ? {
     title: chapter.bookTitle,
     slug: bookSlug,
@@ -615,9 +650,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const keywords = `${chapter?.bookTitle || ''}, ${chapter?.chapterTitle || ''}, ${chapter?.authorNames || ''}, baca online gratis, buku domain publik`
 
-  // ============================================
-  // RENDER
-  // ============================================
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -662,7 +694,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         canonical={`https://masasilam.com${chapterUrl}`}
       />
 
-      <div className="relative pb-20">
+      <div className="relative pb-20" lang="id">
         <style>{hideScrollbarStyle}</style>
 
         {showTTSLoginPrompt && (
@@ -743,8 +775,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             sourceChapter={footnotePopup.sourceChapter}
           />
         )}
-
-        <SwipeIndicator direction={swipeDirection} />
 
         {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
           <nav className="mb-6 text-sm" aria-label="Breadcrumb">
@@ -869,7 +899,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         )}
 
-        <article ref={contentRef}>
+        <article ref={contentRef} lang="id">
           <header className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
               {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
@@ -882,7 +912,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             )}
           </header>
 
-          {/* ✅ FIX: Wrapper dengan padding yang lebih kecil (1.25em) */}
           <div
             lang="id"
             className={`transition-colors duration-300 rounded-lg my-8 mx-auto ${
@@ -892,11 +921,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             }`}
             style={{
               maxWidth: '42em',
-              padding: '1.25em',
-              WebkitHyphens: 'auto',
-              MozHyphens: 'auto',
-              msHyphens: 'auto',
-              hyphens: 'auto'
+              padding: '1.25em'
             }}
           >
             <ChapterContent
@@ -907,13 +932,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               notes={currentChapterNotes}
             />
           </div>
-
-          {isAuthenticated && (
-            <ChapterStatsWidget
-              bookSlug={bookSlug}
-              chapterNumber={parseInt(chapter.chapterNumber)}
-            />
-          )}
 
           <div className="my-8">
             <ChapterRating

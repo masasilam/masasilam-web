@@ -97,13 +97,17 @@ export const useReadingTracker = (bookSlug, chapterData, isAuthenticated) => {
           ? Math.min(100, Math.round((window.scrollY / scrollableHeight) * 100))
           : 100
 
+        // ✅ CONSISTENT: Use 90% threshold like ChapterReaderPage
+        const isCompleted = scrollDepth >= 90
+
         await chapterService.endReading(bookSlug, {
           sessionId: sessionIdRef.current,
           chapterNumber: chapterNumber,
           endPosition: window.scrollY,
           scrollDepthPercentage: scrollDepth,
           wordsRead: calculateWordsRead(),
-          interactionCount: 0
+          interactionCount: 0,
+          isCompleted: isCompleted // ✅ Explicitly send completion status
         })
 
         setIsTracking(false)
@@ -116,11 +120,22 @@ export const useReadingTracker = (bookSlug, chapterData, isAuthenticated) => {
     const handleBeforeUnload = () => {
       // Use sendBeacon for reliable tracking on page close
       if (navigator.sendBeacon) {
+        const contentHeight = document.documentElement.scrollHeight
+        const viewportHeight = window.innerHeight
+        const scrollableHeight = contentHeight - viewportHeight
+        const scrollDepth = scrollableHeight > 0
+          ? Math.min(100, Math.round((window.scrollY / scrollableHeight) * 100))
+          : 100
+
+        // ✅ CONSISTENT: Use 90% threshold
+        const isCompleted = scrollDepth >= 90
+
         const data = JSON.stringify({
           sessionId: sessionIdRef.current,
           chapterNumber: chapterNumber,
           endPosition: window.scrollY,
-          scrollDepthPercentage: Math.round((window.scrollY / document.documentElement.scrollHeight) * 100)
+          scrollDepthPercentage: scrollDepth,
+          isCompleted: isCompleted // ✅ Include completion status
         })
 
         navigator.sendBeacon(

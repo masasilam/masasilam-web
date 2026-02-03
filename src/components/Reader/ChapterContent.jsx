@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/components/Reader/ChapterContent.jsx - MULTI-PARAGRAPH SUPPORT
+// FILE: src/components/Reader/ChapterContent.jsx - ALLOW ADJACENT MARKS
 // ============================================
 import { memo, useEffect, useRef } from 'react'
 
@@ -7,7 +7,76 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
   const contentRef = useRef(null)
 
   const normalizeText = (text) => {
-    return text.replace(/\s+/g, ' ').trim()
+    return text
+      .replace(/\u00AD/g, '') // Remove soft hyphens
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  // Add soft hyphens to long Indonesian words for better hyphenation
+  const addSoftHyphens = (html) => {
+    const temp = document.createElement('div')
+    temp.innerHTML = html
+
+    const processTextNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        let text = node.textContent
+
+        text = text.replace(/\b[\wÀ-ÿ]{8,}\b/g, (word) => {
+          if (word.includes('-') || word.includes('/')) return word
+
+          let hyphenated = word
+
+          const patterns = [
+            [/^(me)(ng)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(me)(ny)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(me)(m)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(me)(n)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(me)(l)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(me)(r)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(me)(w)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(ber)(t)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(ber)([aiueo])/i, '$1\u00AD$2'],
+            [/^(ter)([aiueo])/i, '$1\u00AD$2'],
+            [/^(per)([aiueo])/i, '$1\u00AD$2'],
+            [/^(pe)(ng)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(pe)(ny)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(pe)(m)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(pe)(n)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(pe)(l)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(pe)(r)([aiueo])/i, '$1\u00AD$2$3'],
+            [/^(di)([aiueo])/i, '$1\u00AD$2'],
+            [/^(ke)([aiueo])/i, '$1\u00AD$2'],
+            [/^(se)([aiueo])/i, '$1\u00AD$2'],
+            [/([aiueo])(kan)$/i, '$1\u00AD$2'],
+            [/([aiueo])([bcdfghjklmnpqrstvwxyz]an)$/i, '$1\u00AD$2'],
+            [/([aiueo])(nya)$/i, '$1\u00AD$2'],
+            [/([aiueo])(lah)$/i, '$1\u00AD$2'],
+            [/([aiueo])(kah)$/i, '$1\u00AD$2'],
+            [/([aiueo])(tah)$/i, '$1\u00AD$2'],
+            [/([aiueo])(pun)$/i, '$1\u00AD$2'],
+            [/([bcdfghjklmnpqrstvwxyz]{2,})([aiueo])/gi, '$1\u00AD$2'],
+            [/([aiueo])([bcdfghjklmnpqrstvwxyz][aiueo])/gi, '$1\u00AD$2'],
+          ]
+
+          patterns.forEach(([pattern, replacement]) => {
+            hyphenated = hyphenated.replace(pattern, replacement)
+          })
+
+          return hyphenated
+        })
+
+        node.textContent = text
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (['SCRIPT', 'STYLE', 'CODE', 'PRE'].includes(node.tagName)) {
+          return
+        }
+        Array.from(node.childNodes).forEach(processTextNode)
+      }
+    }
+
+    processTextNode(temp)
+    return temp.innerHTML
   }
 
   // Force list styles after render
@@ -49,26 +118,21 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
 
     const container = contentRef.current
 
-    // ALWAYS remove existing marks first (important for cleanup)
-    // Use a more robust cleanup method
+    // Remove existing marks
     const cleanupMarks = () => {
       const existingMarks = container.querySelectorAll('mark.highlight-mark, mark.note-mark')
       existingMarks.forEach((mark) => {
         const parent = mark.parentNode
         if (parent) {
-          // Move all child nodes out of the mark
           while (mark.firstChild) {
             parent.insertBefore(mark.firstChild, mark)
           }
-          // Remove the empty mark element
           parent.removeChild(mark)
         }
       })
 
-      // Also check for any orphaned marks without class
       const allMarks = container.querySelectorAll('mark')
       allMarks.forEach((mark) => {
-        // Only remove marks with our data attributes
         if (mark.hasAttribute('data-highlight-id') || mark.hasAttribute('data-note-id')) {
           const parent = mark.parentNode
           if (parent) {
@@ -84,70 +148,79 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
     cleanupMarks()
     container.normalize()
 
-    // If no annotations, just return after cleanup
     if ((!highlights || highlights.length === 0) && (!notes || notes.length === 0)) {
       return
     }
 
-    // Build text position map
-    const { textNodes, fullText } = buildTextNodeMap(container)
+    // Build text position map - rebuild after each annotation to handle splits
+    const applyAllAnnotations = () => {
+      const allAnnotations = []
 
-    // Process highlights with position-based approach
-    highlights.forEach((highlight) => {
-      const { id, highlightedText, color, startPosition, endPosition } = highlight
-      const start = parseInt(startPosition)
-      const end = parseInt(endPosition)
+      highlights.forEach((highlight) => {
+        const { id, highlightedText, color, startPosition, endPosition } = highlight
+        const start = parseInt(startPosition)
+        const end = parseInt(endPosition)
 
-      if (isNaN(start) || isNaN(end) || start < 0 || end <= start) return
+        if (isNaN(start) || isNaN(end) || start < 0 || end <= start) return
 
-      // Make colors lighter for better readability
-      let lighterColor = color || '#FFEB3B'
-      const colorMap = {
-        '#FFEB3B': '#FFF9C4', // Yellow - lighter
-        '#4CAF50': '#C8E6C9', // Green - lighter
-        '#2196F3': '#BBDEFB', // Blue - lighter
-        '#FF9800': '#FFE0B2', // Orange - lighter
-        '#F44336': '#FFCDD2'  // Red - lighter
-      }
-      lighterColor = colorMap[color] || lighterColor
+        let lighterColor = color || '#FFEB3B'
+        const colorMap = {
+          '#FFEB3B': '#FFF9C4',
+          '#4CAF50': '#C8E6C9',
+          '#2196F3': '#BBDEFB',
+          '#FF9800': '#FFE0B2',
+          '#F44336': '#FFCDD2'
+        }
+        lighterColor = colorMap[color] || lighterColor
 
-      applyAnnotationByPosition(textNodes, fullText, {
-        id,
-        start,
-        end,
-        color: lighterColor,
-        type: 'highlight',
-        expectedText: normalizeText(highlightedText)
-      })
-    })
-
-    // Process notes
-    notes.forEach((note) => {
-      const { id, selectedText } = note
-
-      if (!selectedText || !selectedText.trim()) return
-
-      const text = normalizeText(selectedText)
-
-      // Try to find the note text in fullText
-      const searchText = text.toLowerCase()
-      const fullTextLower = fullText.toLowerCase()
-      const index = fullTextLower.indexOf(searchText)
-
-      if (index !== -1) {
-        applyAnnotationByPosition(textNodes, fullText, {
+        allAnnotations.push({
           id,
-          start: index,
-          end: index + text.length,
+          start,
+          end,
+          color: lighterColor,
+          type: 'highlight',
+          expectedText: normalizeText(highlightedText),
+          originalText: highlightedText
+        })
+      })
+
+      notes.forEach((note) => {
+        const { id, selectedText, startPosition, endPosition } = note
+
+        if (!selectedText || !selectedText.trim()) return
+
+        const start = parseInt(startPosition)
+        const end = parseInt(endPosition)
+
+        if (isNaN(start) || isNaN(end) || start < 0 || end <= start) {
+          console.warn(`Invalid positions for note ${id}`)
+          return
+        }
+
+        allAnnotations.push({
+          id,
+          start,
+          end,
           color: '#E9D5FF',
           type: 'note',
-          expectedText: text
+          expectedText: normalizeText(selectedText),
+          originalText: selectedText
         })
-      }
-    })
+      })
 
-    container.normalize()
-  }, [highlights, notes])
+      // Sort by start position
+      allAnnotations.sort((a, b) => a.start - b.start)
+
+      // Apply each annotation one by one, rebuilding text map each time
+      allAnnotations.forEach((annotation) => {
+        const { textNodes, fullText } = buildTextNodeMap(container)
+        applyAnnotationByPosition(textNodes, fullText, annotation)
+        container.normalize()
+      })
+    }
+
+    applyAllAnnotations()
+  }, [highlights, notes, htmlContent])
 
   // Build a map of all text nodes with their positions
   const buildTextNodeMap = (container) => {
@@ -188,94 +261,98 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
 
   // Apply annotation using position-based approach
   const applyAnnotationByPosition = (textNodes, fullText, annotation) => {
-    const { id, start, end, color, type, expectedText } = annotation
+    const { id, start, end, color, type, expectedText, originalText } = annotation
 
     try {
-      const normalizedExpected = normalizeText(expectedText)
+      const normalizedFullText = normalizeText(fullText)
+      const normalizedExpected = expectedText
+
       let adjustedStart = start
       let adjustedEnd = end
 
-      // Find the actual position of the expected text in fullText
-      // This handles discrepancies between backend and frontend text extraction
-      const searchWindow = fullText.substring(Math.max(0, start - 50), Math.min(fullText.length, end + 50))
-      const normalizedWindow = normalizeText(searchWindow)
-      const expectedIndex = normalizedWindow.toLowerCase().indexOf(normalizedExpected.toLowerCase())
+      const extractedAtPosition = fullText.substring(start, end)
+      const normalizedExtracted = normalizeText(extractedAtPosition)
 
-      if (expectedIndex !== -1) {
-        // Calculate actual positions based on where we found the text
-        const windowStart = Math.max(0, start - 50)
-
-        // Map back from normalized to actual positions
-        let actualStartInWindow = 0
-        let actualEndInWindow = 0
-        let normalizedPos = 0
-
-        for (let i = 0; i < searchWindow.length && normalizedPos <= expectedIndex + normalizedExpected.length; i++) {
-          if (normalizedPos === expectedIndex) {
-            actualStartInWindow = i
-          }
-          if (normalizedPos === expectedIndex + normalizedExpected.length) {
-            actualEndInWindow = i
-            break
-          }
-
-          // Count position in normalized text
-          const char = searchWindow[i]
-          if (!/\s/.test(char)) {
-            normalizedPos++
-          } else if (i > 0 && !/\s/.test(searchWindow[i - 1])) {
-            normalizedPos++
-          }
-        }
-
-        // If we didn't find the end, use the rest of the match
-        if (actualEndInWindow === 0) {
-          actualEndInWindow = actualStartInWindow + normalizedExpected.length
-        }
-
-        adjustedStart = windowStart + actualStartInWindow
-        adjustedEnd = windowStart + actualEndInWindow
-
-        // Extend to include trailing punctuation
-        while (adjustedEnd < fullText.length && /[.,;:!?)\]]/.test(fullText[adjustedEnd])) {
-          adjustedEnd++
-        }
-
+      if (normalizedExtracted === normalizedExpected) {
+        // Exact match at position
       } else {
-        // Fallback: just extend end to include punctuation
-        while (adjustedEnd < fullText.length && /[.,;:!?)\]]/.test(fullText[adjustedEnd])) {
-          adjustedEnd++
-        }
-      }
+        // Search in window
+        const windowStart = Math.max(0, start - 100)
+        const windowEnd = Math.min(fullText.length, end + 100)
+        const searchWindow = fullText.substring(windowStart, windowEnd)
+        const normalizedWindow = normalizeText(searchWindow)
 
-      // Verify the final extracted text
-      const extractedText = normalizeText(fullText.substring(adjustedStart, adjustedEnd))
+        const foundIndex = normalizedWindow.toLowerCase().indexOf(normalizedExpected.toLowerCase())
 
-      if (extractedText !== normalizedExpected) {
-        // Last resort: try to find the exact text anywhere in a reasonable range
-        const largeWindow = fullText.substring(Math.max(0, start - 100), Math.min(fullText.length, end + 100))
-        const exactIndex = largeWindow.toLowerCase().indexOf(normalizedExpected.toLowerCase())
+        if (foundIndex !== -1) {
+          // Map back to actual position
+          let actualPos = 0
+          let normalizedPos = 0
 
-        if (exactIndex !== -1) {
-          const windowStart = Math.max(0, start - 100)
-          adjustedStart = windowStart + exactIndex
-          adjustedEnd = adjustedStart + normalizedExpected.length
+          for (let i = 0; i < searchWindow.length; i++) {
+            if (normalizedPos === foundIndex) {
+              actualPos = i
+              break
+            }
 
-          // Extend to include trailing punctuation
-          while (adjustedEnd < fullText.length && /[.,;:!?)\]]/.test(fullText[adjustedEnd])) {
-            adjustedEnd++
+            const char = searchWindow[i]
+            if (char !== '\u00AD') {
+              if (!/\s/.test(char) || (i > 0 && !/\s/.test(searchWindow[i - 1]))) {
+                normalizedPos++
+              }
+            }
           }
 
-          console.log(`Position corrected for ${type} ${id}: [${start},${end}] → [${adjustedStart},${adjustedEnd}]`)
+          // Calculate length in actual text
+          let actualLength = 0
+          normalizedPos = 0
+          for (let i = actualPos; i < searchWindow.length && normalizedPos < normalizedExpected.length; i++) {
+            const char = searchWindow[i]
+            actualLength++
+
+            if (char !== '\u00AD') {
+              if (!/\s/.test(char) || (i > 0 && !/\s/.test(searchWindow[i - 1]))) {
+                normalizedPos++
+              }
+            }
+          }
+
+          adjustedStart = windowStart + actualPos
+          adjustedEnd = windowStart + actualPos + actualLength
         } else {
-          console.warn(`Could not find exact match for ${type} ${id}:`, {
-            expected: normalizedExpected.substring(0, 100) + '...',
-            found: extractedText.substring(0, 100) + '...'
-          })
+          // Last resort - full text search
+          const fullNormalized = normalizeText(fullText)
+          const lastResortIndex = fullNormalized.toLowerCase().indexOf(normalizedExpected.toLowerCase())
+
+          if (lastResortIndex !== -1) {
+            let actualPos = 0
+            let normalizedPos = 0
+
+            for (let i = 0; i < fullText.length; i++) {
+              if (normalizedPos === lastResortIndex) {
+                actualPos = i
+                break
+              }
+
+              const char = fullText[i]
+              if (char !== '\u00AD') {
+                if (!/\s/.test(char) || (i > 0 && !/\s/.test(fullText[i - 1]))) {
+                  normalizedPos++
+                }
+              }
+            }
+
+            adjustedStart = actualPos
+            let actualLength = normalizedExpected.length + 10
+            adjustedEnd = Math.min(fullText.length, adjustedStart + actualLength)
+          } else {
+            console.error(`Cannot find: "${normalizedExpected}"`)
+            return
+          }
         }
       }
 
-      // Find all text nodes that overlap with [adjustedStart, adjustedEnd]
+      // Find all text nodes that overlap
       const affectedNodes = textNodes.filter(({ startPos, endPos }) =>
         endPos > adjustedStart && startPos < adjustedEnd
       )
@@ -287,7 +364,6 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
 
       // Apply mark to each affected node
       affectedNodes.forEach(({ node, startPos, endPos }) => {
-        // Calculate the overlap within this specific node
         const nodeStart = Math.max(0, adjustedStart - startPos)
         const nodeEnd = Math.min(node.textContent.length, adjustedEnd - startPos)
 
@@ -301,12 +377,14 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
     }
   }
 
-  // Apply mark to a portion of a text node
+  // Apply mark to a portion of a text node - REMOVED "already marked" check
   const applyMarkToNode = (node, startOffset, endOffset, id, color, type) => {
     try {
-      // Skip if already marked
-      if (node.parentElement?.closest('mark')) {
-        return
+      // Check if this exact range is already marked with the same annotation
+      const existingMark = node.parentElement
+      if (existingMark?.tagName === 'MARK' &&
+          existingMark.getAttribute(`data-${type}-id`) === String(id)) {
+        return // Skip exact duplicate
       }
 
       const range = document.createRange()
@@ -338,7 +416,6 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
     mark.style.transition = 'all 0.2s'
     mark.setAttribute(`data-${type}-id`, id)
 
-    // Add visual distinction for notes
     if (type === 'note') {
       mark.style.borderBottom = '2px dotted #9333EA'
       mark.style.cursor = 'help'
@@ -347,6 +424,9 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
 
     return mark
   }
+
+  // Process HTML with soft hyphens
+  const processedHtml = addSoftHyphens(htmlContent)
 
   return (
     <div
@@ -359,9 +439,15 @@ const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = 
         fontSize: `${fontSize}px`,
         lineHeight: '1.8',
         userSelect: 'text',
-        color: readingMode ? '#2d2d2d' : undefined
+        color: readingMode ? '#2d2d2d' : undefined,
+        WebkitHyphens: 'auto',
+        MozHyphens: 'auto',
+        msHyphens: 'auto',
+        hyphens: 'auto',
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word'
       }}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
+      dangerouslySetInnerHTML={{ __html: processedHtml }}
     />
   )
 })

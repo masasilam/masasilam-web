@@ -197,6 +197,8 @@ const LoginPage = () => {
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             required
             placeholder="username_anda"
+            autoCapitalize="off"
+            autoComplete="username"
           />
 
           <Input
@@ -206,6 +208,8 @@ const LoginPage = () => {
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             required
             placeholder="••••••••"
+            autoCapitalize="off"
+            autoComplete="current-password"
           />
 
           <Button
