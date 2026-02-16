@@ -141,7 +141,7 @@ const GenresPage = () => {
               Kategori Buku
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base md:text-lg lg:text-xl">
-              Jelajahi {genres.length} kategori dengan {totalBooks} buku berdasarkan genre favoritmu
+              Jelajahi {genres.length} kategori buku favoritmu
             </p>
           </header>
 

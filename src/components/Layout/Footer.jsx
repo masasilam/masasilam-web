@@ -18,6 +18,7 @@ const Footer = () => {
             <h3 className="font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Jelajahi</h3>
             <ul className="space-y-2 text-sm">
               <li><Link to="/buku" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Buku</Link></li>
+              <li><Link to="/film" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Film</Link></li>
               <li><Link to="/penulis" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Penulis</Link></li>
               <li><Link to="/kategori" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Kategori</Link></li>
               <li><Link to="/buku/terpopuler" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Terpopuler</Link></li>
@@ -79,6 +80,7 @@ const Footer = () => {
               <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-sm">Jelajahi</h3>
               <ul className="space-y-2 text-xs">
                 <li><Link to="/buku" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Buku</Link></li>
+                <li><Link to="/film" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Film</Link></li>
                 <li><Link to="/penulis" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Penulis</Link></li>
                 <li><Link to="/kategori" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Kategori</Link></li>
                 <li><Link to="/buku/terpopuler" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Terpopuler</Link></li>

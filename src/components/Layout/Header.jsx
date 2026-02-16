@@ -57,7 +57,7 @@ const Header = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleSearchKeyPress}
-                placeholder="Cari buku, penulis, atau kategori..."
+                placeholder="Cari buku, film, penulis, atau kategori..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ring-primary transition-all"
               />
             </div>
@@ -66,6 +66,7 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/buku" className="nav-link">Buku</Link>
+            <Link to="/film" className="nav-link">Film</Link>
             <Link to="/penulis" className="nav-link">Penulis</Link>
             <Link to="/kategori" className="nav-link">Kategori</Link>
 
@@ -127,7 +128,7 @@ const Header = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleSearchKeyPress}
-              placeholder="Cari buku..."
+              placeholder="Cari buku atau film..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ring-primary transition-all"
             />
           </div>
@@ -138,6 +139,7 @@ const Header = () => {
           <nav className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex flex-col gap-4">
               <Link to="/buku" className="nav-link">Buku</Link>
+              <Link to="/film" className="nav-link">Film</Link>
               <Link to="/penulis" className="nav-link">Penulis</Link>
               <Link to="/kategori" className="nav-link">Kategori</Link>
               {isAuthenticated ? (

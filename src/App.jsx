@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - Updated with Film Routes
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
@@ -10,14 +10,20 @@ import ProtectedRoute from './components/Auth/ProtectedRoute'
 import GuestRoute from './components/Auth/GuestRoute'
 import PublicLayout from './components/Layout/PublicLayout'
 import AuthLayout from './components/Layout/AuthLayout'
-import ReaderLayout from './components/Layout/ReaderLayout'
 
-// Public Pages
+// Book Pages
 import HomePage from './pages/HomePage'
 import BooksPage from './pages/BooksPage'
 import BookDetailPage from './pages/BookDetailPage'
 import TableOfContentsPage from './pages/TableOfContentsPage'
 import BookReviewsPage from './pages/BookReviewsPage'
+
+// Film Pages
+import FilmsPage from './pages/FilmsPage'
+import FilmDetailPage from './pages/FilmDetailPage'
+import FilmWatchPage from './pages/FilmWatchPage'
+import PersonDetailPage from './pages/PersonDetailPage'
+import CompanyDetailPage from './pages/CompanyDetailPage'
 
 // Metadata Pages
 import GenresPage from './pages/GenresPage'
@@ -78,10 +84,25 @@ function App() {
     <div className="app">
       <Routes>
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
+
+        {/* Book Routes */}
         <Route path="/buku" element={<PublicLayout><BooksPage /></PublicLayout>} />
         <Route path="/buku/terpopuler" element={<PublicLayout><PopularBooksPage /></PublicLayout>} />
         <Route path="/buku/terbaru" element={<PublicLayout><NewBooksPage /></PublicLayout>} />
         <Route path="/buku/rekomendasi" element={<PublicLayout><RecommendedBooksPage /></PublicLayout>} />
+        <Route path="/buku/:bookSlug/daftar-isi" element={<PublicLayout><TableOfContentsPage /></PublicLayout>} />
+        <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
+        <Route path="/buku/:bookSlug" element={<PublicLayout><BookDetailPage /></PublicLayout>} />
+        <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />
+
+        {/* Film Routes */}
+        <Route path="/film" element={<PublicLayout><FilmsPage /></PublicLayout>} />
+        <Route path="/film/:filmSlug" element={<PublicLayout><FilmDetailPage /></PublicLayout>} />
+        <Route path="/film/:filmSlug/tonton" element={<FilmWatchPage />} />
+        <Route path="/person/:personSlug" element={<PublicLayout><PersonDetailPage /></PublicLayout>} />
+        <Route path="/perusahaan/:companySlug" element={<PublicLayout><CompanyDetailPage /></PublicLayout>} />
+
+        {/* Search */}
         <Route path="/cari" element={<PublicLayout><SearchResultsPage /></PublicLayout>} />
 
         {/* Metadata Routes */}
@@ -89,12 +110,6 @@ function App() {
         <Route path="/kategori/:genreSlug" element={<PublicLayout><GenreDetailPage /></PublicLayout>} />
         <Route path="/penulis" element={<PublicLayout><AuthorsPage /></PublicLayout>} />
         <Route path="/penulis/:authorSlug" element={<PublicLayout><AuthorDetailPage /></PublicLayout>} />
-
-        {/* Book Routes */}
-        <Route path="/buku/:bookSlug/daftar-isi" element={<PublicLayout><TableOfContentsPage /></PublicLayout>} />
-        <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
-        <Route path="/buku/:bookSlug" element={<PublicLayout><BookDetailPage /></PublicLayout>} />
-        <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />
 
         {/* Static Pages */}
         <Route path="/tentang" element={<PublicLayout><AboutPage /></PublicLayout>} />
