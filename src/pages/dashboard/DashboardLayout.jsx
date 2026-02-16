@@ -1,16 +1,15 @@
 // ============================================
-// src/pages/dashboard/DashboardLayout.jsx - FIXED WITH PROFILE PICTURE
+// src/pages/dashboard/DashboardLayout.jsx - UPDATED WITH ADMIN PAGE
 // ============================================
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Library, History, BarChart3, Calendar, Award, Settings,
-  Target, Highlighter, Home, LogOut, User, Menu, X, Moon, Sun, BookOpen
+  Target, Highlighter, Home, LogOut, User, Menu, X, Moon, Sun, BookOpen, Database
 } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
-import { BookPlus } from 'lucide-react'
 
 const DashboardLayout = () => {
   const location = useLocation()
@@ -26,6 +25,7 @@ const DashboardLayout = () => {
     console.log('ProfilePictureUrl:', user?.profilePictureUrl)
     console.log('Username:', user?.username)
     console.log('FullName:', user?.fullName)
+    console.log('Roles:', user?.roles)
     console.groupEnd()
   }, [user])
 
@@ -58,13 +58,14 @@ const DashboardLayout = () => {
       { path: '/dasbor/target', icon: Target, label: 'Target' },
     ]
 
-    // Add admin menu for ADMIN users
+    // Add admin menu for ADMIN users - UPDATED PATH
     if (user?.roles?.includes('ADMIN')) {
       items.push({
-        path: '/dasbor/buku',
-        icon: BookPlus,
-        label: 'Kelola Buku',
-        adminOnly: true
+        path: '/dasbor/kelola',
+        icon: Database,
+        label: 'Kelola Perpustakaan',
+        adminOnly: true,
+        badge: 'Admin'
       })
     }
 
@@ -229,13 +230,28 @@ const DashboardLayout = () => {
                       to={item.path}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         active
-                          ? 'bg-primary text-white'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? item.adminOnly
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100'
+                            : 'bg-primary text-white'
+                          : item.adminOnly
+                            ? 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                       aria-current={active ? 'page' : undefined}
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-                      <span className="text-sm">{item.label}</span>
+                      <span className="text-sm flex-1">{item.label}</span>
+                      {item.badge && (
+                        <span className={`
+                          px-2 py-0.5 text-xs rounded-full font-medium
+                          ${active
+                            ? 'bg-white/20 text-current'
+                            : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                          }
+                        `}>
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
                   )
                 })}

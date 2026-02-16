@@ -1,5 +1,5 @@
 // ============================================
-// src/components/Film/FilmCard.jsx - LENGKAP DENGAN TRAILER BADGE
+// src/components/Film/FilmCard.jsx - LANDSCAPE FORMAT (16:9)
 // ============================================
 
 import { Link } from 'react-router-dom'
@@ -13,8 +13,8 @@ const FilmCard = ({ film }) => {
       to={`/film/${film.slug}`}
       className="group block bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700"
     >
-      {/* Poster Image with Play Overlay */}
-      <div className="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-700">
+      {/* Poster Image with Play Overlay - LANDSCAPE 16:9 */}
+      <div className="relative aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-700">
         {film.posterUrl ? (
           <img
             src={film.posterUrl}

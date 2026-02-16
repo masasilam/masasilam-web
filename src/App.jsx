@@ -66,7 +66,7 @@ import StatisticsPage from './pages/dashboard/StatisticsPage'
 import CalendarPage from './pages/dashboard/CalendarPage'
 import AchievementsPage from './pages/dashboard/AchievementsPage'
 import GoalsPage from './pages/dashboard/GoalsPage'
-import AdminBooksPage from './pages/dashboard/AdminBooksPage'
+import AdminPage from './pages/dashboard/AdminPage' // UPDATED: Changed from AdminBooksPage to AdminPage
 
 // Error Pages
 import NotFoundPage from './pages/NotFoundPage'
@@ -168,7 +168,9 @@ function App() {
           <Route path="pencapaian" element={<AchievementsPage />} />
           <Route path="target" element={<GoalsPage />} />
           <Route path="pengaturan" element={<SettingsPage />} />
-          <Route path="buku" element={<AdminBooksPage />} />
+          {/* UPDATED: Changed route path from "buku" to "kelola" to be more general */}
+          {/* This route now handles both books and films management */}
+          <Route path="kelola" element={<AdminPage />} />
         </Route>
         
         {/* Error Pages */}

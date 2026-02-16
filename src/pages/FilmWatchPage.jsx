@@ -28,7 +28,7 @@ export default function FilmWatchPage() {
   const containerRef = useRef(null)
   const hideTimeout = useRef(null)
   const currentTrackUrl = useRef(null)
-  const progressBarRef = useRef(null) // Tambahkan ref untuk progress bar
+  const progressBarRef = useRef(null)
 
   const [state, setState] = useState({
     playing: false,
@@ -197,31 +197,38 @@ export default function FilmWatchPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // PERBAIKAN: Global mouse/touch move dan up untuk drag
+  // FIXED: Improved global drag handling
   useEffect(() => {
-    const handleGlobalMouseMove = (e) => {
-      if (dragState.isDragging && progressBarRef.current) {
-        const rect = progressBarRef.current.getBoundingClientRect()
-        const x = Math.max(rect.left, Math.min(e.clientX, rect.right))
-        const percent = (x - rect.left) / rect.width
+    const updatePosition = (clientX) => {
+      if (!progressBarRef.current || !videoRef.current || !state.duration) return
 
-        if (videoRef.current && state.duration) {
-          videoRef.current.currentTime = percent * state.duration
-        }
+      const rect = progressBarRef.current.getBoundingClientRect()
+      const x = Math.max(rect.left, Math.min(clientX, rect.right))
+      const percent = (x - rect.left) / rect.width
+      const time = percent * state.duration
+
+      // Update video time
+      videoRef.current.currentTime = time
+
+      // Update hover state for tooltip
+      setHoverState({
+        isHovering: true,
+        time: time,
+        position: percent * 100
+      })
+    }
+
+    const handleGlobalMouseMove = (e) => {
+      if (dragState.isDragging) {
+        e.preventDefault()
+        updatePosition(e.clientX)
       }
     }
 
     const handleGlobalTouchMove = (e) => {
-      if (dragState.isDragging && progressBarRef.current) {
-        e.preventDefault() // Prevent scroll
-        const touch = e.touches[0]
-        const rect = progressBarRef.current.getBoundingClientRect()
-        const x = Math.max(rect.left, Math.min(touch.clientX, rect.right))
-        const percent = (x - rect.left) / rect.width
-
-        if (videoRef.current && state.duration) {
-          videoRef.current.currentTime = percent * state.duration
-        }
+      if (dragState.isDragging && e.touches[0]) {
+        e.preventDefault()
+        updatePosition(e.touches[0].clientX)
       }
     }
 
@@ -232,16 +239,19 @@ export default function FilmWatchPage() {
     }
 
     if (dragState.isDragging) {
-      window.addEventListener('mousemove', handleGlobalMouseMove)
-      window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
-      window.addEventListener('mouseup', handleGlobalUp)
-      window.addEventListener('touchend', handleGlobalUp)
+      // Use capture phase to ensure we get the events
+      window.addEventListener('mousemove', handleGlobalMouseMove, true)
+      window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false, capture: true })
+      window.addEventListener('mouseup', handleGlobalUp, true)
+      window.addEventListener('touchend', handleGlobalUp, true)
+      window.addEventListener('touchcancel', handleGlobalUp, true)
 
       return () => {
-        window.removeEventListener('mousemove', handleGlobalMouseMove)
-        window.removeEventListener('touchmove', handleGlobalTouchMove)
-        window.removeEventListener('mouseup', handleGlobalUp)
-        window.removeEventListener('touchend', handleGlobalUp)
+        window.removeEventListener('mousemove', handleGlobalMouseMove, true)
+        window.removeEventListener('touchmove', handleGlobalTouchMove, true)
+        window.removeEventListener('mouseup', handleGlobalUp, true)
+        window.removeEventListener('touchend', handleGlobalUp, true)
+        window.removeEventListener('touchcancel', handleGlobalUp, true)
       }
     }
   }, [dragState.isDragging, state.duration])
@@ -253,7 +263,7 @@ export default function FilmWatchPage() {
   }
 
   const togglePlay = (e) => {
-    // Jangan toggle play saat drag
+    // Don't toggle play when dragging
     if (dragState.isDragging) {
       e.stopPropagation()
       return
@@ -279,12 +289,14 @@ export default function FilmWatchPage() {
   }
 
   const handleProgressMouseDown = (e) => {
-    e.stopPropagation() // Prevent video click
+    e.preventDefault()
+    e.stopPropagation()
     setDragState({ isDragging: true })
     seekToPosition(e.clientX)
   }
 
   const handleProgressTouchStart = (e) => {
+    e.preventDefault()
     e.stopPropagation()
     setDragState({ isDragging: true })
     if (e.touches[0]) {
@@ -293,7 +305,7 @@ export default function FilmWatchPage() {
   }
 
   const handleProgressHover = (e) => {
-    if (!state.duration || !progressBarRef.current) return
+    if (dragState.isDragging || !state.duration || !progressBarRef.current) return
 
     const rect = progressBarRef.current.getBoundingClientRect()
     const hoverX = e.clientX - rect.left
@@ -686,21 +698,22 @@ export default function FilmWatchPage() {
             </div>
           )}
 
-          {/* Progress Bar */}
+          {/* Progress Bar - IMPROVED WITH BETTER TOUCH */}
           <div className="px-4 sm:px-6 pb-3">
             <div
               ref={progressBarRef}
-              className="relative h-1.5 sm:h-2 bg-white/20 rounded-full cursor-pointer hover:h-2 sm:hover:h-2.5 transition-all group select-none touch-none"
+              className="relative h-2 sm:h-2.5 bg-white/20 rounded-full cursor-pointer hover:h-2.5 sm:hover:h-3 transition-all group select-none"
               onMouseDown={handleProgressMouseDown}
               onMouseMove={handleProgressHover}
               onMouseLeave={handleProgressLeave}
               onTouchStart={handleProgressTouchStart}
+              style={{ touchAction: 'none' }}
             >
               <div
                 className="absolute h-full bg-red-600 rounded-full pointer-events-none transition-all"
                 style={{ width: `${progress}%` }}
               >
-                <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 bg-red-600 rounded-full shadow-lg transition-all ${
+                <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 bg-red-600 rounded-full shadow-lg transition-all ${
                   dragState.isDragging ? 'opacity-100 scale-150' : 'opacity-0 group-hover:opacity-100 group-hover:scale-125'
                 }`} />
               </div>

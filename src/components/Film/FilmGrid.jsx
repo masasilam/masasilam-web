@@ -1,5 +1,5 @@
 // ============================================
-// src/components/Film/FilmGrid.jsx - WARNA KONSISTEN
+// src/components/Film/FilmGrid.jsx - LANDSCAPE FORMAT
 // ============================================
 
 import FilmCard from './FilmCard'
@@ -25,7 +25,7 @@ const FilmGrid = ({ films, loading = false, emptyMessage = 'Tidak ada film ditem
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
       {films.map(film => (
         <FilmCard key={film.id} film={film} />
       ))}

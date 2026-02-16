@@ -29,8 +29,8 @@ const BookCard = memo(({ book }) => (
 ))
 
 const FilmCard = memo(({ film }) => (
-  <Link to={`/film/${film.slug || film.id}`} className="group flex-shrink-0 w-32 sm:w-40 lg:w-48">
-    <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 overflow-hidden mb-2 sm:mb-3 hover:shadow-2xl hover:border-primary transition-all duration-300 rounded-lg">
+  <Link to={`/film/${film.slug || film.id}`} className="group flex-shrink-0 w-48 sm:w-56 lg:w-64">
+    <div className="aspect-[16/9] bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 overflow-hidden mb-2 sm:mb-3 hover:shadow-2xl hover:border-primary transition-all duration-300 rounded-lg">
       {film.posterUrl ? (
         <img src={film.posterUrl} alt={film.judul} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
       ) : (

@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/FilmDetailPage.jsx - LENGKAP DENGAN TRAILER MODAL
+// src/pages/FilmDetailPage.jsx - LANDSCAPE POSTER (16:9)
 // ============================================
 
 import { useState } from 'react'
@@ -119,10 +119,11 @@ export default function FilmDetailPage() {
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* SIDEBAR - Poster */}
+            {/* SIDEBAR - Poster LANDSCAPE */}
             <aside className="lg:col-span-1">
               <div className="sticky top-24">
-                <div className="aspect-[2/3] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 shadow-lg">
+                {/* LANDSCAPE POSTER 16:9 */}
+                <div className="aspect-[16/9] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 shadow-lg">
                   {film.posterUrl ? (
                     <img
                       src={film.posterUrl}
