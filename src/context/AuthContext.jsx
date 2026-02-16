@@ -1,5 +1,5 @@
 // ============================================
-// src/context/AuthContext.jsx - WITH DEBUGGING
+// src/context/AuthContext.jsx - FINAL FIX
 // ============================================
 
 import { createContext, useState, useEffect } from 'react'
@@ -89,16 +89,35 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Update user
+  // ✅ FIXED: Update user dengan proper field handling
   const updateUser = (updatedUserData) => {
     console.log('🔵 AuthContext.updateUser() called')
+    console.log('🔵 Current user:', user)
+    console.log('🔵 Update data:', updatedUserData)
 
     try {
-      const newUserData = { ...user, ...updatedUserData }
+      // 🔥 CRITICAL FIX: Merge dengan benar, prioritaskan data baru
+      const newUserData = {
+        ...user,
+        ...updatedUserData,
+        // 🔥 Jika ada fullName di update, hapus name lama
+        ...(updatedUserData.fullName && { name: undefined }),
+      }
+
+      // 🔥 Clean undefined values
+      Object.keys(newUserData).forEach(key => {
+        if (newUserData[key] === undefined) {
+          delete newUserData[key]
+        }
+      })
+
+      console.log('🔥 New user data (cleaned):', newUserData)
+
       setUser(newUserData)
       localStorage.setItem('user', JSON.stringify(newUserData))
 
       console.log('✅ AuthContext: User updated')
+      console.log('✅ localStorage updated:', JSON.parse(localStorage.getItem('user')))
     } catch (error) {
       console.error('❌ AuthContext: Error updating user:', error)
     }

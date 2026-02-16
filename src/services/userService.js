@@ -1,32 +1,44 @@
-// ============================================
-// src/services/userService.js - UPDATED
-// ============================================
-
+// src/services/userService.js
 import api from './api'
 
 export const userService = {
-  // Get all users (for statistics)
+  // Get all users (for statistics/admin)
   getAllUsers: async () => {
     const response = await api.get('/user')
     return response.data
   },
 
-  // Get user profile
-  getProfile: async () => {
-    const response = await api.get('/user/profile')
+  // Get user by ID
+  getUserById: async (userId) => {
+    const response = await api.get(`/user/${userId}`)
     return response.data
   },
 
   // Update user profile
-  updateProfile: async (profileData) => {
-    const response = await api.put('/user/profile', profileData)
+  updateProfile: async (userId, profileData) => {
+    const response = await api.put(`/user/${userId}`, profileData)
     return response.data
   },
 
-  // Upload profile picture
-  uploadProfilePicture: async (file) => {
+  // Change password
+  changePassword: async (userId, passwordData) => {
+    const response = await api.put(`/user/${userId}/change-password`, passwordData)
+    return response.data
+  },
+
+  // Delete user account
+  deleteAccount: async (userId, hardDelete = false) => {
+    const response = await api.delete(`/user/${userId}`, {
+      params: { hardDelete }
+    })
+    return response.data
+  },
+
+  // ✅ FIXED: Upload profile picture dengan userId sebagai query param
+  uploadProfilePicture: async (file, userId) => {
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('userId', userId)
 
     const response = await api.post('/user/profile-picture', formData, {
       headers: {

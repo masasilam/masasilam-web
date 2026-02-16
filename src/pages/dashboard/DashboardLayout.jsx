@@ -1,4 +1,7 @@
-// src/pages/dashboard/DashboardLayout.jsx
+// ============================================
+// src/pages/dashboard/DashboardLayout.jsx - FIXED WITH PROFILE PICTURE
+// ============================================
+
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Library, History, BarChart3, Calendar, Award, Settings,
@@ -15,6 +18,16 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // 🔥 CRITICAL DEBUG: Monitor user changes
+  useEffect(() => {
+    console.group('🔵 DashboardLayout: User State')
+    console.log('User object:', user)
+    console.log('ProfilePictureUrl:', user?.profilePictureUrl)
+    console.log('Username:', user?.username)
+    console.log('FullName:', user?.fullName)
+    console.groupEnd()
+  }, [user])
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -33,35 +46,35 @@ const DashboardLayout = () => {
     }
   }, [sidebarOpen])
 
-    const menuItems = useMemo(() => {
-      const items = [
-        { path: '/dasbor', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-        { path: '/dasbor/perpustakaan', icon: Library, label: 'Perpustakaan' },
-        { path: '/dasbor/riwayat', icon: History, label: 'Riwayat' },
-        { path: '/dasbor/anotasi', icon: Highlighter, label: 'Anotasi' },
-        { path: '/dasbor/statistik', icon: BarChart3, label: 'Statistik' },
-        { path: '/dasbor/kalender', icon: Calendar, label: 'Kalender' },
-        { path: '/dasbor/pencapaian', icon: Award, label: 'Pencapaian' },
-        { path: '/dasbor/target', icon: Target, label: 'Target' },
-      ]
+  const menuItems = useMemo(() => {
+    const items = [
+      { path: '/dasbor', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+      { path: '/dasbor/perpustakaan', icon: Library, label: 'Perpustakaan' },
+      { path: '/dasbor/riwayat', icon: History, label: 'Riwayat' },
+      { path: '/dasbor/anotasi', icon: Highlighter, label: 'Anotasi' },
+      { path: '/dasbor/statistik', icon: BarChart3, label: 'Statistik' },
+      { path: '/dasbor/kalender', icon: Calendar, label: 'Kalender' },
+      { path: '/dasbor/pencapaian', icon: Award, label: 'Pencapaian' },
+      { path: '/dasbor/target', icon: Target, label: 'Target' },
+    ]
 
-      // Add admin menu for ADMIN users
-      if (user?.roles?.includes('ADMIN')) {
-        items.push({
-          path: '/dasbor/buku',
-          icon: BookPlus,
-          label: 'Kelola Buku',
-          adminOnly: true
-        })
-      }
+    // Add admin menu for ADMIN users
+    if (user?.roles?.includes('ADMIN')) {
+      items.push({
+        path: '/dasbor/buku',
+        icon: BookPlus,
+        label: 'Kelola Buku',
+        adminOnly: true
+      })
+    }
 
-      return items
-    }, [user])
+    return items
+  }, [user])
 
   const bottomMenuItems = useMemo(() => [
     { path: '/', icon: Home, label: 'Beranda', external: true },
     { path: '/buku', icon: BookOpen, label: 'Koleksi Buku', external: true },
-    { path: '/dasbor/pengaturan', icon: Settings, label: 'Pengaturan', comingSoon: true },
+    { path: '/dasbor/pengaturan', icon: Settings, label: 'Pengaturan' },
   ], [])
 
   const isActive = useCallback((path, exact = false) => {
@@ -85,9 +98,14 @@ const DashboardLayout = () => {
     setSidebarOpen(prev => !prev)
   }, [])
 
-  const handleComingSoonClick = useCallback((label) => {
-    alert(`Fitur ${label} segera hadir!`)
-  }, [])
+  // Helper untuk get initial
+  const getInitial = useCallback(() => {
+    const name = user?.fullName || user?.name || user?.username || 'U'
+    return name.charAt(0).toUpperCase()
+  }, [user])
+
+  // 🔥 DEBUG
+  console.log('🔍 DashboardLayout Render - profilePictureUrl:', user?.profilePictureUrl)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -105,14 +123,35 @@ const DashboardLayout = () => {
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
+            {/* 🔥 FIX: Show profile picture in header */}
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
-                <User className="w-5 h-5 text-white" />
-              </div>
+              {(() => {
+                const hasUrl = !!user?.profilePictureUrl
+                console.log(`🖼️ Header Avatar - hasUrl=${hasUrl}, url=${user?.profilePictureUrl}`)
+
+                return hasUrl ? (
+                  <img
+                    key={user.profilePictureUrl}
+                    src={user.profilePictureUrl}
+                    alt={user.username || 'User'}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-primary/50 flex-shrink-0"
+                    onLoad={() => console.log('✅ Dashboard header - Profile picture loaded!')}
+                    onError={(e) => {
+                      console.error('❌ Dashboard header - Failed to load:', user.profilePictureUrl)
+                      e.target.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
+                    {getInitial()}
+                  </div>
+                )
+              })()}
+
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-sm">Dashboard</h1>
                 <p className="text-xs text-gray-500 truncate max-w-[150px]">
-                  Halo, {user?.name || user?.username || 'Pengguna'}
+                  Halo, {user?.fullName || user?.name || user?.username || 'Pengguna'}
                 </p>
               </div>
             </div>
@@ -209,20 +248,7 @@ const DashboardLayout = () => {
                 </h3>
                 {bottomMenuItems.map((item) => {
                   const Icon = item.icon
-
-                  // Handle coming soon items
-                  if (item.comingSoon) {
-                    return (
-                      <button
-                        key={item.path}
-                        onClick={() => handleComingSoonClick(item.label)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full text-left touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                      >
-                        <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-                        <span className="text-sm">{item.label}</span>
-                      </button>
-                    )
-                  }
+                  const active = isActive(item.path)
 
                   // Handle external navigation
                   if (item.external) {
@@ -243,7 +269,12 @@ const DashboardLayout = () => {
                     <Link
                       key={item.path}
                       to={item.path}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        active
+                          ? 'bg-primary text-white'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                      aria-current={active ? 'page' : undefined}
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
                       <span className="text-sm">{item.label}</span>

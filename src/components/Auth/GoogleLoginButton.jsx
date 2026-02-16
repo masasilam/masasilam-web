@@ -1,5 +1,5 @@
 // ============================================
-// src/components/Auth/GoogleLoginButton.jsx
+// src/components/Auth/GoogleLoginButton.jsx - FINAL VERSION
 // ============================================
 
 import { useEffect, useRef } from 'react'
@@ -20,7 +20,6 @@ const GoogleLoginButton = ({
   const resizeTimeoutRef = useRef(null)
 
   useEffect(() => {
-    // Load Google Identity Services script
     const loadGoogleScript = () => {
       if (document.getElementById('google-identity-script')) {
         initializeGoogleSignIn()
@@ -42,7 +41,6 @@ const GoogleLoginButton = ({
         return
       }
 
-      // Use centralized config
       const GOOGLE_CLIENT_ID = config.googleClientId
 
       if (!GOOGLE_CLIENT_ID) {
@@ -60,10 +58,7 @@ const GoogleLoginButton = ({
           cancel_on_tap_outside: true,
         })
 
-        // Initial render
         renderButton()
-
-        // Re-render on window resize (debounced)
         window.addEventListener('resize', handleResize)
       } catch (error) {
         console.error('❌ Error initializing Google Sign-In:', error)
@@ -74,13 +69,8 @@ const GoogleLoginButton = ({
       const buttonContainer = buttonContainerRef.current
       if (!buttonContainer || !window.google) return
 
-      // Clear existing button
       buttonContainer.innerHTML = ''
-
-      // Get container width dynamically
       const containerWidth = buttonContainer.offsetWidth
-
-      // Google accepts width between 200-400px
       const buttonWidth = Math.min(Math.max(containerWidth, 200), 400)
 
       if (config.isDevelopment) {
@@ -105,7 +95,6 @@ const GoogleLoginButton = ({
     }
 
     const handleResize = () => {
-      // Debounce resize events
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current)
       }
@@ -127,27 +116,38 @@ const GoogleLoginButton = ({
 
         if (result && result.data) {
           console.log('✅ Login data received:', {
+            id: result.data.id,
             username: result.data.username,
-            name: result.data.name,
-            roles: result.data.roles,
+            email: result.data.email,
+            profilePictureUrl: result.data.profilePictureUrl,
             hasToken: !!result.data.token,
             hasRefreshToken: !!result.data.refreshToken
           })
 
-          // Save auth data to context + localStorage
+          // ✅ FIXED: Save ALL user data from backend
           await login(
             {
+              id: result.data.id,
               username: result.data.username,
-              name: result.data.name,
+              email: result.data.email,
               roles: result.data.roles,
+              fullName: result.data.fullName || result.data.name,
+              bio: result.data.bio,
+              profilePictureUrl: result.data.profilePictureUrl, // ✅ Now available!
+              emailNotifications: result.data.emailNotifications,
+              level: result.data.level,
+              totalBooksRead: result.data.totalBooksRead,
+              readingStreakDays: result.data.readingStreakDays,
+              contributedBooksCount: result.data.contributedBooksCount,
+              averageRating: result.data.averageRating,
+              experiencePoints: result.data.experiencePoints,
             },
             result.data.token,
             result.data.refreshToken
           )
 
-          console.log('✅ Auth context updated')
+          console.log('✅ Auth context updated with profilePictureUrl:', result.data.profilePictureUrl)
 
-          // Wait for state to update
           setTimeout(() => {
             if (onSuccess) {
               console.log('🔵 Calling onSuccess callback')
@@ -181,7 +181,6 @@ const GoogleLoginButton = ({
 
     loadGoogleScript()
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize)
       if (resizeTimeoutRef.current) {
@@ -197,7 +196,6 @@ const GoogleLoginButton = ({
         className="flex justify-center w-full min-h-[44px]"
       />
 
-      {/* Fallback for browsers without JavaScript */}
       <noscript>
         <div className="text-center text-sm text-gray-600 dark:text-gray-400">
           JavaScript diperlukan untuk login dengan Google

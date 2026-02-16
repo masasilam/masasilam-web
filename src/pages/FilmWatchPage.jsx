@@ -27,7 +27,8 @@ export default function FilmWatchPage() {
   const videoRef = useRef(null)
   const containerRef = useRef(null)
   const hideTimeout = useRef(null)
-  const currentTrackUrl = useRef(null) // Track current subtitle URL
+  const currentTrackUrl = useRef(null)
+  const progressBarRef = useRef(null) // Tambahkan ref untuk progress bar
 
   const [state, setState] = useState({
     playing: false,
@@ -54,7 +55,7 @@ export default function FilmWatchPage() {
   })
 
   const [subtitleState, setSubtitleState] = useState({
-    language: 'en', // 'en' or 'id'
+    language: 'en',
     translating: false,
     translatedUrl: null,
     error: null,
@@ -78,7 +79,6 @@ export default function FilmWatchPage() {
     enabled: !!film
   })
 
-  // Set initial quality
   useEffect(() => {
     if (videoInfo?.qualities?.length && !state.selectedQuality) {
       const best = [...videoInfo.qualities].sort((a, b) => (b.width || 0) - (a.width || 0))[0]
@@ -86,7 +86,6 @@ export default function FilmWatchPage() {
     }
   }, [videoInfo, state.selectedQuality])
 
-  // Video event listeners
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -122,25 +121,22 @@ export default function FilmWatchPage() {
     }
   }, [])
 
-  // Subtitle control
   useEffect(() => {
     const video = videoRef.current
     if (!video?.textTracks?.[0]) return
     video.textTracks[0].mode = state.subtitles ? 'showing' : 'hidden'
   }, [state.subtitles])
 
-  // Fullscreen detection
   useEffect(() => {
     const handleFullscreen = () => setState(s => ({ ...s, fullscreen: !!document.fullscreenElement }))
     document.addEventListener('fullscreenchange', handleFullscreen)
     return () => document.removeEventListener('fullscreenchange', handleFullscreen)
   }, [])
 
-  // Auto-hide controls
   useEffect(() => {
     if (hideTimeout.current) clearTimeout(hideTimeout.current)
 
-    if (state.playing && state.showControls) {
+    if (state.playing && state.showControls && !dragState.isDragging) {
       hideTimeout.current = setTimeout(() => {
         setState(s => ({ ...s, showControls: false }))
       }, 3000)
@@ -149,9 +145,8 @@ export default function FilmWatchPage() {
     return () => {
       if (hideTimeout.current) clearTimeout(hideTimeout.current)
     }
-  }, [state.playing, state.showControls])
+  }, [state.playing, state.showControls, dragState.isDragging])
 
-  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e) => {
       const video = videoRef.current
@@ -202,97 +197,109 @@ export default function FilmWatchPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Global mouse up for progress drag
+  // PERBAIKAN: Global mouse/touch move dan up untuk drag
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseMove = (e) => {
+      if (dragState.isDragging && progressBarRef.current) {
+        const rect = progressBarRef.current.getBoundingClientRect()
+        const x = Math.max(rect.left, Math.min(e.clientX, rect.right))
+        const percent = (x - rect.left) / rect.width
+
+        if (videoRef.current && state.duration) {
+          videoRef.current.currentTime = percent * state.duration
+        }
+      }
+    }
+
+    const handleGlobalTouchMove = (e) => {
+      if (dragState.isDragging && progressBarRef.current) {
+        e.preventDefault() // Prevent scroll
+        const touch = e.touches[0]
+        const rect = progressBarRef.current.getBoundingClientRect()
+        const x = Math.max(rect.left, Math.min(touch.clientX, rect.right))
+        const percent = (x - rect.left) / rect.width
+
+        if (videoRef.current && state.duration) {
+          videoRef.current.currentTime = percent * state.duration
+        }
+      }
+    }
+
+    const handleGlobalUp = () => {
       if (dragState.isDragging) {
         setDragState({ isDragging: false })
       }
     }
 
-    window.addEventListener('mouseup', handleGlobalMouseUp)
-    window.addEventListener('touchend', handleGlobalMouseUp)
+    if (dragState.isDragging) {
+      window.addEventListener('mousemove', handleGlobalMouseMove)
+      window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+      window.addEventListener('mouseup', handleGlobalUp)
+      window.addEventListener('touchend', handleGlobalUp)
 
-    return () => {
-      window.removeEventListener('mouseup', handleGlobalMouseUp)
-      window.removeEventListener('touchend', handleGlobalMouseUp)
+      return () => {
+        window.removeEventListener('mousemove', handleGlobalMouseMove)
+        window.removeEventListener('touchmove', handleGlobalTouchMove)
+        window.removeEventListener('mouseup', handleGlobalUp)
+        window.removeEventListener('touchend', handleGlobalUp)
+      }
     }
-  }, [dragState.isDragging])
+  }, [dragState.isDragging, state.duration])
 
   const handleMouseMove = () => {
-    setState(s => ({ ...s, showControls: true }))
+    if (!dragState.isDragging) {
+      setState(s => ({ ...s, showControls: true }))
+    }
   }
 
-  const togglePlay = () => {
-    // Jika controls hidden, klik pertama munculkan controls dulu
+  const togglePlay = (e) => {
+    // Jangan toggle play saat drag
+    if (dragState.isDragging) {
+      e.stopPropagation()
+      return
+    }
+
     if (!state.showControls) {
       setState(s => ({ ...s, showControls: true }))
       return
     }
 
-    // Jika controls sudah visible, baru toggle play/pause
     const video = videoRef.current
     if (!video) return
     video.paused ? video.play() : video.pause()
   }
 
-  const handleProgressClick = (e) => {
-    const video = videoRef.current
-    if (!video || !state.duration) return
+  const seekToPosition = (clientX) => {
+    if (!progressBarRef.current || !videoRef.current || !state.duration) return
 
-    const rect = e.currentTarget.getBoundingClientRect()
-    const percent = (e.clientX - rect.left) / rect.width
-    video.currentTime = percent * state.duration
+    const rect = progressBarRef.current.getBoundingClientRect()
+    const x = Math.max(rect.left, Math.min(clientX, rect.right))
+    const percent = (x - rect.left) / rect.width
+    videoRef.current.currentTime = percent * state.duration
   }
 
   const handleProgressMouseDown = (e) => {
+    e.stopPropagation() // Prevent video click
     setDragState({ isDragging: true })
-    handleProgressClick(e)
-  }
-
-  const handleProgressMouseMove = (e) => {
-    if (dragState.isDragging) {
-      handleProgressClick(e)
-    }
-    handleProgressHover(e)
-  }
-
-  const handleProgressMouseUp = () => {
-    setDragState({ isDragging: false })
+    seekToPosition(e.clientX)
   }
 
   const handleProgressTouchStart = (e) => {
+    e.stopPropagation()
     setDragState({ isDragging: true })
-    const touch = e.touches[0]
-    const rect = e.currentTarget.getBoundingClientRect()
-    const percent = (touch.clientX - rect.left) / rect.width
-    if (videoRef.current && state.duration) {
-      videoRef.current.currentTime = percent * state.duration
+    if (e.touches[0]) {
+      seekToPosition(e.touches[0].clientX)
     }
-  }
-
-  const handleProgressTouchMove = (e) => {
-    if (!dragState.isDragging) return
-    const touch = e.touches[0]
-    const rect = e.currentTarget.getBoundingClientRect()
-    const percent = (touch.clientX - rect.left) / rect.width
-    if (videoRef.current && state.duration) {
-      videoRef.current.currentTime = percent * state.duration
-    }
-  }
-
-  const handleProgressTouchEnd = () => {
-    setDragState({ isDragging: false })
   }
 
   const handleProgressHover = (e) => {
-    if (!state.duration) return
+    if (!state.duration || !progressBarRef.current) return
 
-    const rect = e.currentTarget.getBoundingClientRect()
+    const rect = progressBarRef.current.getBoundingClientRect()
     const hoverX = e.clientX - rect.left
-    const percent = hoverX / rect.width
+    const percent = Math.max(0, Math.min(1, hoverX / rect.width))
     const time = percent * state.duration
-    const position = (hoverX / rect.width) * 100
+    const position = percent * 100
 
     setHoverState({
       isHovering: true,
@@ -302,11 +309,13 @@ export default function FilmWatchPage() {
   }
 
   const handleProgressLeave = () => {
-    setHoverState({
-      isHovering: false,
-      time: 0,
-      position: 0
-    })
+    if (!dragState.isDragging) {
+      setHoverState({
+        isHovering: false,
+        time: 0,
+        position: 0
+      })
+    }
   }
 
   const formatTime = (seconds) => {
@@ -341,41 +350,35 @@ export default function FilmWatchPage() {
     setSubtitleState(s => ({ ...s, translating: true, error: null }))
 
     try {
-      // Fetch original subtitle
       const response = await fetch(subtitleUrl)
       const vttText = await response.text()
 
       console.log('Original VTT preview:', vttText.substring(0, 300))
 
-      // Parse VTT - IMPROVED PARSING
       const lines = vttText.split('\n')
       const textToTranslate = []
-      const vttStructure = [] // Menyimpan struktur lengkap VTT
+      const vttStructure = []
 
       let i = 0
       while (i < lines.length) {
         const line = lines[i].trim()
 
-        // Skip WEBVTT header and NOTE lines
         if (line.startsWith('WEBVTT') || line.startsWith('NOTE')) {
           vttStructure.push({ type: 'header', content: line })
           i++
           continue
         }
 
-        // Empty line
         if (line === '') {
           vttStructure.push({ type: 'empty', content: '' })
           i++
           continue
         }
 
-        // Timestamp line (contains -->)
         if (line.includes('-->')) {
           vttStructure.push({ type: 'timestamp', content: line })
           i++
 
-          // Next line(s) should be subtitle text
           const subtitleLines = []
           while (i < lines.length && lines[i].trim() !== '' && !lines[i].includes('-->')) {
             const textLine = lines[i].trim()
@@ -394,7 +397,6 @@ export default function FilmWatchPage() {
           continue
         }
 
-        // Cue identifier (number)
         if (line.match(/^\d+$/)) {
           vttStructure.push({ type: 'cue', content: line })
           i++
@@ -405,27 +407,19 @@ export default function FilmWatchPage() {
       }
 
       console.log(`Found ${textToTranslate.length} subtitle lines to translate`)
-      console.log('VTT structure entries:', vttStructure.length)
-      console.log('Sample texts to translate:', textToTranslate.slice(0, 5))
 
-      // Show progress
       setSubtitleState(s => ({ ...s, progress: 10 }))
 
-      // Batch translate all text at once
       const translatedTexts = await translateBatch(textToTranslate)
 
       console.log(`Received ${translatedTexts.length} translated lines`)
 
-      // Check for mismatch
       if (translatedTexts.length !== textToTranslate.length) {
         console.warn(`⚠️ MISMATCH: Expected ${textToTranslate.length} translations, got ${translatedTexts.length}`)
-        console.warn('This might cause subtitle sync issues!')
       }
 
-      // Update progress
       setSubtitleState(s => ({ ...s, progress: 90 }))
 
-      // Rebuild VTT with translated text
       const rebuiltLines = []
       let translationIndex = 0
 
@@ -435,18 +429,15 @@ export default function FilmWatchPage() {
         } else if (entry.type === 'empty') {
           rebuiltLines.push('')
         } else if (entry.type === 'text') {
-          // Get number of original lines
           const originalLines = entry.content.split('\n')
           const originalLineCount = originalLines.length
 
-          // Get corresponding translated lines
           const translatedLines = []
           for (let j = 0; j < originalLineCount; j++) {
             if (translationIndex < translatedTexts.length) {
               translatedLines.push(translatedTexts[translationIndex])
               translationIndex++
             } else {
-              // Fallback to original if translation missing
               console.warn(`Missing translation for line ${translationIndex}, using original`)
               translatedLines.push(originalLines[j] || '')
             }
@@ -460,7 +451,6 @@ export default function FilmWatchPage() {
 
       console.log('Translated VTT preview:', finalVtt.substring(0, 500))
 
-      // Create blob URL for translated subtitle
       const blob = new Blob([finalVtt], { type: 'text/vtt; charset=utf-8' })
       const url = URL.createObjectURL(blob)
 
@@ -472,7 +462,6 @@ export default function FilmWatchPage() {
         progress: 0
       })
 
-      // Reload video tracks
       reloadSubtitleTrack(url)
 
       console.log('Translation complete!')
@@ -492,7 +481,6 @@ export default function FilmWatchPage() {
     try {
       console.log('Sending to translation API:', texts.length, 'lines')
 
-      // Call backend translation endpoint
       const response = await fetch(`${config.apiBaseUrl}/translate/batch`, {
         method: 'POST',
         headers: {
@@ -521,7 +509,6 @@ export default function FilmWatchPage() {
 
     } catch (error) {
       console.error('Translation batch failed:', error)
-      // Fallback to original texts
       return texts
     }
   }
@@ -532,18 +519,15 @@ export default function FilmWatchPage() {
 
     console.log('Reloading subtitle track with new URL:', newUrl)
 
-    // Revoke previous blob URL to prevent memory leak
     if (currentTrackUrl.current && currentTrackUrl.current.startsWith('blob:')) {
       URL.revokeObjectURL(currentTrackUrl.current)
     }
     currentTrackUrl.current = newUrl
 
-    // Remove all existing text tracks imperatively (not through React)
     while (video.firstChild) {
       video.removeChild(video.firstChild)
     }
 
-    // Add new track imperatively
     const track = document.createElement('track')
     track.kind = 'subtitles'
     track.src = newUrl
@@ -555,7 +539,6 @@ export default function FilmWatchPage() {
 
     console.log('New track added:', track.src)
 
-    // Wait for track to load, then enable it
     track.addEventListener('load', () => {
       console.log('Track loaded successfully')
       if (video.textTracks[0]) {
@@ -564,7 +547,6 @@ export default function FilmWatchPage() {
       }
     })
 
-    // Fallback: force enable after short delay
     setTimeout(() => {
       if (video.textTracks[0]) {
         video.textTracks[0].mode = state.subtitles ? 'showing' : 'hidden'
@@ -612,7 +594,6 @@ export default function FilmWatchPage() {
   const subtitleUrl = film.subtitleUrl ? `${config.apiBaseUrl}/films/${filmSlug}/subtitle` : null
   const progress = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0
 
-  // Load initial subtitle on mount
   useEffect(() => {
     if (subtitleUrl && videoRef.current && !currentTrackUrl.current) {
       console.log('Loading initial subtitle:', subtitleUrl)
@@ -640,9 +621,7 @@ export default function FilmWatchPage() {
           onClick={togglePlay}
           playsInline
           preload="metadata"
-        >
-          {/* Tracks will be managed imperatively via reloadSubtitleTrack */}
-        </video>
+        />
 
         {/* Buffering */}
         {state.buffering && (
@@ -710,34 +689,31 @@ export default function FilmWatchPage() {
           {/* Progress Bar */}
           <div className="px-4 sm:px-6 pb-3">
             <div
-              className="relative h-1.5 sm:h-2 bg-white/20 rounded-full cursor-pointer hover:h-2 sm:hover:h-2.5 transition-all group select-none"
+              ref={progressBarRef}
+              className="relative h-1.5 sm:h-2 bg-white/20 rounded-full cursor-pointer hover:h-2 sm:hover:h-2.5 transition-all group select-none touch-none"
               onMouseDown={handleProgressMouseDown}
-              onMouseMove={handleProgressMouseMove}
-              onMouseUp={handleProgressMouseUp}
+              onMouseMove={handleProgressHover}
               onMouseLeave={handleProgressLeave}
               onTouchStart={handleProgressTouchStart}
-              onTouchMove={handleProgressTouchMove}
-              onTouchEnd={handleProgressTouchEnd}
             >
               <div
                 className="absolute h-full bg-red-600 rounded-full pointer-events-none transition-all"
                 style={{ width: `${progress}%` }}
               >
-                <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 bg-red-600 rounded-full shadow-lg transition-opacity ${
-                  dragState.isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover:opacity-100'
+                <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 bg-red-600 rounded-full shadow-lg transition-all ${
+                  dragState.isDragging ? 'opacity-100 scale-150' : 'opacity-0 group-hover:opacity-100 group-hover:scale-125'
                 }`} />
               </div>
 
               {/* Hover Time Tooltip */}
-              {hoverState.isHovering && (
+              {(hoverState.isHovering || dragState.isDragging) && (
                 <div
-                  className="absolute bottom-full mb-3 -translate-x-1/2 pointer-events-none"
+                  className="absolute bottom-full mb-3 -translate-x-1/2 pointer-events-none z-50"
                   style={{ left: `${hoverState.position}%` }}
                 >
-                  <div className="bg-black/90 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded shadow-xl border border-white/10">
+                  <div className="bg-black/90 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded shadow-xl border border-white/10 whitespace-nowrap">
                     {formatTime(hoverState.time)}
                   </div>
-                  {/* Arrow */}
                   <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/90" />
                 </div>
               )}
@@ -799,13 +775,11 @@ export default function FilmWatchPage() {
                 {formatTime(state.currentTime)} / {formatTime(state.duration)}
               </div>
 
-              {/* Spacer - hide on mobile, show on desktop to push items right */}
               <div className="hidden sm:flex flex-1 min-w-0" />
 
               {/* Subtitles */}
               {subtitleUrl && (
                 <div className="flex items-center gap-2">
-                  {/* Subtitle Toggle */}
                   <button
                     onClick={() => setState(s => ({ ...s, subtitles: !s.subtitles }))}
                     className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg transition-colors ${
@@ -816,7 +790,6 @@ export default function FilmWatchPage() {
                     <span className="text-xs sm:text-sm hidden md:inline">{state.subtitles ? 'ON' : 'OFF'}</span>
                   </button>
 
-                  {/* Language Selector */}
                   <div className="flex items-center bg-white/10 rounded-lg overflow-hidden">
                     <button
                       onClick={switchToOriginalSubtitle}

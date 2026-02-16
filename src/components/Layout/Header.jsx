@@ -1,9 +1,8 @@
 // ============================================
-// src/components/Layout/Header.jsx - REFACTORED VERSION
-// Menggunakan CSS Variables seperti BooksPage
+// src/components/Layout/Header.jsx - WITH DETAILED DEBUG
 // ============================================
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, Moon, Search, Sun, User, X } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
@@ -17,10 +16,23 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // 🔥 CRITICAL DEBUG: Monitor user changes
+  useEffect(() => {
+    console.group('🔵 Header: User State Changed')
+    console.log('User object:', user)
+    console.log('User keys:', user ? Object.keys(user) : 'null')
+    console.log('ProfilePictureUrl:', user?.profilePictureUrl)
+    console.log('FullName:', user?.fullName)
+    console.log('Username:', user?.username)
+    console.log('isAuthenticated:', isAuthenticated)
+    console.groupEnd()
+  }, [user, isAuthenticated])
+
   const handleSearch = () => {
     if (searchQuery.trim()) {
       navigate(`/cari?q=${encodeURIComponent(searchQuery)}`)
       setSearchQuery('')
+      setMobileMenuOpen(false)
     }
   }
 
@@ -34,6 +46,14 @@ const Header = () => {
     await logout()
     navigate('/')
   }
+
+  const getInitial = () => {
+    const name = user?.fullName || user?.name || user?.username || 'U'
+    return name.charAt(0).toUpperCase()
+  }
+
+  // 🔥 DEBUG: Inline render check
+  console.log('🔍 Header Render - user?.profilePictureUrl:', user?.profilePictureUrl)
 
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 transition-colors">
@@ -80,9 +100,33 @@ const Header = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                <Link to="/dasbor" className="nav-link flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  <span>{user?.username}</span>
+                <Link
+                  to="/dasbor"
+                  className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                >
+                  {/* 🔥 CRITICAL DEBUG */}
+                  {(() => {
+                    const hasUrl = !!user?.profilePictureUrl
+                    console.log(`🖼️ Rendering avatar: hasUrl=${hasUrl}, url=${user?.profilePictureUrl}`)
+                    return hasUrl ? (
+                      <img
+                        key={user.profilePictureUrl}
+                        src={user.profilePictureUrl}
+                        alt={user.username || 'User'}
+                        className="w-8 h-8 rounded-full object-cover border-2 border-primary/50 hover:border-primary transition-colors"
+                        onLoad={() => console.log('✅ Profile picture loaded successfully!')}
+                        onError={(e) => {
+                          console.error('❌ Failed to load profile picture:', user.profilePictureUrl)
+                          e.target.style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform">
+                        {getInitial()}
+                      </div>
+                    )
+                  })()}
+                  <span className="font-medium">{user?.username}</span>
                 </Link>
                 <Button variant="secondary" size="sm" onClick={handleLogout}>
                   Keluar
@@ -138,23 +182,70 @@ const Header = () => {
         {mobileMenuOpen && (
           <nav className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex flex-col gap-4">
-              <Link to="/buku" className="nav-link">Buku</Link>
-              <Link to="/film" className="nav-link">Film</Link>
-              <Link to="/penulis" className="nav-link">Penulis</Link>
-              <Link to="/kategori" className="nav-link">Kategori</Link>
+              <Link to="/buku" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
+                Buku
+              </Link>
+              <Link to="/film" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
+                Film
+              </Link>
+              <Link to="/penulis" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
+                Penulis
+              </Link>
+              <Link to="/kategori" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
+                Kategori
+              </Link>
+
               {isAuthenticated ? (
                 <>
-                  <Link to="/dasbor" className="nav-link">Dashboard</Link>
-                  <Button variant="secondary" onClick={handleLogout} fullWidth>
+                  <Link
+                    to="/dasbor"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {user?.profilePictureUrl ? (
+                      <img
+                        key={user.profilePictureUrl}
+                        src={user.profilePictureUrl}
+                        alt={user.username || 'User'}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-primary/50"
+                        onLoad={() => console.log('✅ Mobile profile picture loaded!')}
+                        onError={(e) => {
+                          console.error('❌ Failed to load mobile profile picture')
+                          e.target.style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-lg font-bold">
+                        {getInitial()}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-white">
+                        {user?.username}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Lihat Dashboard
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      handleLogout()
+                    }}
+                    fullWidth
+                  >
                     Keluar
                   </Button>
                 </>
               ) : (
                 <div className="flex gap-3">
-                  <Link to="/masuk" className="flex-1">
+                  <Link to="/masuk" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="secondary" fullWidth>Masuk</Button>
                   </Link>
-                  <Link to="/daftar" className="flex-1">
+                  <Link to="/daftar" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="primary" fullWidth>Daftar</Button>
                   </Link>
                 </div>

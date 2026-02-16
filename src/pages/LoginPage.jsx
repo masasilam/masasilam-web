@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/LoginPage.jsx - UPDATED WITH GOOGLE LOGIN
+// src/pages/LoginPage.jsx - FINAL VERSION
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -37,16 +37,32 @@ const LoginPage = () => {
       const response = await authService.login(formData)
 
       if (response.data) {
+        console.log('🔵 Login response:', response.data)
+
+        // ✅ FIXED: Use ALL data from backend response
         login(
           {
+            id: response.data.id,
             username: response.data.username,
-            name: response.data.name,
+            email: response.data.email,
             roles: response.data.roles,
+            // ✅ Use fullName from response (backend sends both name and fullName)
+            fullName: response.data.fullName || response.data.name,
+            bio: response.data.bio,
+            profilePictureUrl: response.data.profilePictureUrl, // ✅ Now available!
+            emailNotifications: response.data.emailNotifications,
+            level: response.data.level,
+            totalBooksRead: response.data.totalBooksRead,
+            readingStreakDays: response.data.readingStreakDays,
+            contributedBooksCount: response.data.contributedBooksCount,
+            averageRating: response.data.averageRating,
+            experiencePoints: response.data.experiencePoints,
           },
           response.data.token,
           response.data.refreshToken
         )
 
+        console.log('✅ Login successful with profilePictureUrl:', response.data.profilePictureUrl)
         navigate('/dasbor')
       }
     } catch (err) {
@@ -64,9 +80,7 @@ const LoginPage = () => {
         const status = err.response.status
         const data = err.response.data
 
-        // Prioritaskan pesan dari backend, tapi terjemahkan ke Indonesia
         if (data?.detail) {
-          // Terjemahkan pesan backend umum ke Indonesia
           const translatedMessages = {
             'Invalid credentials': 'Username atau password salah',
             'Invalid credentials.': 'Username atau password salah',
@@ -112,19 +126,16 @@ const LoginPage = () => {
     }
   }
 
-  // Handler untuk Google login success
   const handleGoogleSuccess = (result) => {
     console.log('✅ Google login success in LoginPage', result)
     setSuccessMessage('Login dengan Google berhasil!')
     setError('')
 
-    // Navigate to dashboard
     setTimeout(() => {
       navigate('/dasbor', { replace: true })
     }, 500)
   }
 
-  // Handler untuk Google login error
   const handleGoogleError = (errorMessage) => {
     console.error('❌ Google login error in LoginPage:', errorMessage)
     setError(errorMessage)
@@ -168,7 +179,7 @@ const LoginPage = () => {
           </div>
         )}
 
-        {/* ========== GOOGLE LOGIN BUTTON ========== */}
+        {/* Google Login Button */}
         <div className="mb-6">
           <GoogleLoginButton
             onSuccess={handleGoogleSuccess}
@@ -176,7 +187,7 @@ const LoginPage = () => {
           />
         </div>
 
-        {/* ========== DIVIDER ========== */}
+        {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
@@ -188,7 +199,7 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* ========== REGULAR LOGIN FORM ========== */}
+        {/* Regular Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             label="Username"
