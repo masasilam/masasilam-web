@@ -49,6 +49,10 @@ export default function FilmWatchPage() {
     position: 0
   })
 
+  const [dragState, setDragState] = useState({
+    isDragging: false
+  })
+
   const [subtitleState, setSubtitleState] = useState({
     language: 'en', // 'en' or 'id'
     translating: false,
@@ -198,11 +202,35 @@ export default function FilmWatchPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Global mouse up for progress drag
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState.isDragging) {
+        setDragState({ isDragging: false })
+      }
+    }
+
+    window.addEventListener('mouseup', handleGlobalMouseUp)
+    window.addEventListener('touchend', handleGlobalMouseUp)
+
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp)
+      window.removeEventListener('touchend', handleGlobalMouseUp)
+    }
+  }, [dragState.isDragging])
+
   const handleMouseMove = () => {
     setState(s => ({ ...s, showControls: true }))
   }
 
   const togglePlay = () => {
+    // Jika controls hidden, klik pertama munculkan controls dulu
+    if (!state.showControls) {
+      setState(s => ({ ...s, showControls: true }))
+      return
+    }
+
+    // Jika controls sudah visible, baru toggle play/pause
     const video = videoRef.current
     if (!video) return
     video.paused ? video.play() : video.pause()
@@ -215,6 +243,46 @@ export default function FilmWatchPage() {
     const rect = e.currentTarget.getBoundingClientRect()
     const percent = (e.clientX - rect.left) / rect.width
     video.currentTime = percent * state.duration
+  }
+
+  const handleProgressMouseDown = (e) => {
+    setDragState({ isDragging: true })
+    handleProgressClick(e)
+  }
+
+  const handleProgressMouseMove = (e) => {
+    if (dragState.isDragging) {
+      handleProgressClick(e)
+    }
+    handleProgressHover(e)
+  }
+
+  const handleProgressMouseUp = () => {
+    setDragState({ isDragging: false })
+  }
+
+  const handleProgressTouchStart = (e) => {
+    setDragState({ isDragging: true })
+    const touch = e.touches[0]
+    const rect = e.currentTarget.getBoundingClientRect()
+    const percent = (touch.clientX - rect.left) / rect.width
+    if (videoRef.current && state.duration) {
+      videoRef.current.currentTime = percent * state.duration
+    }
+  }
+
+  const handleProgressTouchMove = (e) => {
+    if (!dragState.isDragging) return
+    const touch = e.touches[0]
+    const rect = e.currentTarget.getBoundingClientRect()
+    const percent = (touch.clientX - rect.left) / rect.width
+    if (videoRef.current && state.duration) {
+      videoRef.current.currentTime = percent * state.duration
+    }
+  }
+
+  const handleProgressTouchEnd = () => {
+    setDragState({ isDragging: false })
   }
 
   const handleProgressHover = (e) => {
@@ -626,8 +694,8 @@ export default function FilmWatchPage() {
         >
           {/* Translation Error */}
           {subtitleState.error && (
-            <div className="px-6 pb-2">
-              <div className="bg-red-900/90 backdrop-blur-sm text-white text-sm px-4 py-2 rounded-lg flex items-center justify-between">
+            <div className="px-4 sm:px-6 pb-2">
+              <div className="bg-red-900/90 backdrop-blur-sm text-white text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-lg flex items-center justify-between">
                 <span>{subtitleState.error}</span>
                 <button
                   onClick={() => setSubtitleState(s => ({ ...s, error: null }))}
@@ -640,18 +708,24 @@ export default function FilmWatchPage() {
           )}
 
           {/* Progress Bar */}
-          <div className="px-6 pb-3">
+          <div className="px-4 sm:px-6 pb-3">
             <div
-              className="relative h-1 bg-white/20 rounded-full cursor-pointer hover:h-1.5 transition-all group"
-              onClick={handleProgressClick}
-              onMouseMove={handleProgressHover}
+              className="relative h-1.5 sm:h-2 bg-white/20 rounded-full cursor-pointer hover:h-2 sm:hover:h-2.5 transition-all group select-none"
+              onMouseDown={handleProgressMouseDown}
+              onMouseMove={handleProgressMouseMove}
+              onMouseUp={handleProgressMouseUp}
               onMouseLeave={handleProgressLeave}
+              onTouchStart={handleProgressTouchStart}
+              onTouchMove={handleProgressTouchMove}
+              onTouchEnd={handleProgressTouchEnd}
             >
               <div
-                className="absolute h-full bg-red-600 rounded-full pointer-events-none"
+                className="absolute h-full bg-red-600 rounded-full pointer-events-none transition-all"
                 style={{ width: `${progress}%` }}
               >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 bg-red-600 rounded-full shadow-lg transition-opacity ${
+                  dragState.isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover:opacity-100'
+                }`} />
               </div>
 
               {/* Hover Time Tooltip */}
@@ -671,14 +745,14 @@ export default function FilmWatchPage() {
           </div>
 
           {/* Control Bar */}
-          <div className="bg-gradient-to-t from-black/90 to-transparent px-6 pb-6 pt-2">
-            <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-t from-black/90 to-transparent px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
               {/* Play/Pause */}
               <button
                 onClick={togglePlay}
                 className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
               >
-                {state.playing ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7" />}
+                {state.playing ? <Pause className="w-6 h-6 sm:w-7 sm:h-7" /> : <Play className="w-6 h-6 sm:w-7 sm:h-7" />}
               </button>
 
               {/* Skip Back */}
@@ -690,7 +764,7 @@ export default function FilmWatchPage() {
                 }}
                 className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
               >
-                <SkipBack className="w-6 h-6" />
+                <SkipBack className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
               {/* Skip Forward */}
@@ -705,7 +779,7 @@ export default function FilmWatchPage() {
                 }}
                 className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
               >
-                <SkipForward className="w-6 h-6" />
+                <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
               {/* Volume */}
@@ -717,15 +791,16 @@ export default function FilmWatchPage() {
                 }}
                 className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
               >
-                {state.muted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                {state.muted ? <VolumeX className="w-5 h-5 sm:w-6 sm:h-6" /> : <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />}
               </button>
 
               {/* Time */}
-              <div className="text-white text-sm font-medium tabular-nums">
+              <div className="text-white text-xs sm:text-sm font-medium tabular-nums">
                 {formatTime(state.currentTime)} / {formatTime(state.duration)}
               </div>
 
-              <div className="flex-1" />
+              {/* Spacer - hide on mobile, show on desktop to push items right */}
+              <div className="hidden sm:flex flex-1 min-w-0" />
 
               {/* Subtitles */}
               {subtitleUrl && (
@@ -733,12 +808,12 @@ export default function FilmWatchPage() {
                   {/* Subtitle Toggle */}
                   <button
                     onClick={() => setState(s => ({ ...s, subtitles: !s.subtitles }))}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg transition-colors ${
                       state.subtitles ? 'bg-red-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
-                    <Subtitles className="w-5 h-5" />
-                    <span className="text-sm hidden sm:inline">{state.subtitles ? 'ON' : 'OFF'}</span>
+                    <Subtitles className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs sm:text-sm hidden md:inline">{state.subtitles ? 'ON' : 'OFF'}</span>
                   </button>
 
                   {/* Language Selector */}
@@ -746,7 +821,7 @@ export default function FilmWatchPage() {
                     <button
                       onClick={switchToOriginalSubtitle}
                       disabled={subtitleState.translating}
-                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
                         subtitleState.language === 'en'
                           ? 'bg-white/20 text-white'
                           : 'text-gray-300 hover:bg-white/10'
@@ -757,7 +832,7 @@ export default function FilmWatchPage() {
                     <button
                       onClick={translateSubtitle}
                       disabled={subtitleState.translating}
-                      className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                      className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
                         subtitleState.language === 'id'
                           ? 'bg-white/20 text-white'
                           : 'text-gray-300 hover:bg-white/10'
@@ -766,7 +841,7 @@ export default function FilmWatchPage() {
                       {subtitleState.translating ? (
                         <>
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          <span className="hidden sm:inline text-xs">{subtitleState.progress}%</span>
+                          <span className="hidden md:inline text-xs">{subtitleState.progress}%</span>
                         </>
                       ) : (
                         'ID'
@@ -781,10 +856,10 @@ export default function FilmWatchPage() {
                 <div className="relative">
                   <button
                     onClick={() => setState(s => ({ ...s, showQualityMenu: !s.showQualityMenu }))}
-                    className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
                   >
-                    <Settings className="w-5 h-5" />
-                    <span className="text-sm hidden sm:inline">{state.selectedQuality?.label || 'HD'}</span>
+                    <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs sm:text-sm hidden md:inline">{state.selectedQuality?.label || 'HD'}</span>
                   </button>
 
                   {state.showQualityMenu && (
@@ -830,7 +905,7 @@ export default function FilmWatchPage() {
                 }}
                 className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
               >
-                {state.fullscreen ? <Minimize className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
+                {state.fullscreen ? <Minimize className="w-5 h-5 sm:w-6 sm:h-6" /> : <Maximize className="w-5 h-5 sm:w-6 sm:h-6" />}
               </button>
             </div>
           </div>

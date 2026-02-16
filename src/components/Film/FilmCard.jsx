@@ -1,9 +1,9 @@
 // ============================================
-// src/components/Film/FilmCard.jsx - WARNA SEMPURNA SEPERTI BUKU
+// src/components/Film/FilmCard.jsx - LENGKAP DENGAN TRAILER BADGE
 // ============================================
 
 import { Link } from 'react-router-dom'
-import { Calendar, Clock, Eye, Star, Film as FilmIcon, Play } from 'lucide-react'
+import { Calendar, Clock, Eye, Star, Film as FilmIcon, Play, Video } from 'lucide-react'
 
 const FilmCard = ({ film }) => {
   const year = film.tahunRilis ? new Date(film.tahunRilis).getFullYear() : null
@@ -46,13 +46,21 @@ const FilmCard = ({ film }) => {
           </div>
         )}
 
-        {/* Video Available Badge */}
-        {film.videoUrl && (
-          <div className="absolute top-2 right-2 px-2 py-1 bg-green-600/90 dark:bg-green-700/90 backdrop-blur-sm rounded text-xs text-white font-semibold flex items-center gap-1">
-            <Play className="w-3 h-3" fill="currentColor" />
-            <span>Video</span>
-          </div>
-        )}
+        {/* Video & Trailer Badges */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
+          {film.videoUrl && (
+            <div className="px-2 py-1 bg-green-600/90 dark:bg-green-700/90 backdrop-blur-sm rounded text-xs text-white font-semibold flex items-center gap-1">
+              <Play className="w-3 h-3" fill="currentColor" />
+              <span>Full</span>
+            </div>
+          )}
+          {film.trailerUrl && (
+            <div className="px-2 py-1 bg-blue-600/90 dark:bg-blue-700/90 backdrop-blur-sm rounded text-xs text-white font-semibold flex items-center gap-1">
+              <Video className="w-3 h-3" />
+              <span>Trailer</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Film Info */}
@@ -111,6 +119,19 @@ const FilmCard = ({ film }) => {
                 +{film.genre.length - 2}
               </span>
             )}
+          </div>
+        )}
+
+        {/* NEW: Review Score Badge */}
+        {film.reviewScores && film.reviewScores.length > 0 && (
+          <div className="mt-2 flex items-center gap-1">
+            <Star className="w-3 h-3 text-yellow-500 dark:text-yellow-400" fill="currentColor" />
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              {film.reviewScores[0].value}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-500">
+              {film.reviewScores[0].source}
+            </span>
           </div>
         )}
       </div>
