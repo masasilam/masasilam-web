@@ -1,5 +1,5 @@
 // ============================================
-// src/components/Film/FilmGrid.jsx - 2 KOLOM DI MOBILE (FIXED)
+// src/components/Film/FilmGrid.jsx
 // ============================================
 
 import FilmCard from './FilmCard'
@@ -25,8 +25,7 @@ const FilmGrid = ({ films, loading = false, emptyMessage = 'Tidak ada film ditem
   }
 
   return (
-    // FIX: grid-cols-2 dari mobile (bukan 1), 3 di sm, 4 di lg, 5 di xl
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
       {films.map(film => (
         <FilmCard key={film.id} film={film} />
       ))}
