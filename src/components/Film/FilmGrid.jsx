@@ -1,5 +1,5 @@
 // ============================================
-// src/components/Film/FilmGrid.jsx - LANDSCAPE FORMAT
+// src/components/Film/FilmGrid.jsx - 2 KOLOM DI MOBILE (FIXED)
 // ============================================
 
 import FilmCard from './FilmCard'
@@ -25,7 +25,8 @@ const FilmGrid = ({ films, loading = false, emptyMessage = 'Tidak ada film ditem
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
+    // FIX: grid-cols-2 dari mobile (bukan 1), 3 di sm, 4 di lg, 5 di xl
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
       {films.map(film => (
         <FilmCard key={film.id} film={film} />
       ))}

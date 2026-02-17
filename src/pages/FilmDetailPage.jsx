@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/FilmDetailPage.jsx - LANDSCAPE POSTER (16:9)
+// src/pages/FilmDetailPage.jsx - PORTRAIT POSTER (2:3) + IMAGE GALLERY - FIXED
 // ============================================
 
 import { useState } from 'react'
@@ -10,7 +10,7 @@ import { filmService } from '../services/filmService'
 import {
   Calendar, Clock, Globe, Film, Play, Download, User,
   Building2, Tag, ArrowLeft, Share2, Eye, DollarSign,
-  Star, Award, Video, Edit, Camera, Music, Users
+  Star, Award, Video, Edit, Camera, Music, Users, Image
 } from 'lucide-react'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
@@ -22,6 +22,7 @@ export default function FilmDetailPage() {
   const [showAllCast, setShowAllCast] = useState(false)
   const [showFilmDetails, setShowFilmDetails] = useState(false)
   const [showTrailerModal, setShowTrailerModal] = useState(false)
+  const [selectedImage, setSelectedImage] = useState(null)
 
   const { data: film, isLoading, error } = useQuery({
     queryKey: ['film', filmSlug],
@@ -94,6 +95,26 @@ export default function FilmDetailPage() {
         filmTitle={film.judul}
       />
 
+      {/* Lightbox untuk imageUrls */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Film still"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          />
+          <button
+            className="absolute top-4 right-4 text-white text-3xl font-bold hover:text-gray-300"
+            onClick={() => setSelectedImage(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="min-h-screen py-8 bg-white dark:bg-gray-900 transition-colors">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
@@ -119,11 +140,12 @@ export default function FilmDetailPage() {
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* SIDEBAR - Poster LANDSCAPE */}
+            {/* SIDEBAR - Poster PORTRAIT (2:3) - FIXED */}
             <aside className="lg:col-span-1">
               <div className="sticky top-24">
-                {/* LANDSCAPE POSTER 16:9 */}
-                <div className="aspect-[16/9] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 shadow-lg">
+
+                {/* PORTRAIT POSTER 2:3 - seperti poster film asli */}
+                <div className="aspect-[2/3] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 shadow-lg">
                   {film.posterUrl ? (
                     <img
                       src={film.posterUrl}
@@ -137,6 +159,32 @@ export default function FilmDetailPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Image Gallery - tampilkan imageUrls sebagai still foto */}
+                {film.imageUrls && film.imageUrls.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
+                      <Image className="w-4 h-4" />
+                      Foto dari Film
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {film.imageUrls.map((imgUrl, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImage(imgUrl)}
+                          className="aspect-[16/9] rounded overflow-hidden bg-gray-100 dark:bg-gray-700 hover:opacity-90 transition-opacity"
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`${film.judul} - foto ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
@@ -152,7 +200,6 @@ export default function FilmDetailPage() {
                     </Button>
                   )}
 
-                  {/* Trailer Button */}
                   {film.trailerUrl && (
                     <Button
                       fullWidth
@@ -225,7 +272,7 @@ export default function FilmDetailPage() {
                       {film.boxOffice && film.boxOffice.map((bo, index) => (
                         <div key={index}>
                           <div className="text-xs text-gray-600 dark:text-gray-400">
-                            Box Office {bo.region !== 'worldwide' ? `(${bo.region})` : ''}
+                            Box Office {bo.region !== 'worldwide' ? `(${bo.region})` : '(Worldwide)'}
                           </div>
                           <div className="font-semibold text-gray-900 dark:text-white">
                             {bo.displayValue}
@@ -415,15 +462,15 @@ export default function FilmDetailPage() {
                           <img
                             src={actor.photoUrl}
                             alt={actor.name}
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                             loading="lazy"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                             <User className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                           </div>
                         )}
-                        <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
                           {actor.name}
                         </span>
                       </Link>
@@ -443,14 +490,14 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Additional Crew (Cinematographer, Editor, Composer) */}
+              {/* Tim Kreatif */}
               {((film.cinematographer && film.cinematographer.length > 0) ||
                 (film.filmEditor && film.filmEditor.length > 0) ||
-                (film.composer && film.composer.length > 0)) && (
+                (film.composer && film.composer.length > 0) ||
+                (film.produser && film.produser.length > 0)) && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Tim Kreatif</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Cinematographer */}
                     {film.cinematographer && film.cinematographer.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
@@ -469,7 +516,6 @@ export default function FilmDetailPage() {
                       </div>
                     )}
 
-                    {/* Film Editor */}
                     {film.filmEditor && film.filmEditor.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
@@ -488,7 +534,6 @@ export default function FilmDetailPage() {
                       </div>
                     )}
 
-                    {/* Composer */}
                     {film.composer && film.composer.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
@@ -507,7 +552,6 @@ export default function FilmDetailPage() {
                       </div>
                     )}
 
-                    {/* Producers */}
                     {film.produser && film.produser.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">

@@ -29,17 +29,25 @@ const BookCard = memo(({ book }) => (
 ))
 
 const FilmCard = memo(({ film }) => (
-  <Link to={`/film/${film.slug || film.id}`} className="group flex-shrink-0 w-48 sm:w-56 lg:w-64">
-    <div className="aspect-[16/9] bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 overflow-hidden mb-2 sm:mb-3 hover:shadow-2xl hover:border-primary transition-all duration-300 rounded-lg">
+  <Link to={`/film/${film.slug || film.id}`} className="group flex-shrink-0 w-32 sm:w-40 lg:w-48">
+    {/* PORTRAIT 2:3 - bukan 16:9 */}
+    <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 overflow-hidden mb-2 hover:shadow-2xl hover:border-primary transition-all duration-300 rounded-lg">
       {film.posterUrl ? (
-        <img src={film.posterUrl} alt={film.judul} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
+        <img
+          src={film.posterUrl}
+          alt={film.judul}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          loading="lazy"
+        />
       ) : (
-        <div className="w-full h-full flex items-center justify-center p-2 sm:p-3">
+        <div className="w-full h-full flex items-center justify-center p-2">
           <Film className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
         </div>
       )}
     </div>
-    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-0.5 group-hover:text-primary transition-colors">{film.judul}</h3>
+    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-0.5 group-hover:text-primary transition-colors">
+      {film.judul}
+    </h3>
     <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
       {film.tahunRilis ? new Date(film.tahunRilis).getFullYear() : 'Tahun tidak diketahui'}
     </p>
