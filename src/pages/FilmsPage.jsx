@@ -1,9 +1,9 @@
 // ============================================
-// src/pages/FilmsPage.jsx - WARNA SEMPURNA SEPERTI BooksPage
+// src/pages/FilmsPage.jsx - PERFORMA OPTIMAL + URL STATE
 // ============================================
 
-import { useState, useEffect, useCallback, memo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { filmService } from '../services/filmService'
 import FilmGrid from '../components/Film/FilmGrid'
 import Button from '../components/Common/Button'
@@ -16,17 +16,6 @@ const SORTS = [
   { v: 'judul', l: 'Judul' },
   { v: 'durasi', l: 'Durasi' }
 ]
-
-const Sel = memo(({ val, onChange, opts, ph }) => (
-  <select
-    value={val}
-    onChange={onChange}
-    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm transition-colors"
-  >
-    <option value="">{ph}</option>
-    {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-  </select>
-))
 
 const Filt = memo(({ crit, onChange, onApply, onReset, onClose }) => (
   <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -101,74 +90,138 @@ const SBtn = memo(({ opt, act, ord, load, onClick }) => (
   </button>
 ))
 
+const EMPTY_CRIT = { searchTitle: '', genre: '', negara: '', yearFrom: '', yearTo: '' }
+
 const FilmsPage = () => {
   const navigate = useNavigate()
+
+  // ── URL sebagai sumber kebenaran untuk page ──────────────────────────────────
+  // Saat user kembali dari detail film, browser restore URL → page otomatis kembali
+  const [searchParams, setSearchParams] = useSearchParams()
+  const currentPage = Math.max(1, Number(searchParams.get('page') || 1))
+
+  const setCurrentPage = useCallback((valOrFn) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      const prevPage = Math.max(1, Number(prev.get('page') || 1))
+      const newPage = typeof valOrFn === 'function' ? valOrFn(prevPage) : valOrFn
+      if (newPage <= 1) {
+        next.delete('page')
+      } else {
+        next.set('page', String(newPage))
+      }
+      return next
+    }, { replace: false }) // false → masuk history stack, tombol Back browser berfungsi
+  }, [setSearchParams])
+
+  // ── Data state ───────────────────────────────────────────────────────────────
   const [films, setFilms] = useState([])
   const [loading, setLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalFilms, setTotalFilms] = useState(0)
-  const [sortField, setSortField] = useState('tahunRilis')
-  const [sortOrder, setSortOrder] = useState('DESC')
+
+  // ── UI state ─────────────────────────────────────────────────────────────────
   const [showAdv, setShowAdv] = useState(false)
   const [showSort, setShowSort] = useState(false)
-  const [crit, setCrit] = useState({
-    searchTitle: '',
-    genre: '',
-    negara: '',
-    yearFrom: '',
-    yearTo: ''
-  })
+  const [pageInput, setPageInput] = useState(currentPage)
 
-  const fetch = useCallback(async () => {
-    try {
-      setLoading(true)
-      const params = {
-        page: currentPage - 1,
-        size: 12,
-        sortField,
-        sortOrder,
-        ...Object.fromEntries(Object.entries(crit).filter(([_, v]) => v))
+  // ── Input sementara (tidak memicu fetch) ─────────────────────────────────────
+  const [crit, setCrit] = useState(EMPTY_CRIT)
+  const [appliedCrit, setAppliedCrit] = useState(EMPTY_CRIT)
+  const [sortField, setSortField] = useState('tahunRilis')
+  const [sortOrder, setSortOrder] = useState('DESC')
+
+  const abortRef = useRef(null)
+
+  // ── Satu-satunya fetch trigger ───────────────────────────────────────────────
+  useEffect(() => {
+    if (abortRef.current) abortRef.current.abort()
+    abortRef.current = new AbortController()
+
+    const doFetch = async () => {
+      try {
+        setLoading(true)
+        const params = {
+          page: currentPage - 1,
+          size: 12,
+          sortField,
+          sortOrder,
+          ...Object.fromEntries(Object.entries(appliedCrit).filter(([, v]) => v))
+        }
+        const res = await filmService.getFilms(params)
+        setFilms(res.data?.data || [])
+        const total = res.data?.total || 0
+        setTotalFilms(total)
+        setTotalPages(Math.ceil(total / 12))
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          console.error('Error:', e)
+          setFilms([])
+        }
+      } finally {
+        setLoading(false)
       }
-      const res = await filmService.getFilms(params)
-      setFilms(res.data?.data || [])
-      const total = res.data?.total || 0
-      setTotalFilms(total)
-      setTotalPages(Math.ceil(total / 12))
-    } catch (e) {
-      console.error('Error:', e)
-      setFilms([])
-    } finally {
-      setLoading(false)
     }
-  }, [currentPage, sortField, sortOrder, crit])
 
-  useEffect(() => { fetch() }, [fetch])
+    doFetch()
+    return () => abortRef.current?.abort()
+  }, [currentPage, sortField, sortOrder, appliedCrit])
 
-  const handleSort = useCallback((f) => {
-    if (sortField === f) {
-      setSortOrder(o => o === 'DESC' ? 'ASC' : 'DESC')
-    } else {
-      setSortField(f)
-      setSortOrder('DESC')
-    }
-    setCurrentPage(1)
-  }, [sortField])
+  useEffect(() => { setPageInput(currentPage) }, [currentPage])
 
   const handleChange = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
-  const handleApply = useCallback(() => { setCurrentPage(1); fetch() }, [fetch])
-  const handleReset = useCallback(() => {
-    setCrit({ searchTitle: '', genre: '', negara: '', yearFrom: '', yearTo: '' })
-    setCurrentPage(1)
-    setTimeout(fetch, 100)
-  }, [fetch])
 
-  const pageTitle = crit.searchTitle
-    ? `${crit.searchTitle} - Koleksi Film`
+  const handleApply = useCallback(() => {
+    setAppliedCrit(prev => {
+      const next = { ...EMPTY_CRIT, ...crit }
+      if (JSON.stringify(prev) === JSON.stringify(next)) return prev
+      return next
+    })
+    setCurrentPage(1)
+  }, [crit, setCurrentPage])
+
+  const handleReset = useCallback(() => {
+    setCrit(EMPTY_CRIT)
+    setAppliedCrit(EMPTY_CRIT)
+    setCurrentPage(1)
+  }, [setCurrentPage])
+
+  const handleSort = useCallback((f) => {
+    setSortField(prev => {
+      if (prev === f) {
+        setSortOrder(o => o === 'DESC' ? 'ASC' : 'DESC')
+        return prev
+      }
+      setSortOrder('DESC')
+      return f
+    })
+    setCurrentPage(1)
+  }, [setCurrentPage])
+
+  const handlePageInputChange = (e) => setPageInput(e.target.value)
+
+  const handlePageInputCommit = useCallback(() => {
+    const val = Number(pageInput)
+    if (!isNaN(val) && val >= 1 && val <= totalPages) {
+      setCurrentPage(val)
+    } else {
+      setPageInput(currentPage)
+    }
+  }, [pageInput, totalPages, currentPage, setCurrentPage])
+
+  const handlePageInputKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.target.blur()
+      handlePageInputCommit()
+    }
+  }, [handlePageInputCommit])
+
+  const pageTitle = appliedCrit.searchTitle
+    ? `${appliedCrit.searchTitle} - Koleksi Film`
     : `Koleksi Film Digital - Halaman ${currentPage}`
 
-  const pageDescription = crit.searchTitle
-    ? `Hasil pencarian "${crit.searchTitle}" - Temukan film yang Anda cari`
+  const pageDescription = appliedCrit.searchTitle
+    ? `Hasil pencarian "${appliedCrit.searchTitle}" - Temukan film yang Anda cari`
     : `Jelajahi ${totalFilms.toLocaleString('id-ID')} film klasik domain publik. Halaman ${currentPage} dari ${totalPages}.`
 
   return (
@@ -232,7 +285,6 @@ const FilmsPage = () => {
                     <button
                       onClick={() => setShowSort(false)}
                       className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                      aria-label="Close"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -267,7 +319,7 @@ const FilmsPage = () => {
           <FilmGrid films={films} loading={loading} />
 
           {totalPages > 1 && (
-            <nav className="mt-8 flex justify-center gap-2" aria-label="Pagination">
+            <nav className="mt-8 flex justify-center items-center gap-2" aria-label="Pagination">
               <Button
                 variant="secondary"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -275,9 +327,23 @@ const FilmsPage = () => {
               >
                 Prev
               </Button>
-              <span className="flex items-center px-3 text-xs text-gray-600 dark:text-gray-400">
-                {currentPage}/{totalPages}
-              </span>
+
+              <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                <span className="hidden sm:inline">Hal.</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  onBlur={handlePageInputCommit}
+                  onKeyDown={handlePageInputKeyDown}
+                  disabled={loading}
+                  className="w-14 px-2 py-1.5 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-xs disabled:opacity-50 transition-colors"
+                />
+                <span>dari {totalPages}</span>
+              </div>
+
               <Button
                 variant="secondary"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}

@@ -1,28 +1,55 @@
 // ============================================
-// src/components/Film/FilmCard.jsx - PORTRAIT (2:3) + MOBILE OPTIMIZED
+// src/components/Film/FilmCard.jsx
 // ============================================
 
+import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, Star, Film as FilmIcon, Play, Video } from 'lucide-react'
+import { Clock, Film as FilmIcon, Play, Video } from 'lucide-react'
 
-const FilmCard = ({ film }) => {
+// Konversi URL Wikimedia ke thumbnail kecil — hemat 80-95% ukuran
+const getThumb = (url, w = 300) => {
+  if (!url) return null
+  const m = url.match(/^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)([a-f0-9]\/[a-f0-9]{2}\/)(.+)$/)
+  if (!m) return url
+  const [, base, hash, filename] = m
+  const isSvg = filename.toLowerCase().endsWith('.svg')
+  const thumbName = isSvg ? `${filename}.png` : filename
+  return `${base}thumb/${hash}${filename}/${w}px-${thumbName}`
+}
+
+const FilmCard = memo(({ film }) => {
+  const [imgStatus, setImgStatus] = useState('loading') // 'loading' | 'loaded' | 'error'
   const year = film.tahunRilis ? new Date(film.tahunRilis).getFullYear() : null
+  const thumbUrl = getThumb(film.posterUrl, 300)
 
   return (
     <Link
       to={`/film/${film.slug}`}
       className="group block bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700"
     >
-      {/* Poster - PORTRAIT 2:3 seperti poster film bioskop */}
+      {/* Poster - PORTRAIT 2:3 */}
       <div className="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-700">
-        {film.posterUrl ? (
+
+        {/* Skeleton shimmer */}
+        {imgStatus === 'loading' && thumbUrl && (
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
+        )}
+
+        {/* Poster image */}
+        {thumbUrl && imgStatus !== 'error' ? (
           <img
-            src={film.posterUrl}
+            src={thumbUrl}
             alt={film.judul}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
+            decoding="async"
+            onLoad={() => setImgStatus('loaded')}
+            onError={() => setImgStatus('error')}
+            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${
+              imgStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
+            }`}
           />
         ) : (
+          // Fallback: no poster atau error
           <div className="w-full h-full flex items-center justify-center">
             <FilmIcon className="w-10 h-10 text-gray-400 dark:text-gray-500" />
           </div>
@@ -70,7 +97,7 @@ const FilmCard = ({ film }) => {
           {film.judul}
         </h3>
 
-        {/* Director - hidden di mobile kecil */}
+        {/* Director */}
         {film.sutradara && film.sutradara.length > 0 && (
           <p className="hidden sm:block text-[10px] text-gray-500 dark:text-gray-400 mb-1 truncate">
             {film.sutradara[0].name}
@@ -102,7 +129,9 @@ const FilmCard = ({ film }) => {
         {/* Review score */}
         {film.reviewScores && film.reviewScores.length > 0 && (
           <div className="mt-1 flex items-center gap-0.5">
-            <Star className="w-2.5 h-2.5 text-yellow-500" fill="currentColor" />
+            <svg className="w-2.5 h-2.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
             <span className="text-[10px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300">
               {film.reviewScores[0].value}
             </span>
@@ -111,6 +140,8 @@ const FilmCard = ({ film }) => {
       </div>
     </Link>
   )
-}
+})
+
+FilmCard.displayName = 'FilmCard'
 
 export default FilmCard

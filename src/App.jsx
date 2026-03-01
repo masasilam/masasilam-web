@@ -1,4 +1,8 @@
-// src/App.jsx
+// src/App.jsx - UPDATED: Added blog routes
+// Changes:
+//   1. Added BlogPage, BlogDetailPage public routes
+//   2. Added BlogManagePage, BlogEditorPage protected admin routes in dashboard
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
@@ -55,6 +59,10 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 
+// ✅ NEW: Blog Pages
+import BlogPage from './pages/BlogPage'
+import BlogDetailPage from './pages/BlogDetailPage'
+
 // Dashboard Pages
 import DashboardLayout from './pages/dashboard/DashboardLayout'
 import DashboardOverview from './pages/dashboard/DashboardOverview'
@@ -66,7 +74,11 @@ import StatisticsPage from './pages/dashboard/StatisticsPage'
 import CalendarPage from './pages/dashboard/CalendarPage'
 import AchievementsPage from './pages/dashboard/AchievementsPage'
 import GoalsPage from './pages/dashboard/GoalsPage'
-import AdminPage from './pages/dashboard/AdminPage' // UPDATED: Changed from AdminBooksPage to AdminPage
+import AdminPage from './pages/dashboard/AdminPage'
+
+// ✅ NEW: Blog Admin Pages
+import BlogManagePage from './pages/dashboard/BlogManagePage'
+import BlogEditorPage from './pages/dashboard/BlogEditorPage'
 
 // Error Pages
 import NotFoundPage from './pages/NotFoundPage'
@@ -129,6 +141,10 @@ function App() {
         <Route path="/person/:personSlug" element={<PublicLayout><PersonDetailPage /></PublicLayout>} />
         <Route path="/perusahaan/:companySlug" element={<PublicLayout><CompanyDetailPage /></PublicLayout>} />
 
+        {/* ✅ NEW: Blog Routes - Public */}
+        <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
+        <Route path="/blog/:slug" element={<PublicLayout><BlogDetailPage /></PublicLayout>} />
+
         {/* Search */}
         <Route path="/cari" element={<PublicLayout><SearchResultsPage /></PublicLayout>} />
 
@@ -168,9 +184,12 @@ function App() {
           <Route path="pencapaian" element={<AchievementsPage />} />
           <Route path="target" element={<GoalsPage />} />
           <Route path="pengaturan" element={<SettingsPage />} />
-          {/* UPDATED: Changed route path from "buku" to "kelola" to be more general */}
-          {/* This route now handles both books and films management */}
           <Route path="kelola" element={<AdminPage />} />
+
+          {/* ✅ NEW: Blog Admin Routes - accessible only if user has ADMIN role */}
+          <Route path="blog" element={<BlogManagePage />} />
+          <Route path="blog/baru" element={<BlogEditorPage />} />
+          <Route path="blog/edit/:id" element={<BlogEditorPage />} />
         </Route>
         
         {/* Error Pages */}

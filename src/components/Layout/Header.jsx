@@ -1,10 +1,8 @@
-// ============================================
-// src/components/Layout/Header.jsx - WITH DETAILED DEBUG
-// ============================================
+// src/components/Layout/Header.jsx - UPDATED: Added Blog link
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, Moon, Search, Sun, User, X } from 'lucide-react'
+import { Menu, Moon, Search, Sun, X } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useAuth } from '../../hooks/useAuth'
 import Button from '../Common/Button'
@@ -16,14 +14,10 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // 🔥 CRITICAL DEBUG: Monitor user changes
   useEffect(() => {
     console.group('🔵 Header: User State Changed')
     console.log('User object:', user)
-    console.log('User keys:', user ? Object.keys(user) : 'null')
     console.log('ProfilePictureUrl:', user?.profilePictureUrl)
-    console.log('FullName:', user?.fullName)
-    console.log('Username:', user?.username)
     console.log('isAuthenticated:', isAuthenticated)
     console.groupEnd()
   }, [user, isAuthenticated])
@@ -37,9 +31,7 @@ const Header = () => {
   }
 
   const handleSearchKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch()
-    }
+    if (e.key === 'Enter') handleSearch()
   }
 
   const handleLogout = async () => {
@@ -52,8 +44,14 @@ const Header = () => {
     return name.charAt(0).toUpperCase()
   }
 
-  // 🔥 DEBUG: Inline render check
-  console.log('🔍 Header Render - user?.profilePictureUrl:', user?.profilePictureUrl)
+  // Nav links — Blog ditambahkan di sini
+  const navLinks = [
+    { to: '/buku', label: 'Buku' },
+    { to: '/film', label: 'Film' },
+    { to: '/blog', label: 'Blog' },       // ✅ BARU
+    { to: '/penulis', label: 'Penulis' },
+    { to: '/kategori', label: 'Kategori' },
+  ]
 
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 transition-colors">
@@ -84,11 +82,13 @@ const Header = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/buku" className="nav-link">Buku</Link>
-            <Link to="/film" className="nav-link">Film</Link>
-            <Link to="/penulis" className="nav-link">Penulis</Link>
-            <Link to="/kategori" className="nav-link">Kategori</Link>
+          <nav className="hidden md:flex items-center gap-4">
+            {/* Nav links */}
+            {navLinks.map(({ to, label }) => (
+              <Link key={to} to={to} className="nav-link text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                {label}
+              </Link>
+            ))}
 
             <button
               onClick={toggleTheme}
@@ -104,21 +104,15 @@ const Header = () => {
                   to="/dasbor"
                   className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
                 >
-                  {/* 🔥 CRITICAL DEBUG */}
                   {(() => {
                     const hasUrl = !!user?.profilePictureUrl
-                    console.log(`🖼️ Rendering avatar: hasUrl=${hasUrl}, url=${user?.profilePictureUrl}`)
                     return hasUrl ? (
                       <img
                         key={user.profilePictureUrl}
                         src={user.profilePictureUrl}
                         alt={user.username || 'User'}
                         className="w-8 h-8 rounded-full object-cover border-2 border-primary/50 hover:border-primary transition-colors"
-                        onLoad={() => console.log('✅ Profile picture loaded successfully!')}
-                        onError={(e) => {
-                          console.error('❌ Failed to load profile picture:', user.profilePictureUrl)
-                          e.target.style.display = 'none'
-                        }}
+                        onError={(e) => { e.target.style.display = 'none' }}
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-sm font-bold hover:scale-110 transition-transform">
@@ -144,7 +138,7 @@ const Header = () => {
             )}
           </nav>
 
-          {/* Mobile Theme Toggle & Menu Button */}
+          {/* Mobile: Theme + Hamburger */}
           <div className="md:hidden flex items-center gap-2">
             <button
               onClick={toggleTheme}
@@ -182,18 +176,17 @@ const Header = () => {
         {mobileMenuOpen && (
           <nav className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex flex-col gap-4">
-              <Link to="/buku" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                Buku
-              </Link>
-              <Link to="/film" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                Film
-              </Link>
-              <Link to="/penulis" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                Penulis
-              </Link>
-              <Link to="/kategori" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                Kategori
-              </Link>
+              {/* Nav links — termasuk Blog */}
+              {navLinks.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className="nav-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {label}
+                </Link>
+              ))}
 
               {isAuthenticated ? (
                 <>
@@ -208,11 +201,7 @@ const Header = () => {
                         src={user.profilePictureUrl}
                         alt={user.username || 'User'}
                         className="w-12 h-12 rounded-full object-cover border-2 border-primary/50"
-                        onLoad={() => console.log('✅ Mobile profile picture loaded!')}
-                        onError={(e) => {
-                          console.error('❌ Failed to load mobile profile picture')
-                          e.target.style.display = 'none'
-                        }}
+                        onError={(e) => { e.target.style.display = 'none' }}
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-lg font-bold">

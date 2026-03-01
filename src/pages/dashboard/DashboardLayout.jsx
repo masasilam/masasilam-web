@@ -1,11 +1,11 @@
 // ============================================
-// src/pages/dashboard/DashboardLayout.jsx - UPDATED WITH ADMIN PAGE
+// src/pages/dashboard/DashboardLayout.jsx - UPDATED WITH BLOG MENU
 // ============================================
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Library, History, BarChart3, Calendar, Award, Settings,
-  Target, Highlighter, Home, LogOut, User, Menu, X, Moon, Sun, BookOpen, Database
+  Target, Highlighter, Home, LogOut, User, Menu, X, Moon, Sun, BookOpen, Database, PenSquare
 } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
@@ -18,7 +18,6 @@ const DashboardLayout = () => {
   const { theme, toggleTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // 🔥 CRITICAL DEBUG: Monitor user changes
   useEffect(() => {
     console.group('🔵 DashboardLayout: User State')
     console.log('User object:', user)
@@ -29,12 +28,10 @@ const DashboardLayout = () => {
     console.groupEnd()
   }, [user])
 
-  // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false)
   }, [location.pathname])
 
-  // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
     if (sidebarOpen) {
       document.body.style.overflow = 'hidden'
@@ -58,15 +55,24 @@ const DashboardLayout = () => {
       { path: '/dasbor/target', icon: Target, label: 'Target' },
     ]
 
-    // Add admin menu for ADMIN users - UPDATED PATH
+    // Admin-only menus
     if (user?.roles?.includes('ADMIN')) {
-      items.push({
-        path: '/dasbor/kelola',
-        icon: Database,
-        label: 'Kelola Perpustakaan',
-        adminOnly: true,
-        badge: 'Admin'
-      })
+      items.push(
+        {
+          path: '/dasbor/blog',
+          icon: PenSquare,
+          label: 'Posting Blog',
+          adminOnly: true,
+          badge: 'Admin'
+        },
+        {
+          path: '/dasbor/kelola',
+          icon: Database,
+          label: 'Kelola Perpustakaan',
+          adminOnly: true,
+          badge: 'Admin'
+        }
+      )
     }
 
     return items
@@ -99,13 +105,11 @@ const DashboardLayout = () => {
     setSidebarOpen(prev => !prev)
   }, [])
 
-  // Helper untuk get initial
   const getInitial = useCallback(() => {
     const name = user?.fullName || user?.name || user?.username || 'U'
     return name.charAt(0).toUpperCase()
   }, [user])
 
-  // 🔥 DEBUG
   console.log('🔍 DashboardLayout Render - profilePictureUrl:', user?.profilePictureUrl)
 
   return (
@@ -124,23 +128,16 @@ const DashboardLayout = () => {
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            {/* 🔥 FIX: Show profile picture in header */}
             <div className="flex items-center gap-2">
               {(() => {
                 const hasUrl = !!user?.profilePictureUrl
-                console.log(`🖼️ Header Avatar - hasUrl=${hasUrl}, url=${user?.profilePictureUrl}`)
-
                 return hasUrl ? (
                   <img
                     key={user.profilePictureUrl}
                     src={user.profilePictureUrl}
                     alt={user.username || 'User'}
                     className="w-8 h-8 rounded-full object-cover border-2 border-primary/50 flex-shrink-0"
-                    onLoad={() => console.log('✅ Dashboard header - Profile picture loaded!')}
-                    onError={(e) => {
-                      console.error('❌ Dashboard header - Failed to load:', user.profilePictureUrl)
-                      e.target.style.display = 'none'
-                    }}
+                    onError={(e) => { e.target.style.display = 'none' }}
                   />
                 ) : (
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
@@ -266,7 +263,6 @@ const DashboardLayout = () => {
                   const Icon = item.icon
                   const active = isActive(item.path)
 
-                  // Handle external navigation
                   if (item.external) {
                     return (
                       <button
@@ -280,7 +276,6 @@ const DashboardLayout = () => {
                     )
                   }
 
-                  // Handle internal navigation
                   return (
                     <Link
                       key={item.path}

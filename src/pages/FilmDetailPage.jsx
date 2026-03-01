@@ -1,21 +1,93 @@
 // ============================================
-// src/pages/FilmDetailPage.jsx - PORTRAIT POSTER (2:3) + IMAGE GALLERY - FIXED
+// src/pages/FilmDetailPage.jsx - OPTIMIZED
 // ============================================
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Helmet } from 'react-helmet-async'
 import { filmService } from '../services/filmService'
 import {
   Calendar, Clock, Globe, Film, Play, Download, User,
-  Building2, Tag, ArrowLeft, Share2, Eye, DollarSign,
+  Building2, Tag, ArrowLeft, Share2, DollarSign,
   Star, Award, Video, Edit, Camera, Music, Users, Image
 } from 'lucide-react'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
 import TrailerModal from '../components/Film/TrailerModal'
 
+// ── Wikimedia thumbnail helper ───────────────────────────────────────────────
+const getThumb = (url, w = 300) => {
+  if (!url) return null
+  const m = url.match(/^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)([a-f0-9]\/[a-f0-9]{2}\/)(.+)$/)
+  if (!m) return url
+  const [, base, hash, filename] = m
+  const isSvg = filename.toLowerCase().endsWith('.svg')
+  const thumbName = isSvg ? `${filename}.png` : filename
+  return `${base}thumb/${hash}${filename}/${w}px-${thumbName}`
+}
+
+// ── Gambar dengan skeleton loading ───────────────────────────────────────────
+const LazyImg = memo(({ src, alt, className, thumbWidth = 300, ...props }) => {
+  const [status, setStatus] = useState('loading')
+  const thumbUrl = getThumb(src, thumbWidth)
+  if (!thumbUrl) return null
+  return (
+    <div className={`relative overflow-hidden bg-gray-200 dark:bg-gray-700 ${className}`} {...props}>
+      {status === 'loading' && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
+      )}
+      <img
+        src={thumbUrl}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setStatus('loaded')}
+        onError={() => setStatus('error')}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          status === 'loaded' ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+      {status === 'error' && (
+        <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600">
+          <Film className="w-8 h-8" />
+        </div>
+      )}
+    </div>
+  )
+})
+LazyImg.displayName = 'LazyImg'
+
+// ── Avatar foto orang (sutradara, pemeran, dll) ───────────────────────────────
+const PersonAvatar = memo(({ photoUrl, name, size = 'md' }) => {
+  const [error, setError] = useState(false)
+  const px = size === 'sm' ? 80 : 120
+  const cls = size === 'sm'
+    ? 'w-10 h-10 rounded-full flex-shrink-0'
+    : 'w-12 h-12 rounded-full flex-shrink-0'
+  const thumbUrl = !error && photoUrl ? getThumb(photoUrl, px) : null
+
+  if (thumbUrl) {
+    return (
+      <img
+        src={thumbUrl}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+        onError={() => setError(true)}
+        className={`${cls} object-cover`}
+      />
+    )
+  }
+  return (
+    <div className={`${cls} bg-gray-200 dark:bg-gray-700 flex items-center justify-center`}>
+      <User className={`${size === 'sm' ? 'w-5 h-5' : 'w-6 h-6'} text-gray-400 dark:text-gray-500`} />
+    </div>
+  )
+})
+PersonAvatar.displayName = 'PersonAvatar'
+
+// ── Komponen utama ────────────────────────────────────────────────────────────
 export default function FilmDetailPage() {
   const { filmSlug } = useParams()
   const navigate = useNavigate()
@@ -35,11 +107,7 @@ export default function FilmDetailPage() {
   })
 
   const handleShare = async () => {
-    const shareData = {
-      title: film.judul,
-      text: `Tonton "${film.judul}"`,
-      url: window.location.href
-    }
+    const shareData = { title: film.judul, text: `Tonton "${film.judul}"`, url: window.location.href }
     try {
       if (navigator.share) {
         await navigator.share(shareData)
@@ -77,17 +145,10 @@ export default function FilmDetailPage() {
   return (
     <>
       <Helmet>
-        <title>
-          {film.judul}
-          {year ? ` (${year})` : ''} - Film Domain Publik
-        </title>
-        <meta
-          name="description"
-          content={film.deskripsi || `${film.judul} - Film klasik domain publik`}
-        />
+        <title>{film.judul}{year ? ` (${year})` : ''} - Film Domain Publik</title>
+        <meta name="description" content={film.deskripsi || `${film.judul} - Film klasik domain publik`} />
       </Helmet>
 
-      {/* Trailer Modal */}
       <TrailerModal
         isOpen={showTrailerModal}
         onClose={() => setShowTrailerModal(false)}
@@ -95,14 +156,14 @@ export default function FilmDetailPage() {
         filmTitle={film.judul}
       />
 
-      {/* Lightbox untuk imageUrls */}
+      {/* Lightbox */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
         >
           <img
-            src={selectedImage}
+            src={getThumb(selectedImage, 1200)}
             alt="Film still"
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
           />
@@ -117,6 +178,7 @@ export default function FilmDetailPage() {
 
       <div className="min-h-screen py-8 bg-white dark:bg-gray-900 transition-colors">
         <div className="container mx-auto px-4">
+
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm mb-4 overflow-x-auto" aria-label="Breadcrumb">
             <Link to="/" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
@@ -132,7 +194,7 @@ export default function FilmDetailPage() {
 
           {/* Back Button */}
           <button
-            onClick={() => navigate('/film')}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-6 group transition-colors"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -140,27 +202,28 @@ export default function FilmDetailPage() {
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* SIDEBAR - Poster PORTRAIT (2:3) - FIXED */}
+
+            {/* SIDEBAR */}
             <aside className="lg:col-span-1">
               <div className="sticky top-24">
 
-                {/* PORTRAIT POSTER 2:3 - seperti poster film asli */}
-                <div className="aspect-[2/3] rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 mb-4 shadow-lg">
+                {/* Poster 2:3 dengan thumbnail */}
+                <div className="aspect-[2/3] rounded-lg overflow-hidden mb-4 shadow-lg">
                   {film.posterUrl ? (
-                    <img
+                    <LazyImg
                       src={film.posterUrl}
                       alt={`Poster ${film.judul}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
+                      className="w-full h-full"
+                      thumbWidth={500}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
                       <Film className="w-24 h-24 text-gray-400 dark:text-gray-500" />
                     </div>
                   )}
                 </div>
 
-                {/* Image Gallery - tampilkan imageUrls sebagai still foto */}
+                {/* Image Gallery */}
                 {film.imageUrls && film.imageUrls.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
@@ -172,13 +235,13 @@ export default function FilmDetailPage() {
                         <button
                           key={index}
                           onClick={() => setSelectedImage(imgUrl)}
-                          className="aspect-[16/9] rounded overflow-hidden bg-gray-100 dark:bg-gray-700 hover:opacity-90 transition-opacity"
+                          className="aspect-[16/9] rounded overflow-hidden hover:opacity-90 transition-opacity"
                         >
-                          <img
+                          <LazyImg
                             src={imgUrl}
                             alt={`${film.judul} - foto ${index + 1}`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
+                            className="w-full h-full"
+                            thumbWidth={300}
                           />
                         </button>
                       ))}
@@ -189,29 +252,17 @@ export default function FilmDetailPage() {
                 {/* Action Buttons */}
                 <div className="space-y-3">
                   {film.videoUrl && (
-                    <Button
-                      fullWidth
-                      variant="primary"
-                      size="lg"
-                      onClick={() => navigate(`/film/${filmSlug}/tonton`)}
-                    >
+                    <Button fullWidth variant="primary" size="lg" onClick={() => navigate(`/film/${filmSlug}/tonton`)}>
                       <Play className="w-5 h-5 mr-2" />
                       Tonton Film Lengkap
                     </Button>
                   )}
-
                   {film.trailerUrl && (
-                    <Button
-                      fullWidth
-                      variant="secondary"
-                      size="lg"
-                      onClick={() => setShowTrailerModal(true)}
-                    >
+                    <Button fullWidth variant="secondary" size="lg" onClick={() => setShowTrailerModal(true)}>
                       <Video className="w-5 h-5 mr-2" />
                       Tonton Trailer
                     </Button>
                   )}
-
                   {film.videoUrl && (
                     <a
                       href={film.videoUrl}
@@ -222,12 +273,7 @@ export default function FilmDetailPage() {
                       Unduh Film
                     </a>
                   )}
-
-                  <Button
-                    fullWidth
-                    variant="outline"
-                    onClick={handleShare}
-                  >
+                  <Button fullWidth variant="outline" onClick={handleShare}>
                     <Share2 className="w-5 h-5 mr-2" />
                     Bagikan
                   </Button>
@@ -244,9 +290,7 @@ export default function FilmDetailPage() {
                       {film.reviewScores.map((review, index) => (
                         <div key={index} className="flex justify-between items-center">
                           <span className="text-sm text-gray-700 dark:text-gray-300">{review.source}</span>
-                          <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">
-                            {review.value}
-                          </span>
+                          <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">{review.value}</span>
                         </div>
                       ))}
                     </div>
@@ -264,26 +308,22 @@ export default function FilmDetailPage() {
                       {film.budget && (
                         <div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">Budget</div>
-                          <div className="font-semibold text-gray-900 dark:text-white">
-                            {film.budget.displayValue}
-                          </div>
+                          <div className="font-semibold text-gray-900 dark:text-white">{film.budget.displayValue}</div>
                         </div>
                       )}
-                      {film.boxOffice && film.boxOffice.map((bo, index) => (
+                      {film.boxOffice?.map((bo, index) => (
                         <div key={index}>
                           <div className="text-xs text-gray-600 dark:text-gray-400">
                             Box Office {bo.region !== 'worldwide' ? `(${bo.region})` : '(Worldwide)'}
                           </div>
-                          <div className="font-semibold text-gray-900 dark:text-white">
-                            {bo.displayValue}
-                          </div>
+                          <div className="font-semibold text-gray-900 dark:text-white">{bo.displayValue}</div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Additional Info Card */}
+                {/* Additional Info */}
                 {(film.negaraAsal || film.jenis || film.color || film.originalLanguage) && (
                   <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3 text-sm border border-gray-200 dark:border-gray-700">
                     {film.negaraAsal && (
@@ -295,21 +335,18 @@ export default function FilmDetailPage() {
                         </div>
                       </div>
                     )}
-
                     {film.color && (
                       <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                         <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">Warna</div>
                         <div className="font-medium text-gray-900 dark:text-white capitalize">{film.color}</div>
                       </div>
                     )}
-
                     {film.originalLanguage && (
                       <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                         <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">Bahasa Asli</div>
                         <div className="font-medium text-gray-900 dark:text-white">{film.originalLanguage}</div>
                       </div>
                     )}
-
                     {film.jenis && (
                       <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                         <div className="text-gray-500 dark:text-gray-400 text-xs mb-1">Jenis</div>
@@ -325,7 +362,6 @@ export default function FilmDetailPage() {
             <article className="lg:col-span-2">
               <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">{film.judul}</h1>
 
-              {/* Meta Info */}
               <div className="flex flex-wrap gap-4 mb-6 text-sm text-gray-600 dark:text-gray-400">
                 {year && (
                   <div className="flex items-center gap-2">
@@ -347,17 +383,15 @@ export default function FilmDetailPage() {
                 )}
               </div>
 
-              {/* Description */}
+              {/* Sinopsis */}
               {film.deskripsi && (
                 <section className="mb-8">
                   <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Sinopsis</h2>
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
-                    {film.deskripsi}
-                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">{film.deskripsi}</p>
                 </section>
               )}
 
-              {/* Genres */}
+              {/* Genre */}
               {film.genre && film.genre.length > 0 && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
@@ -366,10 +400,7 @@ export default function FilmDetailPage() {
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {film.genre.map((genre, index) => (
-                      <span
-                        key={index}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium hover:shadow-md transition-shadow"
-                      >
+                      <span key={index} className="px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium hover:shadow-md transition-shadow">
                         {genre}
                       </span>
                     ))}
@@ -377,7 +408,7 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Directors */}
+              {/* Sutradara */}
               {film.sutradara && film.sutradara.length > 0 && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Sutradara</h2>
@@ -388,18 +419,7 @@ export default function FilmDetailPage() {
                         to={`/person/${director.slug}`}
                         className="flex items-center gap-3 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
                       >
-                        {director.photoUrl ? (
-                          <img
-                            src={director.photoUrl}
-                            alt={director.name}
-                            className="w-12 h-12 rounded-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                            <User className="w-6 h-6 text-gray-400 dark:text-gray-500" />
-                          </div>
-                        )}
+                        <PersonAvatar photoUrl={director.photoUrl} name={director.name} size="md" />
                         <span className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {director.name}
                         </span>
@@ -409,7 +429,7 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Screenwriters */}
+              {/* Penulis Skenario */}
               {film.penulisSkenario && film.penulisSkenario.length > 0 && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
@@ -423,18 +443,7 @@ export default function FilmDetailPage() {
                         to={`/person/${writer.slug}`}
                         className="flex items-center gap-3 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
                       >
-                        {writer.photoUrl ? (
-                          <img
-                            src={writer.photoUrl}
-                            alt={writer.name}
-                            className="w-10 h-10 rounded-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                            <User className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                          </div>
-                        )}
+                        <PersonAvatar photoUrl={writer.photoUrl} name={writer.name} size="sm" />
                         <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {writer.name}
                         </span>
@@ -444,7 +453,7 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Cast */}
+              {/* Pemeran */}
               {film.pemeran && film.pemeran.length > 0 && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
@@ -458,18 +467,7 @@ export default function FilmDetailPage() {
                         to={`/person/${actor.slug}`}
                         className="flex items-center gap-3 p-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
                       >
-                        {actor.photoUrl ? (
-                          <img
-                            src={actor.photoUrl}
-                            alt={actor.name}
-                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                            <User className="w-6 h-6 text-gray-400 dark:text-gray-500" />
-                          </div>
-                        )}
+                        <PersonAvatar photoUrl={actor.photoUrl} name={actor.name} size="md" />
                         <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
                           {actor.name}
                         </span>
@@ -481,10 +479,7 @@ export default function FilmDetailPage() {
                       onClick={() => setShowAllCast(!showAllCast)}
                       className="mt-3 text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
                     >
-                      {showAllCast
-                        ? 'Tampilkan lebih sedikit'
-                        : `Lihat semua pemeran (${film.pemeran.length})`
-                      }
+                      {showAllCast ? 'Tampilkan lebih sedikit' : `Lihat semua pemeran (${film.pemeran.length})`}
                     </button>
                   )}
                 </section>
@@ -505,17 +500,12 @@ export default function FilmDetailPage() {
                           Sinematografer
                         </h3>
                         {film.cinematographer.map((person, index) => (
-                          <Link
-                            key={`cinematographer-${person.id}-${index}`}
-                            to={`/person/${person.slug}`}
-                            className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium"
-                          >
+                          <Link key={`cinematographer-${person.id}-${index}`} to={`/person/${person.slug}`} className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium">
                             {person.name}
                           </Link>
                         ))}
                       </div>
                     )}
-
                     {film.filmEditor && film.filmEditor.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
@@ -523,17 +513,12 @@ export default function FilmDetailPage() {
                           Editor
                         </h3>
                         {film.filmEditor.map((person, index) => (
-                          <Link
-                            key={`editor-${person.id}-${index}`}
-                            to={`/person/${person.slug}`}
-                            className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium"
-                          >
+                          <Link key={`editor-${person.id}-${index}`} to={`/person/${person.slug}`} className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium">
                             {person.name}
                           </Link>
                         ))}
                       </div>
                     )}
-
                     {film.composer && film.composer.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
@@ -541,17 +526,12 @@ export default function FilmDetailPage() {
                           Komposer Musik
                         </h3>
                         {film.composer.map((person, index) => (
-                          <Link
-                            key={`composer-${person.id}-${index}`}
-                            to={`/person/${person.slug}`}
-                            className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium"
-                          >
+                          <Link key={`composer-${person.id}-${index}`} to={`/person/${person.slug}`} className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium">
                             {person.name}
                           </Link>
                         ))}
                       </div>
                     )}
-
                     {film.produser && film.produser.length > 0 && (
                       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
@@ -559,11 +539,7 @@ export default function FilmDetailPage() {
                           Produser
                         </h3>
                         {film.produser.map((person, index) => (
-                          <Link
-                            key={`producer-${person.id}-${index}`}
-                            to={`/person/${person.slug}`}
-                            className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium mb-1"
-                          >
+                          <Link key={`producer-${person.id}-${index}`} to={`/person/${person.slug}`} className="block text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 font-medium mb-1">
                             {person.name}
                           </Link>
                         ))}
@@ -573,7 +549,7 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Production Companies */}
+              {/* Perusahaan Produksi */}
               {film.perusahaanProduksi && film.perusahaanProduksi.length > 0 && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
@@ -582,11 +558,7 @@ export default function FilmDetailPage() {
                   </h2>
                   <div className="flex flex-wrap gap-3">
                     {film.perusahaanProduksi.map((company, index) => (
-                      <Link
-                        key={`company-${company.id}-${index}`}
-                        to={`/perusahaan/${company.slug}`}
-                        className="px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
-                      >
+                      <Link key={`company-${company.id}-${index}`} to={`/perusahaan/${company.slug}`} className="px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
                         {company.name}
                       </Link>
                     ))}
@@ -594,7 +566,7 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Distributors */}
+              {/* Distributor */}
               {film.distributor && film.distributor.length > 0 && (
                 <section className="mb-8">
                   <h2 className="text-xl font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
@@ -603,11 +575,7 @@ export default function FilmDetailPage() {
                   </h2>
                   <div className="flex flex-wrap gap-3">
                     {film.distributor.map((company, index) => (
-                      <Link
-                        key={`distributor-${company.id}-${index}`}
-                        to={`/perusahaan/${company.slug}`}
-                        className="px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
-                      >
+                      <Link key={`distributor-${company.id}-${index}`} to={`/perusahaan/${company.slug}`} className="px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
                         {company.name}
                       </Link>
                     ))}
@@ -615,7 +583,7 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Film Details Collapsible */}
+              {/* Detail Film Collapsible */}
               {(film.durasi || film.tahunRilis || film.negaraAsal || film.jenis ||
                 film.narrativeLocation || film.filmingLocation || film.followedBy || film.partOfSeries) && (
                 <section className="mb-8">
@@ -629,9 +597,7 @@ export default function FilmDetailPage() {
                     </div>
                     <svg
                       className={`w-5 h-5 transition-transform text-gray-500 dark:text-gray-400 ${showFilmDetails ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -694,17 +660,12 @@ export default function FilmDetailPage() {
                 </section>
               )}
 
-              {/* Subtitles Info */}
+              {/* Subtitles */}
               {film.subtitleUrl && (
                 <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     <strong>✨ Subtitle tersedia:</strong>{' '}
-                    <a
-                      href={film.subtitleUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:no-underline font-medium"
-                    >
+                    <a href={film.subtitleUrl} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline font-medium">
                       Unduh subtitle
                     </a>
                   </p>

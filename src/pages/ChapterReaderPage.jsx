@@ -32,7 +32,7 @@ import TextSelectionPopup from '../components/Reader/TextSelectionPopup'
 import BottomToolbar from '../components/Reader/BottomToolbar'
 import AnnotationPanel from '../components/Reader/AnnotationPanel'
 import ReviewsSection from '../components/Reader/ReviewsSection'
-import { Volume2, Highlighter, Bookmark, Search } from 'lucide-react'
+import { Volume2, Highlighter, Bookmark, Search, CheckCircle, Circle } from 'lucide-react'
 import '../styles/epub-styles.css'
 
 const hideScrollbarStyle = `
@@ -112,6 +112,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [showExportLoginPrompt, setShowExportLoginPrompt] = useState(false)
 
   const [showTTSPanel, setShowTTSPanel] = useState(true)
+
+  // ✅ NEW: State for marking chapter as complete
+  const [isChapterCompleted, setIsChapterCompleted] = useState(false)
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false)
 
   const [readingMode, setReadingMode] = useState(() => {
     return localStorage.getItem('readingMode') === 'true'
@@ -204,6 +208,31 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     setShowExportModal(true)
   }
 
+  // ✅ NEW: Handler to mark chapter as complete/incomplete
+  const handleMarkComplete = async () => {
+    if (!isAuthenticated) {
+      navigate('/masuk', { state: { from: location.pathname } })
+      return
+    }
+    if (!chapter?.chapterNumber || isMarkingComplete) return
+
+    setIsMarkingComplete(true)
+    const newCompletedState = !isChapterCompleted
+
+    try {
+      await chapterService.saveProgress(bookSlug, parseInt(chapter.chapterNumber), {
+        position: window.scrollY,
+        readingTimeSeconds: 0,
+        isCompleted: newCompletedState
+      })
+      setIsChapterCompleted(newCompletedState)
+    } catch (error) {
+      alert('✗ Gagal memperbarui status bab')
+    } finally {
+      setIsMarkingComplete(false)
+    }
+  }
+
   useKeyboardShortcuts({
     chapter,
     isAuthenticated,
@@ -246,6 +275,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         isCompleted
       }).catch(() => {})
 
+      // ✅ Auto-update completed state if scrolled past 90%
+      if (isCompleted && !isChapterCompleted) {
+        setIsChapterCompleted(true)
+      }
+
       setProgressData(prev => ({
         ...prev,
         startTime: currentTime,
@@ -254,7 +288,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [isAuthenticated, chapter, bookSlug, progressData.startTime])
+  }, [isAuthenticated, chapter, bookSlug, progressData.startTime, isChapterCompleted])
 
   useEffect(() => {
     return () => {
@@ -349,6 +383,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       setLoading(true)
       const response = await chapterService.readChapterByPath(bookSlug, fullChapterPath)
       setChapter(response)
+      // ✅ NEW: Initialize completed state from chapter data if available
+      if (response?.isCompleted !== undefined) {
+        setIsChapterCompleted(response.isCompleted)
+      }
     } catch (error) {
       console.error('Error fetching chapter:', error)
     } finally {
@@ -932,6 +970,35 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
               notes={currentChapterNotes}
             />
           </div>
+
+          {/* ✅ NEW: Mark as Complete Button */}
+          {isAuthenticated && (
+            <div className="flex justify-center my-6">
+              <button
+                onClick={handleMarkComplete}
+                disabled={isMarkingComplete}
+                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border ${
+                  isChapterCompleted
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                } disabled:opacity-60 disabled:cursor-not-allowed`}
+                aria-label={isChapterCompleted ? 'Tandai sebagai belum selesai' : 'Tandai sebagai selesai dibaca'}
+              >
+                {isChapterCompleted ? (
+                  <CheckCircle size={18} className="text-green-600 dark:text-green-400" />
+                ) : (
+                  <Circle size={18} className="text-gray-400" />
+                )}
+                <span>
+                  {isMarkingComplete
+                    ? 'Menyimpan...'
+                    : isChapterCompleted
+                      ? 'Selesai Dibaca'
+                      : 'Tandai Selesai'}
+                </span>
+              </button>
+            </div>
+          )}
 
           <div className="my-8">
             <ChapterRating
