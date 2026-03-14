@@ -1,7 +1,8 @@
-// src/App.jsx - UPDATED: Added blog routes
+// src/App.jsx - UPDATED: Added newspaper (koran) routes
 // Changes:
-//   1. Added BlogPage, BlogDetailPage public routes
-//   2. Added BlogManagePage, BlogEditorPage protected admin routes in dashboard
+//   1. Added NewspaperPage, NewspaperCategoryPage, NewspaperDatePage,
+//      NewspaperArticleDetailPage, NewspaperSearchPage, NewspaperOnThisDayPage public routes
+//   2. Added NewspaperManagePage, NewspaperEditorPage protected admin routes in dashboard
 
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
@@ -59,9 +60,17 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 
-// ✅ NEW: Blog Pages
+// Blog Pages
 import BlogPage from './pages/BlogPage'
 import BlogDetailPage from './pages/BlogDetailPage'
+
+// ✅ NEW: Newspaper (Koran) Pages
+import NewspaperPage from './pages/NewspaperPage'
+import NewspaperCategoryPage from './pages/NewspaperCategoryPage'
+import NewspaperDatePage from './pages/NewspaperDatePage'
+import NewspaperArticleDetailPage from './pages/NewspaperArticleDetailPage'
+import NewspaperSearchPage from './pages/NewspaperSearchPage'
+import NewspaperOnThisDayPage from './pages/NewspaperOnThisDayPage'
 
 // Dashboard Pages
 import DashboardLayout from './pages/dashboard/DashboardLayout'
@@ -76,9 +85,13 @@ import AchievementsPage from './pages/dashboard/AchievementsPage'
 import GoalsPage from './pages/dashboard/GoalsPage'
 import AdminPage from './pages/dashboard/AdminPage'
 
-// ✅ NEW: Blog Admin Pages
+// Blog Admin Pages
 import BlogManagePage from './pages/dashboard/BlogManagePage'
 import BlogEditorPage from './pages/dashboard/BlogEditorPage'
+
+// ✅ NEW: Newspaper Admin Pages
+import NewspaperManagePage from './pages/dashboard/NewspaperManagePage'
+import NewspaperEditorPage from './pages/dashboard/NewspaperEditorPage'
 
 // Error Pages
 import NotFoundPage from './pages/NotFoundPage'
@@ -141,9 +154,19 @@ function App() {
         <Route path="/person/:personSlug" element={<PublicLayout><PersonDetailPage /></PublicLayout>} />
         <Route path="/perusahaan/:companySlug" element={<PublicLayout><CompanyDetailPage /></PublicLayout>} />
 
-        {/* ✅ NEW: Blog Routes - Public */}
+        {/* Blog Routes - Public */}
         <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
         <Route path="/blog/:slug" element={<PublicLayout><BlogDetailPage /></PublicLayout>} />
+
+        {/* ✅ NEW: Koran (Newspaper) Routes - Public */}
+        {/* URUTAN PENTING: route statis harus sebelum route dinamis */}
+        <Route path="/koran" element={<PublicLayout><NewspaperPage /></PublicLayout>} />
+        <Route path="/koran/cari" element={<PublicLayout><NewspaperSearchPage /></PublicLayout>} />
+        <Route path="/koran/hari-ini" element={<PublicLayout><NewspaperOnThisDayPage /></PublicLayout>} />
+        <Route path="/koran/kategori/:categorySlug" element={<PublicLayout><NewspaperCategoryPage /></PublicLayout>} />
+        <Route path="/koran/tanggal/:date" element={<PublicLayout><NewspaperDatePage /></PublicLayout>} />
+        <Route path="/koran/:categorySlug/:date" element={<PublicLayout><NewspaperDatePage /></PublicLayout>} />
+        <Route path="/koran/:categorySlug/:date/:articleSlug" element={<PublicLayout><NewspaperArticleDetailPage /></PublicLayout>} />
 
         {/* Search */}
         <Route path="/cari" element={<PublicLayout><SearchResultsPage /></PublicLayout>} />
@@ -186,12 +209,17 @@ function App() {
           <Route path="pengaturan" element={<SettingsPage />} />
           <Route path="kelola" element={<AdminPage />} />
 
-          {/* ✅ NEW: Blog Admin Routes - accessible only if user has ADMIN role */}
+          {/* Blog Admin Routes */}
           <Route path="blog" element={<BlogManagePage />} />
           <Route path="blog/baru" element={<BlogEditorPage />} />
           <Route path="blog/edit/:id" element={<BlogEditorPage />} />
+
+          {/* ✅ NEW: Koran Admin Routes */}
+          <Route path="koran" element={<NewspaperManagePage />} />
+          <Route path="koran/baru" element={<NewspaperEditorPage />} />
+          <Route path="koran/edit/:id" element={<NewspaperEditorPage />} />
         </Route>
-        
+
         {/* Error Pages */}
         <Route path="/pemeliharaan" element={<MaintenancePage />} />
         <Route path="/404" element={<PublicLayout><NotFoundPage /></PublicLayout>} />

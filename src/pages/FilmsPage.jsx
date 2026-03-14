@@ -1,5 +1,5 @@
 // ============================================
-// src/pages/FilmsPage.jsx - PERFORMA OPTIMAL + URL STATE
+// src/pages/FilmsPage.jsx
 // ============================================
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
@@ -96,7 +96,6 @@ const FilmsPage = () => {
   const navigate = useNavigate()
 
   // ── URL sebagai sumber kebenaran untuk page ──────────────────────────────────
-  // Saat user kembali dari detail film, browser restore URL → page otomatis kembali
   const [searchParams, setSearchParams] = useSearchParams()
   const currentPage = Math.max(1, Number(searchParams.get('page') || 1))
 
@@ -111,7 +110,7 @@ const FilmsPage = () => {
         next.set('page', String(newPage))
       }
       return next
-    }, { replace: false }) // false → masuk history stack, tombol Back browser berfungsi
+    }, { replace: false })
   }, [setSearchParams])
 
   // ── Data state ───────────────────────────────────────────────────────────────

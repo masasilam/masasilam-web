@@ -1,4 +1,4 @@
-// src/components/Layout/Header.jsx - UPDATED: Added Blog link
+// src/components/Layout/Header.jsx
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -44,13 +44,14 @@ const Header = () => {
     return name.charAt(0).toUpperCase()
   }
 
-  // Nav links — Blog ditambahkan di sini
+  // ✅ Nav links lengkap — Blog + Koran
   const navLinks = [
-    { to: '/buku', label: 'Buku' },
-    { to: '/film', label: 'Film' },
-    { to: '/blog', label: 'Blog' },       // ✅ BARU
+    { to: '/buku',    label: 'Buku'    },
+    { to: '/film',    label: 'Film'    },
+    { to: '/blog',    label: 'Blog'    },
+    { to: '/koran',   label: 'Koran'   },
     { to: '/penulis', label: 'Penulis' },
-    { to: '/kategori', label: 'Kategori' },
+    { to: '/kategori',label: 'Kategori'},
   ]
 
   return (
@@ -83,9 +84,12 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-4">
-            {/* Nav links */}
             {navLinks.map(({ to, label }) => (
-              <Link key={to} to={to} className="nav-link text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+              <Link
+                key={to}
+                to={to}
+                className="nav-link text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+              >
                 {label}
               </Link>
             ))}
@@ -176,7 +180,6 @@ const Header = () => {
         {mobileMenuOpen && (
           <nav className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex flex-col gap-4">
-              {/* Nav links — termasuk Blog */}
               {navLinks.map(({ to, label }) => (
                 <Link
                   key={to}

@@ -6,21 +6,40 @@ import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { Clock, Film as FilmIcon, Play, Video } from 'lucide-react'
 
-// Konversi URL Wikimedia ke thumbnail kecil — hemat 80-95% ukuran
+// Konversi URL Wikimedia ke thumbnail kecil lalu proxy via weserv.nl
+// untuk menghindari 429 Too Many Requests dari Wikimedia
 const getThumb = (url, w = 300) => {
   if (!url) return null
+
+  let thumbUrl = url
+
+  // Buat URL thumbnail Wikimedia yang lebih kecil (hemat 80-95% ukuran)
   const m = url.match(/^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)([a-f0-9]\/[a-f0-9]{2}\/)(.+)$/)
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbName = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbName}`
+  if (m) {
+    const [, base, hash, filename] = m
+    const isSvg = filename.toLowerCase().endsWith('.svg')
+    const thumbName = isSvg ? `${filename}.png` : filename
+    thumbUrl = `${base}thumb/${hash}${filename}/${w}px-${thumbName}`
+  }
+
+  // Proxy via images.weserv.nl untuk bypass 429
+  return `https://images.weserv.nl/?url=${encodeURIComponent(thumbUrl)}&w=${w}&q=80&output=webp`
 }
 
 const FilmCard = memo(({ film }) => {
   const [imgStatus, setImgStatus] = useState('loading') // 'loading' | 'loaded' | 'error'
   const year = film.tahunRilis ? new Date(film.tahunRilis).getFullYear() : null
   const thumbUrl = getThumb(film.posterUrl, 300)
+
+  // Fallback bertingkat: proxy gagal → coba URL asli → tampilkan icon
+  const handleError = (e) => {
+    const currentSrc = e.target.src
+    if (currentSrc.includes('weserv.nl') && film.posterUrl) {
+      e.target.src = film.posterUrl
+      return
+    }
+    setImgStatus('error')
+  }
 
   return (
     <Link
@@ -43,13 +62,12 @@ const FilmCard = memo(({ film }) => {
             loading="lazy"
             decoding="async"
             onLoad={() => setImgStatus('loaded')}
-            onError={() => setImgStatus('error')}
+            onError={handleError}
             className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${
               imgStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
             }`}
           />
         ) : (
-          // Fallback: no poster atau error
           <div className="w-full h-full flex items-center justify-center">
             <FilmIcon className="w-10 h-10 text-gray-400 dark:text-gray-500" />
           </div>
@@ -92,19 +110,16 @@ const FilmCard = memo(({ film }) => {
 
       {/* Info */}
       <div className="p-2 sm:p-3">
-        {/* Title */}
         <h3 className="font-semibold text-xs sm:text-sm leading-snug text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-1">
           {film.judul}
         </h3>
 
-        {/* Director */}
         {film.sutradara && film.sutradara.length > 0 && (
           <p className="hidden sm:block text-[10px] text-gray-500 dark:text-gray-400 mb-1 truncate">
             {film.sutradara[0].name}
           </p>
         )}
 
-        {/* Duration */}
         {film.durasi && (
           <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">
             <Clock className="w-2.5 h-2.5" />
@@ -112,7 +127,6 @@ const FilmCard = memo(({ film }) => {
           </div>
         )}
 
-        {/* Genre */}
         {film.genre && film.genre.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded text-[9px] sm:text-[10px] font-medium max-w-full truncate">
@@ -126,7 +140,6 @@ const FilmCard = memo(({ film }) => {
           </div>
         )}
 
-        {/* Review score */}
         {film.reviewScores && film.reviewScores.length > 0 && (
           <div className="mt-1 flex items-center gap-0.5">
             <svg className="w-2.5 h-2.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">

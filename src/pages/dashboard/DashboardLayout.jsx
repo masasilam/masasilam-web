@@ -1,11 +1,10 @@
-// ============================================
-// src/pages/dashboard/DashboardLayout.jsx - UPDATED WITH BLOG MENU
-// ============================================
+// src/pages/dashboard/DashboardLayout.jsx - UPDATED WITH KORAN MENU
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Library, History, BarChart3, Calendar, Award, Settings,
-  Target, Highlighter, Home, LogOut, User, Menu, X, Moon, Sun, BookOpen, Database, PenSquare
+  Target, Highlighter, Home, LogOut, User, Menu, X, Moon, Sun, BookOpen,
+  Database, PenSquare, Newspaper
 } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
@@ -62,6 +61,13 @@ const DashboardLayout = () => {
           path: '/dasbor/blog',
           icon: PenSquare,
           label: 'Posting Blog',
+          adminOnly: true,
+          badge: 'Admin'
+        },
+        {
+          path: '/dasbor/koran',
+          icon: Newspaper,
+          label: 'Kelola Koran',
           adminOnly: true,
           badge: 'Admin'
         },

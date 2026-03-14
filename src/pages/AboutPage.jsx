@@ -322,6 +322,31 @@ const AboutPage = () => {
             </div>
           </div>
 
+          {/* Copyright Complaint */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-10 mb-12 sm:mb-16 border-l-4 border-yellow-400">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <Mail className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                Pelanggaran Hak Cipta?
+              </h2>
+            </div>
+            <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
+              Meskipun kami berupaya memastikan seluruh konten di MasasilaM berada dalam domain publik, kami menyadari kemungkinan adanya kekeliruan. Jika Anda meyakini bahwa suatu karya di sini melanggar hak cipta Anda atau pihak lain, mohon segera hubungi kami.
+            </p>
+            <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-6 text-justify">
+              Laporan akan kami tindaklanjuti sesegera mungkin, dan konten yang terbukti bermasalah akan segera diturunkan.
+            </p>
+            <a
+              href="mailto:support@masasilam.com"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg font-semibold transition-all hover:shadow-lg transform hover:scale-105"
+            >
+              <Mail className="w-5 h-5" />
+              Kirim Laporan ke support@masasilam.com
+            </a>
+          </div>
+
           {/* CTA */}
           <div className="bg-gradient-to-br from-amber-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-8 sm:p-12 border-2 border-amber-200 dark:border-amber-700 shadow-2xl text-center">
             <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-6 text-gray-900 dark:text-white">
