@@ -6,15 +6,39 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Clock, ChevronRight, ChevronLeft, BookOpen, Calendar } from 'lucide-react'
 import api from '../services/api'
 
-const CATEGORY_ICONS = {
-  olahraga: '⚽', politik: '🏛️', ekonomi: '💰', budaya: '🎭',
-  pendidikan: '📚', kesehatan: '🏥', teknologi: '💻', hiburan: '🎬',
-}
-const CATEGORY_NAMES = {
-  olahraga: 'Olahraga', politik: 'Politik', ekonomi: 'Ekonomi',
-  budaya: 'Budaya', pendidikan: 'Pendidikan', kesehatan: 'Kesehatan',
-  teknologi: 'Teknologi', hiburan: 'Hiburan',
-}
+// ✅ Lengkap 27 kategori
+const CATEGORIES = [
+  { value: 'nasional',          label: 'Nasional',           icon: '🇮🇩' },
+  { value: 'internasional',     label: 'Internasional',      icon: '🌏' },
+  { value: 'daerah',            label: 'Daerah / Lokal',     icon: '📍' },
+  { value: 'politik',           label: 'Politik',            icon: '🏛️' },
+  { value: 'hukum',             label: 'Hukum & Kriminal',   icon: '⚖️' },
+  { value: 'pemerintahan',      label: 'Pemerintahan',       icon: '🏢' },
+  { value: 'ekonomi',           label: 'Ekonomi',            icon: '💰' },
+  { value: 'bisnis',            label: 'Bisnis & Keuangan',  icon: '📈' },
+  { value: 'pertanian',         label: 'Pertanian',          icon: '🌾' },
+  { value: 'sosial',            label: 'Sosial',             icon: '👥' },
+  { value: 'pendidikan',        label: 'Pendidikan',         icon: '📚' },
+  { value: 'kesehatan',         label: 'Kesehatan',          icon: '🏥' },
+  { value: 'agama',             label: 'Agama',              icon: '🕌' },
+  { value: 'lingkungan',        label: 'Lingkungan',         icon: '🌿' },
+  { value: 'teknologi',         label: 'Teknologi',          icon: '💻' },
+  { value: 'sains',             label: 'Sains & Iptek',      icon: '🔬' },
+  { value: 'budaya',            label: 'Budaya',             icon: '🎭' },
+  { value: 'hiburan',           label: 'Hiburan',            icon: '🎬' },
+  { value: 'olahraga',          label: 'Olahraga',           icon: '⚽' },
+  { value: 'gaya-hidup',        label: 'Gaya Hidup',         icon: '✨' },
+  { value: 'kuliner',           label: 'Kuliner',            icon: '🍜' },
+  { value: 'wisata',            label: 'Wisata',             icon: '✈️' },
+  { value: 'opini',             label: 'Opini / Kolom',      icon: '✍️' },
+  { value: 'sastra',            label: 'Sastra & Cerita',    icon: '📖' },
+  { value: 'cerita-bersambung', label: 'Cerita Bersambung',  icon: '📜' },
+  { value: 'iklan',             label: 'Iklan / Pengumuman', icon: '📢' },
+  { value: 'lainnya',           label: 'Lainnya',            icon: '📰' },
+]
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.value, c]))
+const getCatLabel = (v) => CAT_MAP[v]?.label || v
+const getCatIcon  = (v) => CAT_MAP[v]?.icon  || '📰'
 
 const MONTHS_ID = [
   '', 'Januari','Februari','Maret','April','Mei','Juni',
@@ -184,7 +208,7 @@ const NewspaperOnThisDayPage = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-xs text-gray-400">
-                            {CATEGORY_ICONS[art.category]} {CATEGORY_NAMES[art.category] || art.category}
+                            {getCatIcon(art.category)} {getCatLabel(art.category)}
                           </span>
                           {art.source && <>
                             <span className="text-gray-200 dark:text-gray-700">·</span>

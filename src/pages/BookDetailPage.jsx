@@ -410,7 +410,7 @@ const BookDetailPage = () => {
                   <div className="flex flex-wrap items-center gap-1">
                     {book.authorNames.split(',').map((author, index, arr) => {
                       const authorName = author.trim()
-                      const authorSlug = authorName.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-')
+                      const authorSlug = authorName.toLowerCase().replace(/\.\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
                       return (
                         <span key={index} className="inline-flex items-center">
                           <Link to={`/penulis/${authorSlug}`} className="text-lg font-medium hover:text-primary hover:underline">{authorName}</Link>

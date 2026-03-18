@@ -9,10 +9,39 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 
-const CATEGORY_ICONS = {
-  olahraga: '⚽', politik: '🏛️', ekonomi: '💰', budaya: '🎭',
-  pendidikan: '📚', kesehatan: '🏥', teknologi: '💻', hiburan: '🎬',
-}
+// ✅ Lengkap 27 kategori
+const CATEGORIES = [
+  { value: 'nasional',          label: 'Nasional',           icon: '🇮🇩' },
+  { value: 'internasional',     label: 'Internasional',      icon: '🌏' },
+  { value: 'daerah',            label: 'Daerah / Lokal',     icon: '📍' },
+  { value: 'politik',           label: 'Politik',            icon: '🏛️' },
+  { value: 'hukum',             label: 'Hukum & Kriminal',   icon: '⚖️' },
+  { value: 'pemerintahan',      label: 'Pemerintahan',       icon: '🏢' },
+  { value: 'ekonomi',           label: 'Ekonomi',            icon: '💰' },
+  { value: 'bisnis',            label: 'Bisnis & Keuangan',  icon: '📈' },
+  { value: 'pertanian',         label: 'Pertanian',          icon: '🌾' },
+  { value: 'sosial',            label: 'Sosial',             icon: '👥' },
+  { value: 'pendidikan',        label: 'Pendidikan',         icon: '📚' },
+  { value: 'kesehatan',         label: 'Kesehatan',          icon: '🏥' },
+  { value: 'agama',             label: 'Agama',              icon: '🕌' },
+  { value: 'lingkungan',        label: 'Lingkungan',         icon: '🌿' },
+  { value: 'teknologi',         label: 'Teknologi',          icon: '💻' },
+  { value: 'sains',             label: 'Sains & Iptek',      icon: '🔬' },
+  { value: 'budaya',            label: 'Budaya',             icon: '🎭' },
+  { value: 'hiburan',           label: 'Hiburan',            icon: '🎬' },
+  { value: 'olahraga',          label: 'Olahraga',           icon: '⚽' },
+  { value: 'gaya-hidup',        label: 'Gaya Hidup',         icon: '✨' },
+  { value: 'kuliner',           label: 'Kuliner',            icon: '🍜' },
+  { value: 'wisata',            label: 'Wisata',             icon: '✈️' },
+  { value: 'opini',             label: 'Opini / Kolom',      icon: '✍️' },
+  { value: 'sastra',            label: 'Sastra & Cerita',    icon: '📖' },
+  { value: 'cerita-bersambung', label: 'Cerita Bersambung',  icon: '📜' },
+  { value: 'iklan',             label: 'Iklan / Pengumuman', icon: '📢' },
+  { value: 'lainnya',           label: 'Lainnya',            icon: '📰' },
+]
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.value, c]))
+const getCatIcon  = (v) => CAT_MAP[v]?.icon  || '📰'
+const getCatLabel = (v) => CAT_MAP[v]?.label || v
 
 const NewspaperPage = () => {
   const [stats, setStats]           = useState(null)
@@ -112,7 +141,7 @@ const NewspaperPage = () => {
             {categories.map(cat => (
               <Link key={cat.slug} to={`/koran/kategori/${cat.slug}`}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-white/10 transition text-xs whitespace-nowrap text-gray-300">
-                <span>{CATEGORY_ICONS[cat.slug] || '📰'}</span>
+                <span>{getCatIcon(cat.slug)}</span>
                 {cat.name}
                 {cat.articleCount > 0 && (
                   <span className="text-gray-500 text-xs">({cat.articleCount.toLocaleString('id-ID')})</span>
@@ -145,7 +174,7 @@ const NewspaperPage = () => {
                   {categories.map(cat => (
                     <Link key={cat.slug} to={`/koran/kategori/${cat.slug}`}
                       className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-gray-900 dark:hover:border-white transition-all hover:shadow-md">
-                      <div className="text-3xl mb-2">{CATEGORY_ICONS[cat.slug] || '📰'}</div>
+                      <div className="text-3xl mb-2">{getCatIcon(cat.slug)}</div>
                       <h3 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-300 transition">
                         {cat.name}
                       </h3>
@@ -177,7 +206,7 @@ const NewspaperPage = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-semibold text-gray-500 uppercase">
-                              {CATEGORY_ICONS[art.category]} {art.categoryName || art.category}
+                              {getCatIcon(art.category)} {art.categoryName || getCatLabel(art.category)}
                             </span>
                             <span className="text-gray-300 dark:text-gray-600">·</span>
                             <span className="text-xs text-gray-400">{art.dateFormatted || art.publishDate}</span>
