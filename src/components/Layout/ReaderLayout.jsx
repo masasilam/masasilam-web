@@ -1,10 +1,80 @@
 // src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC FIXED + PERSISTENT SETTINGS
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard } from 'lucide-react'
+import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard, ChevronDown, ChevronRight } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { chapterService } from '../../services/chapterService'
 import logoSvg from '/masasilam-logo.svg'
+
+// ✅ FIXED: Recursive TocItem untuk support h1, h2, h3, dst.
+const TocItem = ({ chapter, bookSlug, onClose }) => {
+  const [isExpanded, setIsExpanded] = useState(true)
+  const hasSubChapters = chapter.subChapters && chapter.subChapters.length > 0
+
+  const chapterPath = chapter.fullPath || chapter.slug || String(chapter.chapterNumber)
+
+  return (
+    <div>
+      <div className="flex items-center">
+        {hasSubChapters && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 ml-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+            aria-label={isExpanded ? 'Tutup' : 'Buka'}
+          >
+            {isExpanded
+              ? <ChevronDown className="w-3 h-3" />
+              : <ChevronRight className="w-3 h-3" />
+            }
+          </button>
+        )}
+
+        <Link
+          to={`/buku/${bookSlug}/${chapterPath}`}
+          onClick={onClose}
+          className={`flex-1 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+            !hasSubChapters ? 'ml-5' : ''
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
+              {chapter.chapterNumber}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm mb-1 line-clamp-2">
+                {chapter.title || `Bab ${chapter.chapterNumber}`}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Clock className="w-3 h-3" />
+                <span>{chapter.estimatedReadTime} menit</span>
+                {chapter.isCompleted && (
+                  <div className="flex items-center gap-1 text-green-600">
+                    <Check className="w-3 h-3" />
+                    <span>Selesai</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* ✅ Rekursi: render subChapters dengan indentasi */}
+      {hasSubChapters && isExpanded && (
+        <div className="border-l-2 border-primary/20 ml-5">
+          {chapter.subChapters.map((sub) => (
+            <TocItem
+              key={sub.id}
+              chapter={sub}
+              bookSlug={bookSlug}
+              onClose={onClose}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const ReaderLayout = ({
   children,
@@ -85,11 +155,14 @@ const ReaderLayout = ({
     setFontFamily('serif')
     setContentWidth('normal')
 
-    // ✅ Clear localStorage to ensure settings persist after reload
     localStorage.setItem('reader-font-size', '16')
     localStorage.setItem('reader-font-family', 'serif')
     localStorage.setItem('reader-content-width', 'normal')
   }
+
+  // ✅ Hanya ambil top-level chapters (parentChapterId === null)
+  // subChapters sudah di-nest di dalam masing-masing chapter dari API
+  const topLevelChapters = chapters.filter(ch => ch.parentChapterId === null)
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -160,7 +233,7 @@ const ReaderLayout = ({
                   <>
                     <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setTocOpen(false)} />
 
-                    {/* RESPONSIVE TOC - FIXED FOR MOBILE */}
+                    {/* RESPONSIVE TOC */}
                     <div className="fixed md:absolute right-0 top-0 md:top-12 bottom-0 md:bottom-auto w-full md:w-80 max-w-[85vw] md:max-w-none md:max-h-[70vh] bg-white dark:bg-gray-800 border-l md:border border-gray-200 dark:border-gray-700 md:rounded-lg shadow-xl overflow-y-auto z-[70]">
                       {/* Sticky Header */}
                       <div className="p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between z-10">
@@ -173,52 +246,15 @@ const ReaderLayout = ({
                         </button>
                       </div>
 
-                      {/* Scrollable Content with Bottom Padding for Mobile */}
+                      {/* ✅ FIXED: Gunakan TocItem rekursif */}
                       <div className="divide-y divide-gray-200 dark:divide-gray-700 pb-24 md:pb-4">
-                        {chapters.filter(ch => ch.parentChapterId === null).map((chapter) => (
-                          <div key={chapter.id}>
-                            <Link
-                              to={`/buku/${bookSlug}/${chapter.slug}`}
-                              onClick={() => setTocOpen(false)}
-                              className="block p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
-                                  {chapter.chapterNumber}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm mb-1 line-clamp-2">
-                                    {chapter.title || `Bab ${chapter.chapterNumber}`}
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{chapter.estimatedReadTime} menit</span>
-                                    {chapter.isCompleted && (
-                                      <div className="flex items-center gap-1 text-green-600">
-                                        <Check className="w-3 h-3" />
-                                        <span>Selesai</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </Link>
-
-                            {chapter.subChapters?.length > 0 && (
-                              <div className="ml-11 pb-2 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
-                                {chapter.subChapters.map((sub) => (
-                                  <Link
-                                    key={sub.id}
-                                    to={`/buku/${bookSlug}/${chapter.slug}/${sub.slug}`}
-                                    onClick={() => setTocOpen(false)}
-                                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors py-1"
-                                  >
-                                    {sub.chapterNumber}. {sub.title}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                        {topLevelChapters.map((chapter) => (
+                          <TocItem
+                            key={chapter.id}
+                            chapter={chapter}
+                            bookSlug={bookSlug}
+                            onClose={() => setTocOpen(false)}
+                          />
                         ))}
                       </div>
                     </div>

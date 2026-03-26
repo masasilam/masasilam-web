@@ -326,6 +326,12 @@ const BookDetailPage = () => {
                   <Button fullWidth variant="primary" size="lg" onClick={handleStartReading} loading={readingLoading} disabled={readingLoading}>
                     <BookOpen className="w-5 h-5 mr-2" />{readingLoading ? 'Memuat...' : 'Mulai Membaca'}
                   </Button>
+                  {book.fileUrl && (
+                    <Button fullWidth variant="outline" onClick={() => navigate(`/buku/${bookSlug}/baca`)}>
+                      <BookOpen className="w-5 h-5 mr-2" />
+                      Baca EPUB Online
+                    </Button>
+                  )}
                   <Button fullWidth variant="secondary" onClick={handleDownload} loading={downloadLoading} disabled={downloadLoading || !book.fileUrl}>
                     <Download className="w-5 h-5 mr-2" />{downloadLoading ? 'Mengunduh...' : 'Unduh EPUB'}
                   </Button>

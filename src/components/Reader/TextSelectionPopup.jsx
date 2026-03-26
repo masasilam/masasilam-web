@@ -1,7 +1,8 @@
 // ============================================
-// FILE: src/components/Reader/TextSelectionPopup.jsx - LIGHTER COLORS
+// FILE: src/components/Reader/TextSelectionPopup.jsx
+// PERUBAHAN: Tambah tombol "Laporkan Typo" dan prop onReportTypo
 // ============================================
-import { X, Highlighter, Check, Lock } from 'lucide-react'
+import { X, Highlighter, Check, Lock, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 
 const TextSelectionPopup = ({
@@ -11,23 +12,20 @@ const TextSelectionPopup = ({
   onClose,
   onHighlight,
   onAddNote,
+  onReportTypo,       // ← BARU: dipanggil saat user klik "Laporkan Typo"
   onNavigateToLogin,
   onMouseDown,
   onTouchStart
 }) => {
-  // Use lighter colors for better readability
   const [highlightColor, setHighlightColor] = useState('#FFF9C4')
   const [noteContent, setNoteContent] = useState('')
 
-  // Lighter color palette for highlights
-  // display = darker color for button preview
-  // store = lighter color that will be saved and shown in content
   const highlightColors = [
-    { display: '#FFEB3B', store: '#FFF9C4', name: 'Kuning' },   // Yellow
-    { display: '#4CAF50', store: '#C8E6C9', name: 'Hijau' },    // Green
-    { display: '#2196F3', store: '#BBDEFB', name: 'Biru' },     // Blue
-    { display: '#FF9800', store: '#FFE0B2', name: 'Oranye' },   // Orange
-    { display: '#F44336', store: '#FFCDD2', name: 'Merah' }     // Red
+    { display: '#FFEB3B', store: '#FFF9C4', name: 'Kuning' },
+    { display: '#4CAF50', store: '#C8E6C9', name: 'Hijau' },
+    { display: '#2196F3', store: '#BBDEFB', name: 'Biru' },
+    { display: '#FF9800', store: '#FFE0B2', name: 'Oranye' },
+    { display: '#F44336', store: '#FFCDD2', name: 'Merah' }
   ]
 
   const handleAddNote = () => {
@@ -79,9 +77,6 @@ const TextSelectionPopup = ({
                   />
                 ))}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                Warna akan lebih terang di konten untuk kemudahan membaca
-              </p>
             </div>
             <button
               onClick={() => onHighlight(highlightColor)}
@@ -100,11 +95,30 @@ const TextSelectionPopup = ({
               <button
                 onClick={handleAddNote}
                 disabled={!noteContent.trim()}
-                className="w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-3"
               >
                 <Check className="w-4 h-4 inline mr-1" /> Simpan Catatan
               </button>
             </div>
+
+            {/* ── TOMBOL BARU: Laporkan Typo ── */}
+            {onReportTypo && (
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={onReportTypo}
+                  className="w-full py-2 flex items-center justify-center gap-2
+                    bg-amber-50 dark:bg-amber-900/20
+                    hover:bg-amber-100 dark:hover:bg-amber-900/30
+                    border border-amber-200 dark:border-amber-700
+                    text-amber-700 dark:text-amber-400
+                    rounded-lg text-xs font-medium transition-colors"
+                  title="Laporkan kesalahan ketik di teks ini"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Laporkan Typo
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center py-4">
@@ -114,10 +128,26 @@ const TextSelectionPopup = ({
             </p>
             <button
               onClick={onNavigateToLogin}
-              className="w-full py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors"
+              className="w-full py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors mb-3"
             >
               Masuk Sekarang
             </button>
+
+            {/* Guest juga bisa laporkan typo tanpa login */}
+            {onReportTypo && (
+              <button
+                onClick={onReportTypo}
+                className="w-full py-2 flex items-center justify-center gap-2
+                  bg-amber-50 dark:bg-amber-900/20
+                  hover:bg-amber-100 dark:hover:bg-amber-900/30
+                  border border-amber-200 dark:border-amber-700
+                  text-amber-700 dark:text-amber-400
+                  rounded-lg text-xs font-medium transition-colors"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Laporkan Typo (tanpa login)
+              </button>
+            )}
           </div>
         )}
       </div>

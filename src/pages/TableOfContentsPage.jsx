@@ -7,16 +7,17 @@ import SEO from '../components/Common/SEO'
 import { generateTableOfContentsStructuredData, generateBreadcrumbStructuredData } from '../utils/seoHelpers'
 import { BookOpen, Check, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 
-const buildChapterPath = (chapter, parentChapter = null) => {
-  if (!chapter?.slug) return chapter?.chapterNumber || ''
-  if (!parentChapter) return chapter.slug
-  return `${parentChapter.slug}/${chapter.slug}`
+// ✅ FIXED: Gunakan fullPath langsung dari data API
+const buildChapterPath = (chapter) => {
+  if (chapter.fullPath) return chapter.fullPath
+  return chapter.slug || String(chapter.chapterNumber)
 }
 
-const ChapterItem = ({ chapter, bookSlug, level = 0, parentChapter = null }) => {
+const ChapterItem = ({ chapter, bookSlug, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(true)
   const hasSubChapters = chapter.subChapters && chapter.subChapters.length > 0
-  const chapterPath = buildChapterPath(chapter, parentChapter)
+  // ✅ FIXED: Tidak perlu parentChapter prop lagi
+  const chapterPath = buildChapterPath(chapter)
 
   return (
     <div>
@@ -78,6 +79,7 @@ const ChapterItem = ({ chapter, bookSlug, level = 0, parentChapter = null }) => 
         </Link>
       </div>
 
+      {/* ✅ FIXED: Tidak pass parentChapter, cukup pass chapter saja */}
       {hasSubChapters && isExpanded && (
         <div className="border-l-2 border-primary/20 ml-6">
           {chapter.subChapters.map((subChapter) => (
@@ -86,7 +88,6 @@ const ChapterItem = ({ chapter, bookSlug, level = 0, parentChapter = null }) => 
               chapter={subChapter}
               bookSlug={bookSlug}
               level={level + 1}
-              parentChapter={chapter}
             />
           ))}
         </div>
@@ -124,7 +125,10 @@ const TableOfContentsPage = () => {
 
   const mainChaptersCount = chapters.filter(ch => ch.parentChapterId === null).length
   const firstChapter = chapters.find(ch => ch.parentChapterId === null)
-  const firstChapterPath = firstChapter ? buildChapterPath(firstChapter) : '1'
+  // ✅ FIXED: Gunakan fullPath untuk firstChapterPath juga
+  const firstChapterPath = firstChapter
+    ? buildChapterPath(firstChapter)
+    : '1'
 
   // Generate SEO data
   const breadcrumbs = [
@@ -184,7 +188,6 @@ const TableOfContentsPage = () => {
                       chapter={chapter}
                       bookSlug={bookSlug}
                       level={0}
-                      parentChapter={null}
                     />
                   ))}
               </div>

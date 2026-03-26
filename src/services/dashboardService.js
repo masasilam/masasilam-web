@@ -28,7 +28,9 @@ const normalize = (res, isArray = false) => {
 }
 
 export const dashboardService = {
-  getMainDashboard: () => api.get('/dashboard').then(res => normalize(res)),
+  // ── Existing Methods ────────────────────────────────────────────
+  getMainDashboard: () =>
+    api.get('/dashboard').then(res => normalize(res)),
 
   getLibrary: (filter = 'all', page = 1, limit = 12, sortBy = 'last_read') =>
     api.get('/dashboard/library', { params: { filter, page, limit, sortBy } })
@@ -68,5 +70,39 @@ export const dashboardService = {
 
   getRecommendations: (limit = 10) =>
     api.get('/dashboard/recommendations', { params: { limit } })
-      .then(res => normalize(res, true))
+      .then(res => normalize(res, true)),
+
+  // ── Correction Admin Methods ────────────────────────────────────
+  /**
+   * Admin: Ambil daftar koreksi berdasarkan status.
+   * GET /api/dashboard/corrections?status=PENDING&page=1&limit=20
+   */
+  getCorrections: (status = 'PENDING', page = 1, limit = 20) =>
+    api.get('/dashboard/corrections', { params: { status, page, limit } })
+      .then(res => normalize(res, true)),
+
+  /**
+   * Admin: Setujui koreksi.
+   * POST /api/dashboard/corrections/{id}/approve
+   *
+   * Efek di backend:
+   *  1. UPDATE book_chapter.html_content
+   *  2. EVICT cache chapter
+   *  3. Trigger async epub rebuild (Cloudinary overwrite)
+   */
+  approveCorrection: (correctionId) =>
+    api.post(`/dashboard/corrections/${correctionId}/approve`)
+      .then(res => normalize(res)),
+
+  /**
+   * Admin: Tolak koreksi.
+   * POST /api/dashboard/corrections/{id}/reject
+   *
+   * @param {string|null} note - alasan penolakan (opsional)
+   */
+  rejectCorrection: (correctionId, note = null) =>
+    api.post(`/dashboard/corrections/${correctionId}/reject`, { note })
+      .then(res => normalize(res)),
 }
+
+export default dashboardService

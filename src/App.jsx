@@ -1,9 +1,7 @@
-// src/App.jsx - UPDATED: Added newspaper (koran) routes
-// Changes:
-//   1. Added NewspaperPage, NewspaperCategoryPage, NewspaperDatePage,
-//      NewspaperArticleDetailPage, NewspaperSearchPage, NewspaperOnThisDayPage public routes
-//   2. Added NewspaperManagePage, NewspaperEditorPage protected admin routes in dashboard
-
+// ============================================
+// FILE: src/App.jsx
+// PERUBAHAN: Tambah import CorrectionQueuePage + route /dasbor/koreksi
+// ============================================
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
@@ -11,27 +9,23 @@ import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 import { Toaster } from 'react-hot-toast'
 import './styles/index.css'
 
-// Layout Components
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import GuestRoute from './components/Auth/GuestRoute'
 import PublicLayout from './components/Layout/PublicLayout'
 import AuthLayout from './components/Layout/AuthLayout'
 
-// Book Pages
 import HomePage from './pages/HomePage'
 import BooksPage from './pages/BooksPage'
 import BookDetailPage from './pages/BookDetailPage'
 import TableOfContentsPage from './pages/TableOfContentsPage'
 import BookReviewsPage from './pages/BookReviewsPage'
 
-// Film Pages
 import FilmsPage from './pages/FilmsPage'
 import FilmDetailPage from './pages/FilmDetailPage'
 import FilmWatchPage from './pages/FilmWatchPage'
 import PersonDetailPage from './pages/PersonDetailPage'
 import CompanyDetailPage from './pages/CompanyDetailPage'
 
-// Metadata Pages
 import GenresPage from './pages/GenresPage'
 import GenreDetailPage from './pages/GenreDetailPage'
 import AuthorsPage from './pages/AuthorsPage'
@@ -42,7 +36,6 @@ import PopularBooksPage from './pages/PopularBooksPage'
 import NewBooksPage from './pages/NewBooksPage'
 import RecommendedBooksPage from './pages/RecommendedBooksPage'
 
-// Static Pages
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import FAQPage from './pages/FAQPage'
@@ -50,21 +43,17 @@ import HowToReadPage from './pages/HowToReadPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 
-// Reading Experience
 import ChapterReaderWrapper from './pages/ChapterReaderWrapper'
 
-// Auth Pages
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 
-// Blog Pages
 import BlogPage from './pages/BlogPage'
 import BlogDetailPage from './pages/BlogDetailPage'
 
-// ✅ NEW: Newspaper (Koran) Pages
 import NewspaperPage from './pages/NewspaperPage'
 import NewspaperCategoryPage from './pages/NewspaperCategoryPage'
 import NewspaperDatePage from './pages/NewspaperDatePage'
@@ -72,7 +61,6 @@ import NewspaperArticleDetailPage from './pages/NewspaperArticleDetailPage'
 import NewspaperSearchPage from './pages/NewspaperSearchPage'
 import NewspaperOnThisDayPage from './pages/NewspaperOnThisDayPage'
 
-// Dashboard Pages
 import DashboardLayout from './pages/dashboard/DashboardLayout'
 import DashboardOverview from './pages/dashboard/DashboardOverview'
 import MyLibraryPage from './pages/dashboard/MyLibraryPage'
@@ -85,17 +73,19 @@ import AchievementsPage from './pages/dashboard/AchievementsPage'
 import GoalsPage from './pages/dashboard/GoalsPage'
 import AdminPage from './pages/dashboard/AdminPage'
 
-// Blog Admin Pages
 import BlogManagePage from './pages/dashboard/BlogManagePage'
 import BlogEditorPage from './pages/dashboard/BlogEditorPage'
 
-// ✅ NEW: Newspaper Admin Pages
 import NewspaperManagePage from './pages/dashboard/NewspaperManagePage'
 import NewspaperEditorPage from './pages/dashboard/NewspaperEditorPage'
 
-// Error Pages
+// ← BARU: Halaman antrian koreksi untuk admin
+import CorrectionQueuePage from './pages/dashboard/CorrectionQueuePage'
+
 import NotFoundPage from './pages/NotFoundPage'
 import MaintenancePage from './pages/MaintenancePage'
+
+import EpubReaderPage from './pages/EpubReaderPage'
 
 function App() {
   const { theme } = useTheme()
@@ -108,29 +98,13 @@ function App() {
 
   return (
     <div className="app">
-      {/* Toast Notifications */}
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-          },
+          style: { background: '#363636', color: '#fff' },
+          success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
+          error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
         }}
       />
 
@@ -146,6 +120,7 @@ function App() {
         <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug" element={<PublicLayout><BookDetailPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />
+        <Route path="/buku/:bookSlug/baca" element={<EpubReaderPage />} />
 
         {/* Film Routes */}
         <Route path="/film" element={<PublicLayout><FilmsPage /></PublicLayout>} />
@@ -154,12 +129,11 @@ function App() {
         <Route path="/person/:personSlug" element={<PublicLayout><PersonDetailPage /></PublicLayout>} />
         <Route path="/perusahaan/:companySlug" element={<PublicLayout><CompanyDetailPage /></PublicLayout>} />
 
-        {/* Blog Routes - Public */}
+        {/* Blog Routes */}
         <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
         <Route path="/blog/:slug" element={<PublicLayout><BlogDetailPage /></PublicLayout>} />
 
-        {/* ✅ NEW: Koran (Newspaper) Routes - Public */}
-        {/* URUTAN PENTING: route statis harus sebelum route dinamis */}
+        {/* Koran Routes */}
         <Route path="/koran" element={<PublicLayout><NewspaperPage /></PublicLayout>} />
         <Route path="/koran/cari" element={<PublicLayout><NewspaperSearchPage /></PublicLayout>} />
         <Route path="/koran/hari-ini" element={<PublicLayout><NewspaperOnThisDayPage /></PublicLayout>} />
@@ -193,11 +167,7 @@ function App() {
         <Route path="/verifikasi-email" element={<AuthLayout><VerifyEmailPage /></AuthLayout>} />
 
         {/* Protected Dashboard Routes */}
-        <Route path="/dasbor" element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }>
+        <Route path="/dasbor" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DashboardOverview />} />
           <Route path="perpustakaan" element={<MyLibraryPage />} />
           <Route path="riwayat" element={<ReadingHistoryPage />} />
@@ -209,15 +179,18 @@ function App() {
           <Route path="pengaturan" element={<SettingsPage />} />
           <Route path="kelola" element={<AdminPage />} />
 
-          {/* Blog Admin Routes */}
+          {/* Blog Admin */}
           <Route path="blog" element={<BlogManagePage />} />
           <Route path="blog/baru" element={<BlogEditorPage />} />
           <Route path="blog/edit/:id" element={<BlogEditorPage />} />
 
-          {/* ✅ NEW: Koran Admin Routes */}
+          {/* Koran Admin */}
           <Route path="koran" element={<NewspaperManagePage />} />
           <Route path="koran/baru" element={<NewspaperEditorPage />} />
           <Route path="koran/edit/:id" element={<NewspaperEditorPage />} />
+
+          {/* ← BARU: Correction Queue Admin */}
+          <Route path="koreksi" element={<CorrectionQueuePage />} />
         </Route>
 
         {/* Error Pages */}
