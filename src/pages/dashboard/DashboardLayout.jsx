@@ -41,57 +41,38 @@ const DashboardLayout = () => {
     return () => { document.body.style.overflow = '' }
   }, [sidebarOpen])
 
-  const menuItems = useMemo(() => {
-    const items = [
-      { path: '/dasbor',              icon: LayoutDashboard, label: 'Dashboard',     exact: true },
-      { path: '/dasbor/perpustakaan', icon: Library,         label: 'Perpustakaan'              },
-      { path: '/dasbor/riwayat',      icon: History,         label: 'Riwayat'                   },
-      { path: '/dasbor/anotasi',      icon: Highlighter,     label: 'Anotasi'                   },
-      { path: '/dasbor/statistik',    icon: BarChart3,       label: 'Statistik'                 },
-      { path: '/dasbor/kalender',     icon: Calendar,        label: 'Kalender'                  },
-      { path: '/dasbor/pencapaian',   icon: Award,           label: 'Pencapaian'                },
-      { path: '/dasbor/target',       icon: Target,          label: 'Target'                    },
-    ]
+   const menuItems = useMemo(() => {
+     const items = [
+       { path: '/dasbor',              icon: LayoutDashboard, label: 'Dashboard',     exact: true },
+       { path: '/dasbor/perpustakaan', icon: Library,         label: 'Perpustakaan'              },
+       { path: '/dasbor/riwayat',      icon: History,         label: 'Riwayat'                   },
+       { path: '/dasbor/anotasi',      icon: Highlighter,     label: 'Anotasi'                   },
+       { path: '/dasbor/statistik',    icon: BarChart3,       label: 'Statistik'                 },
+       { path: '/dasbor/kalender',     icon: Calendar,        label: 'Kalender'                  },
+       { path: '/dasbor/pencapaian',   icon: Award,           label: 'Pencapaian'                },
+       { path: '/dasbor/target',       icon: Target,          label: 'Target'                    },
+       {
+         path: '/dasbor/koreksi',
+         icon: AlertTriangle,
+         label: 'Koreksi Teks',
+         // Tampilkan badge Admin hanya jika user adalah admin
+         ...(user?.roles?.includes('ADMIN') && {
+           adminOnly: true,
+           badge: 'Admin'
+         })
+       },
+     ]
 
-    if (user?.roles?.includes('ADMIN')) {
-      items.push(
-        {
-          path: '/dasbor/blog',
-          icon: PenSquare,
-          label: 'Posting Blog',
-          adminOnly: true,
-          badge: 'Admin'
-        },
-        {
-          path: '/dasbor/koran',
-          icon: Newspaper,
-          label: 'Kelola Koran',
-          adminOnly: true,
-          badge: 'Admin'
-        },
-        // ── BARU: Menu Koreksi Teks ─────────────────────────────────
-        // Ditaruh setelah Kelola Koran, sebelum Kelola Perpustakaan
-        // Menampilkan antrian laporan typo dari pembaca
-        {
-          path: '/dasbor/koreksi',
-          icon: AlertTriangle,
-          label: 'Koreksi Teks',
-          adminOnly: true,
-          badge: 'Admin'
-        },
-        // ────────────────────────────────────────────────────────────
-        {
-          path: '/dasbor/kelola',
-          icon: Database,
-          label: 'Kelola Perpustakaan',
-          adminOnly: true,
-          badge: 'Admin'
-        }
-      )
-    }
+     if (user?.roles?.includes('ADMIN')) {
+       items.push(
+         { path: '/dasbor/blog',   icon: PenSquare, label: 'Posting Blog',       adminOnly: true, badge: 'Admin' },
+         { path: '/dasbor/koran',  icon: Newspaper, label: 'Kelola Koran',       adminOnly: true, badge: 'Admin' },
+         { path: '/dasbor/kelola', icon: Database,  label: 'Kelola Perpustakaan',adminOnly: true, badge: 'Admin' },
+       )
+     }
 
-    return items
-  }, [user])
+     return items
+   }, [user])
 
   const bottomMenuItems = useMemo(() => [
     { path: '/',           icon: Home,     label: 'Beranda',      external: true },

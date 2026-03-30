@@ -1,7 +1,7 @@
 // PART 1: Imports, RatingModal, and Component Setup
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { Book, BookOpen, Calendar, Clock, Download, Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp, ArrowLeft } from 'lucide-react'
+import { Book, BookOpen, Calendar, Clock, Download, Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp, ArrowLeft, Pencil } from 'lucide-react'
 import bookService from '../services/bookService'
 import { useAuth } from '../hooks/useAuth'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
@@ -323,15 +323,13 @@ const BookDetailPage = () => {
               <div className="sticky top-24">
                 <img src={book.coverImageUrl || 'https://via.placeholder.com/400x600?text=No+Cover'} alt={`Cover buku ${book.title}`} className="w-full rounded-lg shadow-lg" loading="lazy" />
                 <div className="mt-6 space-y-3">
-                  <Button fullWidth variant="primary" size="lg" onClick={handleStartReading} loading={readingLoading} disabled={readingLoading}>
-                    <BookOpen className="w-5 h-5 mr-2" />{readingLoading ? 'Memuat...' : 'Mulai Membaca'}
-                  </Button>
-                  {book.fileUrl && (
-                    <Button fullWidth variant="outline" onClick={() => navigate(`/buku/${bookSlug}/baca`)}>
-                      <BookOpen className="w-5 h-5 mr-2" />
-                      Baca EPUB Online
-                    </Button>
-                  )}
+                        <Button fullWidth variant="primary" size="lg" onClick={() => navigate(`/buku/${bookSlug}/baca`)} loading={readingLoading} disabled={readingLoading}>
+                          <BookOpen className="w-5 h-5 mr-2" />Baca
+                        </Button>
+
+                   <Button fullWidth variant="outline" onClick={handleStartReading} loading={readingLoading} disabled={readingLoading}>
+                     <Pencil className="w-5 h-5 mr-2" />Koreksi Teks
+                   </Button>
                   <Button fullWidth variant="secondary" onClick={handleDownload} loading={downloadLoading} disabled={downloadLoading || !book.fileUrl}>
                     <Download className="w-5 h-5 mr-2" />{downloadLoading ? 'Mengunduh...' : 'Unduh EPUB'}
                   </Button>

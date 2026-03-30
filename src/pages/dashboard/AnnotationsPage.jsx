@@ -31,12 +31,12 @@ const AnnotationsPage = () => {
     }
   }
 
-  const typeOptions = [
-    { value: 'all', label: 'Semua', icon: FileText },
-    { value: 'bookmarks', label: 'Bookmarks', icon: Bookmark },
-    { value: 'highlights', label: 'Highlights', icon: Highlighter },
-    { value: 'notes', label: 'Notes', icon: FileText }
-  ]
+    const typeOptions = [
+      { value: 'all', label: 'Semua', icon: FileText },
+      { value: 'bookmark', label: 'Bookmarks', icon: Bookmark },
+      { value: 'highlight', label: 'Highlights', icon: Highlighter },
+      { value: 'note', label: 'Notes', icon: FileText }
+    ]
 
   const getAnnotationStyle = (annotationType) => {
     switch(annotationType) {
@@ -107,12 +107,13 @@ const AnnotationsPage = () => {
                     </span>
                   </div>
 
-                  <Link
-                    to={`/buku/${annotation.bookSlug}`}
-                    className="font-semibold hover:text-primary block mb-2"
-                  >
-                    {annotation.bookTitle}
-                  </Link>
+                    <Link
+                      to={`/buku/${annotation.bookSlug}/baca`}
+                      state={{ cfi: annotation.cfi }}
+                      className="font-semibold hover:text-primary block mb-2"
+                    >
+                      {annotation.bookTitle}
+                    </Link>
 
                   {annotation.title && annotation.type === 'note' && (
                     <h3 className="font-medium mb-2">{annotation.title}</h3>

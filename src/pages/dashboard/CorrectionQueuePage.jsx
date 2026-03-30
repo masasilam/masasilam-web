@@ -2,14 +2,6 @@
 // FILE: src/pages/dashboard/CorrectionQueuePage.jsx
 // Route: /dasbor/koreksi
 // ============================================
-// Halaman admin untuk mereview laporan typo dari user.
-//
-// Fitur:
-//  - Tab: PENDING | APPROVED | REJECTED
-//  - Setiap item menampilkan diff preview
-//  - Tombol Setujui / Tolak
-//  - Konfirmasi sebelum aksi
-//  - Pagination
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../hooks/useAuth'
@@ -36,14 +28,11 @@ const StatusBadge = ({ status }) => {
 }
 
 // ─── Diff Preview ─────────────────────────────────────────────
-// Menampilkan teks asli vs koreksi dengan warna merah/hijau
 const DiffPreview = ({ originalText, correctedText, contextBefore, contextAfter }) => {
   const before = contextBefore || ''
   const after  = contextAfter  || ''
-
   return (
     <div className="space-y-1.5 mt-2">
-      {/* Baris asli (merah) */}
       <div className="p-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-sm font-mono">
         <span className="text-gray-500 dark:text-gray-400 text-xs mr-1">−</span>
         <span className="text-gray-500">{before}</span>
@@ -52,8 +41,6 @@ const DiffPreview = ({ originalText, correctedText, contextBefore, contextAfter 
         </span>
         <span className="text-gray-500">{after}</span>
       </div>
-
-      {/* Baris koreksi (hijau) */}
       <div className="p-2.5 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-sm font-mono">
         <span className="text-gray-500 dark:text-gray-400 text-xs mr-1">+</span>
         <span className="text-gray-500">{before}</span>
@@ -67,7 +54,7 @@ const DiffPreview = ({ originalText, correctedText, contextBefore, contextAfter 
 }
 
 // ─── Correction Card ──────────────────────────────────────────
-const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
+const CorrectionCard = ({ correction, onApprove, onReject, isProcessing, isAdmin }) => {
   const [showRejectInput, setShowRejectInput] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
 
@@ -101,7 +88,6 @@ const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
               Bab {correction.chapterNumber}: {correction.chapterTitle}
             </span>
           </div>
-
           <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <User size={11} />
@@ -124,7 +110,7 @@ const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
         contextAfter={correction.contextAfter}
       />
 
-      {/* Catatan user (jika ada) */}
+      {/* Catatan user */}
       {correction.userNote && (
         <div className="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
           <MessageSquare size={12} className="flex-shrink-0 mt-0.5" />
@@ -132,7 +118,7 @@ const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
         </div>
       )}
 
-      {/* Review note (jika sudah diproses) */}
+      {/* Review note */}
       {correction.reviewNote && (
         <div className="mt-3 p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-xs text-gray-600 dark:text-gray-400">
           <span className="font-medium">Catatan admin: </span>
@@ -140,8 +126,8 @@ const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
         </div>
       )}
 
-      {/* Tombol aksi (hanya untuk PENDING) */}
-      {correction.status === 'PENDING' && (
+      {/* Tombol aksi — hanya admin, hanya PENDING */}
+      {correction.status === 'PENDING' && isAdmin && (
         <div className="mt-4 space-y-3">
           {!showRejectInput ? (
             <div className="flex gap-2">
@@ -152,11 +138,7 @@ const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
                   bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg
                   transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isProcessing ? (
-                  <Loader size={14} className="animate-spin" />
-                ) : (
-                  <CheckCircle size={15} />
-                )}
+                {isProcessing ? <Loader size={14} className="animate-spin" /> : <CheckCircle size={15} />}
                 Setujui
               </button>
               <button
@@ -173,7 +155,6 @@ const CorrectionCard = ({ correction, onApprove, onReject, isProcessing }) => {
               </button>
             </div>
           ) : (
-            /* Form penolakan */
             <div className="space-y-2">
               <input
                 type="text"
@@ -247,33 +228,32 @@ const CorrectionQueuePage = () => {
   const { user } = useAuth()
   const isAdmin = user?.roles?.includes('ADMIN')
 
-  const [activeTab, setActiveTab] = useState('PENDING')
-  const [corrections, setCorrections] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalItems, setTotalItems] = useState(0)
+  const [activeTab, setActiveTab]       = useState('PENDING')
+  const [corrections, setCorrections]   = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [page, setPage]                 = useState(1)
+  const [totalPages, setTotalPages]     = useState(1)
+  const [totalItems, setTotalItems]     = useState(0)
   const [processingId, setProcessingId] = useState(null)
-  const [actionFeedback, setActionFeedback] = useState(null) // { type, message }
+  const [actionFeedback, setActionFeedback] = useState(null)
 
   const LIMIT = 10
 
- const fetchCorrections = useCallback(async (tab, p) => {
-   setLoading(true)
-   try {
-     const res = await dashboardService.getCorrections(tab, p, LIMIT)
-     // Perbaikan: langsung ambil dari res.data yang sudah dinormalisasi
-     setCorrections(res.data?.items || [])
-     const total = res.data?.total || 0
-     setTotalItems(total)
-     setTotalPages(Math.ceil(total / LIMIT) || 1)
-   } catch (err) {
-     console.error('Failed to fetch corrections:', err)
-     setCorrections([])
-   } finally {
-     setLoading(false)
-   }
- }, [])
+    const fetchCorrections = useCallback(async (tab, p) => {
+      setLoading(true)
+      try {
+        const res = await dashboardService.getCorrections(tab, p, LIMIT)
+        setCorrections(res.data?.items || [])
+        const total = res.data?.total || 0
+        setTotalItems(total)
+        setTotalPages(Math.ceil(total / LIMIT) || 1)
+      } catch (err) {
+        console.error('Failed to fetch corrections:', err)
+        setCorrections([])
+      } finally {
+        setLoading(false)
+      }
+    }, []) // ← isAdmin dihapus dari dependency
 
   useEffect(() => {
     fetchCorrections(activeTab, page)
@@ -289,7 +269,6 @@ const CorrectionQueuePage = () => {
     try {
       await dashboardService.approveCorrection(correctionId)
       showFeedback('success', '✓ Koreksi disetujui. Epub sedang diperbarui di background.')
-      // Refresh list
       await fetchCorrections(activeTab, page)
     } catch (err) {
       showFeedback('error', '✗ Gagal menyetujui koreksi: ' + (err?.response?.data?.message || err.message))
@@ -316,25 +295,12 @@ const CorrectionQueuePage = () => {
     setPage(1)
   }
 
-  // Akses ditolak untuk non-admin
-  if (!isAdmin) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-8 text-center">
-          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Akses Terbatas</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Halaman ini hanya dapat diakses oleh Administrator.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
+  // Tabs: semua user bisa lihat PENDING, APPROVED, REJECTED
+  // Bedanya: label berbeda, dan tombol aksi hanya muncul untuk admin
   const tabs = [
-    { id: 'PENDING',  label: 'Menunggu Review', color: 'amber' },
-    { id: 'APPROVED', label: 'Disetujui',        color: 'green' },
-    { id: 'REJECTED', label: 'Ditolak',          color: 'red'   },
+    { id: 'PENDING',  label: isAdmin ? 'Menunggu Review'   : 'Menunggu',          color: 'amber' },
+    { id: 'APPROVED', label: isAdmin ? 'Disetujui'         : 'Riwayat Perbaikan', color: 'green' },
+    { id: 'REJECTED', label: 'Ditolak',                                            color: 'red'   },
   ]
 
   return (
@@ -342,9 +308,13 @@ const CorrectionQueuePage = () => {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1">Antrian Koreksi Teks</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1">
+          {isAdmin ? 'Antrian Koreksi Teks' : 'Riwayat Koreksi Saya'}
+        </h1>
         <p className="text-gray-600 dark:text-gray-400 text-sm">
-          Review laporan typo dari pembaca. Setujui untuk langsung mengupdate konten dan rebuild epub.
+          {isAdmin
+            ? 'Review laporan typo dari pembaca. Setujui untuk langsung mengupdate konten dan rebuild epub.'
+            : 'Lihat status koreksi teks yang pernah kamu kirimkan.'}
         </p>
       </div>
 
@@ -397,7 +367,9 @@ const CorrectionQueuePage = () => {
               <p className="font-medium">Tidak ada koreksi</p>
               <p className="text-sm mt-1">
                 {activeTab === 'PENDING'
-                  ? 'Semua laporan sudah diproses!'
+                  ? isAdmin
+                    ? 'Semua laporan sudah diproses!'
+                    : 'Belum ada laporan yang menunggu review.'
                   : 'Belum ada koreksi dengan status ini.'}
               </p>
             </div>
@@ -410,6 +382,7 @@ const CorrectionQueuePage = () => {
                   onApprove={handleApprove}
                   onReject={handleReject}
                   isProcessing={processingId === correction.id}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>

@@ -3,16 +3,23 @@
 // Route: /buku/:bookSlug/baca
 // Install: npm install epubjs
 //
-// FIXES:
-//   1. CSS: Inject EPUB's own stylesheet + minimal overrides only (no override body/font-family)
+// FIXES APPLIED:
+//   1. CSS: Inject EPUB's own stylesheet + minimal overrides only
 //   2. Font picker: 5 font choices persisted to localStorage
-//   3. Cream mode: bg #f6eee3 / text #2d1f0e added alongside light/dark
-//   4. Mobile swipe navigation (touch) retained + desktop arrow buttons
-//   5. Progress %: use epubBook.locations.percentageFromCfi correctly (generate 2000 steps)
-//   6. Sync: annotations/bookmarks POST to API on add, DELETE on remove; load from API on mount
+//   3. Cream mode: bg #f6eee3 / text #2d1f0e
+//   4. Mobile swipe navigation (touch) + desktop arrow buttons
+//   5. Progress %: selalu dari epubBook.locations.percentageFromCfi (character-based,
+//      konsisten di semua ukuran font). Fallback spine-index saat locations belum siap.
+//   6. Sync: annotations/bookmarks POST ke API on add, DELETE on remove; load dari API on mount
+//   7. handlePrev: deteksi perpindahan section, re-anchor ke elemen terakhir section sebelumnya
+//      agar selalu mendarat di akhir bab — konsisten di semua ukuran font
+//   8. currentCfiRef: ref sinkron untuk CFI terkini, tidak bergantung React state lag
+//   9. locationChanged: baca CFI dari string langsung (location.start adalah string di epub.js)
+//  10. ← TAMBAHAN: GuestNoticeBanner — muncul saat tamu pertama kali highlight/bookmark,
+//      menjelaskan bahwa data hanya tersimpan di browser dan mengajak daftar/masuk.
 // ============================================
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import ePub from 'epubjs'
 import bookService from '../services/bookService'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
@@ -33,8 +40,8 @@ import {
   List,
   StickyNote,
   Trash2,
-  Coffee,   // cream mode icon
-  Type,     // font picker icon
+  Coffee,
+  Type,
 } from 'lucide-react'
 import api from '../services/api'
 
@@ -57,14 +64,13 @@ const FONT_OPTIONS = [
 ]
 
 // ─── Color Modes ──────────────────────────────────────────────────────────────
-// mode: 'light' | 'dark' | 'cream'
 const COLOR_MODES = {
-  light: { bg: '#FFFFFF', color: '#1F2937', label: 'Terang',  icon: Sun   },
+  light: { bg: '#FFFFFF', color: '#1F2937', label: 'Terang',  icon: Sun    },
   cream: { bg: '#f6eee3', color: '#2d1f0e', label: 'Krem',    icon: Coffee },
-  dark:  { bg: '#111827', color: '#E5E7EB', label: 'Gelap',   icon: Moon  },
+  dark:  { bg: '#111827', color: '#E5E7EB', label: 'Gelap',   icon: Moon   },
 }
 
-// ─── API Service untuk EPUB Annotations ──────────────────────────────────────
+// ─── API Service ──────────────────────────────────────────────────────────────
 const epubAnnotationService = {
   getAll: async (slug) => {
     const res = await api.get(`/books/${slug}/epub-annotations`)
@@ -175,8 +181,8 @@ const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
 // ─── Sidebar Panel ────────────────────────────────────────────────────────────
 const SidebarPanel = ({ activeTab, toc, bookmarks, annotations, onTocClick, onBookmarkClick, onAnnotationClick, onDeleteBookmark, onDeleteAnnotation, onClose }) => {
   const tabs = [
-    { id: 'toc',         label: 'Daftar Isi', icon: List       },
-    { id: 'bookmarks',   label: 'Penanda',    icon: Bookmark   },
+    { id: 'toc',         label: 'Daftar Isi', icon: List        },
+    { id: 'bookmarks',   label: 'Penanda',    icon: Bookmark    },
     { id: 'annotations', label: 'Anotasi',    icon: Highlighter },
   ]
   const [tab, setTab] = useState(activeTab || 'toc')
@@ -250,58 +256,103 @@ const SidebarPanel = ({ activeTab, toc, bookmarks, annotations, onTocClick, onBo
 
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChange, fontFamily, onFontChange, onClose }) => (
-  <div className="absolute top-14 right-4 z-30 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 space-y-4">
-    <div className="flex items-center justify-between">
+  <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <span className="font-semibold text-sm text-gray-700 dark:text-gray-300">Pengaturan Tampilan</span>
-      <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={16} /></button>
+      <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"><X size={18} /></button>
     </div>
-
-    {/* Font Size */}
-    <div>
-      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Ukuran Font</label>
-      <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-        <button onClick={() => onFontSizeChange(Math.max(12, fontSize - 2))} className="flex-1 flex items-center justify-center h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"><Minus size={14} /></button>
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[3ch] text-center">{fontSize}</span>
-        <button onClick={() => onFontSizeChange(Math.min(28, fontSize + 2))} className="flex-1 flex items-center justify-center h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"><Plus size={14} /></button>
+    <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      {/* Font Size */}
+      <div>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Ukuran Font</label>
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+          <button onClick={() => onFontSizeChange(Math.max(12, fontSize - 2))} className="flex-1 flex items-center justify-center h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"><Minus size={14} /></button>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[3ch] text-center">{fontSize}</span>
+          <button onClick={() => onFontSizeChange(Math.min(28, fontSize + 2))} className="flex-1 flex items-center justify-center h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"><Plus size={14} /></button>
+        </div>
       </div>
-    </div>
-
-    {/* Font Family */}
-    <div>
-      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide flex items-center gap-1"><Type size={11} /> Font</label>
-      <div className="space-y-1">
-        {FONT_OPTIONS.map(f => (
-          <button key={f.value} onClick={() => onFontChange(f.value)}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${fontFamily === f.value ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-            style={{ fontFamily: f.value }}>
-            {f.label}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* Color Mode */}
-    <div>
-      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Tema</label>
-      <div className="flex gap-2">
-        {Object.entries(COLOR_MODES).map(([key, cfg]) => {
-          const Icon = cfg.icon
-          return (
-            <button key={key} onClick={() => onColorModeChange(key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-medium transition border-2 ${colorMode === key ? 'border-amber-500 shadow' : 'border-transparent'}`}
-              style={{ background: cfg.bg, color: cfg.color }}>
-              <Icon size={14} />
-              {cfg.label}
+      {/* Font Family */}
+      <div>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide flex items-center gap-1"><Type size={11} /> Font</label>
+        <div className="space-y-1">
+          {FONT_OPTIONS.map(f => (
+            <button key={f.value} onClick={() => onFontChange(f.value)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${fontFamily === f.value ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              style={{ fontFamily: f.value }}>
+              {f.label}
             </button>
-          )
-        })}
+          ))}
+        </div>
+      </div>
+      {/* Color Mode */}
+      <div>
+        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Tema</label>
+        <div className="flex gap-2">
+          {Object.entries(COLOR_MODES).map(([key, cfg]) => {
+            const Icon = cfg.icon
+            return (
+              <button key={key} onClick={() => onColorModeChange(key)}
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-medium transition border-2 ${colorMode === key ? 'border-amber-500 shadow' : 'border-transparent'}`}
+                style={{ background: cfg.bg, color: cfg.color }}>
+                <Icon size={14} />
+                {cfg.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   </div>
 )
 
+// ─── Guest Notice Banner ──────────────────────────────────────────────────────
+// ← TAMBAHAN: Komponen banner yang muncul saat tamu pertama kali menyimpan
+// highlight atau bookmark. Muncul sekali per sesi, dismiss-able, tidak
+// mengganggu pengalaman membaca (posisi fixed bottom, di atas bottom bar).
+const GuestNoticeBanner = ({ onDismiss, onRegister, onLogin }) => (
+  <div className="fixed bottom-12 left-3 right-3 z-50 md:left-auto md:right-4 md:bottom-6 md:w-80
+    bg-white dark:bg-gray-800
+    border border-amber-200 dark:border-amber-700
+    rounded-xl shadow-lg
+    p-3 flex items-start gap-3
+    animate-in slide-in-from-bottom-2 duration-200">
+    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40
+      flex items-center justify-center mt-0.5">
+      <Highlighter size={15} className="text-amber-600 dark:text-amber-400" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mb-0.5">
+        Highlight tersimpan di browser ini saja
+      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">
+        Daftar gratis untuk menyimpan permanen dan sync di semua perangkat.
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onRegister}
+          className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white
+            text-xs font-medium rounded-lg transition">
+          Daftar gratis
+        </button>
+        <button
+          onClick={onLogin}
+          className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300
+            hover:text-gray-800 dark:hover:text-white transition">
+          Masuk
+        </button>
+      </div>
+    </div>
+    <button
+      onClick={onDismiss}
+      className="flex-shrink-0 text-gray-300 hover:text-gray-500
+        dark:text-gray-600 dark:hover:text-gray-400 transition mt-0.5">
+      <X size={14} />
+    </button>
+  </div>
+)
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// CFI helpers (unchanged from original)
+// CFI helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 const resolveCanonicalHref = (epubBook, sectionHref) => {
   const filename = sectionHref.split('/').pop()
@@ -347,13 +398,34 @@ const resolveAnchorToCfi = async (epubBook, canonicalHref, anchor) => {
 
 // ─── localStorage keys ────────────────────────────────────────────────────────
 const localKeys = (bookSlug) => ({
-  annotations: `epub_annotations_${bookSlug}`,
-  bookmarks:   `epub_bookmarks_${bookSlug}`,
-  progress:    `epub_progress_${bookSlug}`,
-  colorMode:   'epubColorMode',
-  fontSize:    'epubFontSize',
-  fontFamily:  'epubFontFamily',
+  annotations:       `epub_annotations_${bookSlug}`,
+  bookmarks:         `epub_bookmarks_${bookSlug}`,
+  progress:          `epub_progress_${bookSlug}`,
+  colorMode:         'epubColorMode',
+  fontSize:          'epubFontSize',
+  fontFamily:        'epubFontFamily',
+  guestNoticeSeen:   'epub_guest_notice_seen', // ← TAMBAHAN: flag agar banner hanya muncul sekali
 })
+
+// ─── Helper: ambil CFI last element dari sebuah section ───────────────────────
+const getLastElementCfi = async (epubBook, href) => {
+  try {
+    const section    = epubBook.spine.get(href)
+    if (!section) return null
+    const sectionDoc = await section.load(epubBook.load.bind(epubBook))
+    if (!sectionDoc) return null
+    const candidates = sectionDoc.querySelectorAll(
+      'p, h1, h2, h3, h4, h5, h6, li, td, blockquote'
+    )
+    const lastElem = candidates[candidates.length - 1]
+    if (!lastElem) { section.unload(); return null }
+    const cfi = section.cfiFromElement(lastElem)
+    section.unload()
+    return cfi || null
+  } catch {
+    return null
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
@@ -361,6 +433,7 @@ const localKeys = (bookSlug) => ({
 const EpubReaderPage = () => {
   const { bookSlug } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const isAuthenticated = !!localStorage.getItem('token')
 
   const [book, setBook] = useState(null)
@@ -370,6 +443,7 @@ const EpubReaderPage = () => {
   const viewerRef    = useRef(null)
   const bookRef      = useRef(null)
   const renditionRef = useRef(null)
+  const currentCfiRef = useRef(null)
 
   const [toc, setToc] = useState([])
   const [currentLocation, setCurrentLocation] = useState(null)
@@ -377,17 +451,16 @@ const EpubReaderPage = () => {
   const keys = localKeys(bookSlug)
 
   // ── Persisted preferences ──────────────────────────────────────
-  const [colorMode, setColorMode] = useState(() => localStorage.getItem(keys.colorMode) || 'light')
-  const [fontSize,  setFontSize]  = useState(() => parseInt(localStorage.getItem(keys.fontSize) || '16'))
+  const [colorMode,  setColorMode]  = useState(() => localStorage.getItem(keys.colorMode)  || 'light')
+  const [fontSize,   setFontSize]   = useState(() => parseInt(localStorage.getItem(keys.fontSize) || '16'))
   const [fontFamily, setFontFamily] = useState(() => localStorage.getItem(keys.fontFamily) || FONT_OPTIONS[0].value)
 
-  // Derived: isDark for class-based styling on host page
   const isDark = colorMode === 'dark'
 
   const [showSidebar,  setShowSidebar]  = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [isReady,  setIsReady]  = useState(false)
+  const [progress,  setProgress]  = useState(0)
+  const [isReady,   setIsReady]   = useState(false)
   const [epubError, setEpubError] = useState(null)
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -398,9 +471,26 @@ const EpubReaderPage = () => {
     try { return JSON.parse(localStorage.getItem(keys.bookmarks) || '[]') } catch { return [] }
   })
 
-  const [selection,      setSelection]      = useState(null)
-  const [showNoteModal,  setShowNoteModal]   = useState(false)
-  const [isBookmarked,   setIsBookmarked]    = useState(false)
+  const [selection,     setSelection]     = useState(null)
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [isBookmarked,  setIsBookmarked]  = useState(false)
+
+  // ← TAMBAHAN: state banner tamu
+  // Tidak ditampilkan kalau sudah login, atau kalau sudah pernah di-dismiss sebelumnya
+  const [showGuestNotice, setShowGuestNotice] = useState(false)
+
+  // ← TAMBAHAN: helper — tampilkan banner hanya sekali per browser (bukan per sesi),
+  // agar tidak muncul berulang dan mengganggu pembaca yang memang tidak mau daftar.
+  const triggerGuestNotice = useCallback(() => {
+    if (isAuthenticated) return
+    const alreadySeen = localStorage.getItem(keys.guestNoticeSeen)
+    if (!alreadySeen) setShowGuestNotice(true)
+  }, [isAuthenticated, keys.guestNoticeSeen])
+
+  const dismissGuestNotice = useCallback(() => {
+    setShowGuestNotice(false)
+    localStorage.setItem(keys.guestNoticeSeen, '1')
+  }, [keys.guestNoticeSeen])
 
   // ── Fetch book ──────────────────────────────────────────────────
   useEffect(() => {
@@ -441,35 +531,73 @@ const EpubReaderPage = () => {
   const applyTheme = useCallback((rendition, mode, size, family) => {
     if (!rendition) return
     const cfg = COLOR_MODES[mode] || COLOR_MODES.light
+    const isDarkMode  = mode === 'dark'
+    const isCreamMode = mode === 'cream'
 
-    // Override only what the viewer controls — do NOT fight the EPUB's own CSS
-    // The EPUB stylesheet (masasilam.css) handles typography; we only set:
-    //   - background color on body/html
-    //   - text color override (light touch)
-    //   - font-size as base
-    //   - font-family preference (can be overridden by epub css specificity)
+    const infoBoxBg        = isDarkMode ? '#2d2d2d' : isCreamMode ? '#ede3d6' : '#f8f8f8'
+    const infoBoxBorder    = isDarkMode ? '#555'    : isCreamMode ? '#c9b89a' : '#ddd'
+    const letterBg         = isDarkMode ? '#1e1e1e' : isCreamMode ? '#ede3d6' : '#fdfcf8'
+    const letterBorder     = isDarkMode ? '#444'    : isCreamMode ? '#c9b89a' : '#ccc'
+    const thBg             = isDarkMode ? '#222'    : isCreamMode ? '#e8dcc8' : '#f0f0f0'
+    const tdBorder         = isDarkMode ? '#444'    : isCreamMode ? '#c9b89a' : '#ccc'
+    const blockquoteBorder = isDarkMode ? '#666'    : isCreamMode ? '#b09070' : '#ccc'
+    const separatorColor   = isDarkMode ? '#999'    : isCreamMode ? '#8c7055' : '#666'
+    const codeBg           = isDarkMode ? '#1e1e1e' : isCreamMode ? '#ede3d6' : '#f6f6f6'
+    const imgFilter        = isDarkMode ? 'invert(1)' : 'none'
+    const imgNoInvertFilter = 'none'
+
     rendition.themes.register('reader-theme', {
-      'html': {
-        'background': cfg.bg + ' !important',
-      },
+      'html': { 'background': cfg.bg + ' !important' },
       'body': {
-        'background-color': cfg.bg + ' !important',
-        'color':            cfg.color + ' !important',
-        'font-size':        `${size}px !important`,
-        'font-family':      family + ' !important',
-        'line-height':      '1.8 !important',
+        'background-color':       cfg.bg + ' !important',
+        'color':                  cfg.color + ' !important',
+        'font-size':              `${size}px !important`,
+        'font-family':            family,
         '-webkit-font-smoothing': 'antialiased',
       },
-      // Don't override font for headings — let EPUB CSS win on specifics
-      'p': { 'color': cfg.color },
-      'h1,h2,h3,h4,h5,h6': { 'color': cfg.color },
-      // Highlight existing marks stay visible
-      '.epub-highlight': { 'opacity': '0.4' },
+      'p':                    { 'color': cfg.color },
+      'h1,h2,h3,h4,h5,h6':   { 'color': cfg.color },
+      'a':                    { 'color': isDarkMode ? '#93c5fd' : isCreamMode ? '#7a5c3a' : '' },
+      'li':                   { 'color': cfg.color },
+      'td':                   { 'color': cfg.color, 'border-color': tdBorder },
+      'th':                   { 'color': cfg.color, 'background-color': thBg, 'border-color': tdBorder },
+      'blockquote':           { 'border-left-color': blockquoteBorder, 'color': cfg.color },
+      'code':                 { 'background-color': codeBg, 'color': cfg.color },
+      'pre':                  { 'background-color': codeBg, 'color': cfg.color },
+      'p.separator':          { 'color': separatorColor },
+      'p.ornament':           { 'color': separatorColor },
+      'p.divider':            { 'color': separatorColor },
+      '.scene-break':         { 'color': separatorColor },
+      '.note':                { 'color': cfg.color },
+      '.image-caption':       { 'color': separatorColor },
+      '.info-box': {
+        'background-color': infoBoxBg + ' !important',
+        'border-color':     infoBoxBorder + ' !important',
+        'color':            cfg.color + ' !important',
+      },
+      '.info-box p': { 'color': cfg.color + ' !important' },
+      '.letter': {
+        'background-color': letterBg + ' !important',
+        'border-color':     letterBorder + ' !important',
+        'color':            cfg.color + ' !important',
+      },
+      '.letter p':            { 'color': cfg.color },
+      '.letter .date':        { 'color': cfg.color },
+      '.letter .salutation':  { 'color': cfg.color },
+      '.letter .closing':     { 'color': cfg.color },
+      '.letter .signature':   { 'color': cfg.color },
+      'img':                            { 'filter': imgFilter },
+      'img.photo':                      { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
+      'img.illustration':               { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
+      'img.colored':                    { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
+      '.chapter img.no-invert':         { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
+      '.image-inline':                  { 'filter': imgFilter, 'opacity': isDarkMode ? '0.9' : '1' },
+      '.epub-highlight':                { 'opacity': '0.4' },
     })
     rendition.themes.select('reader-theme')
   }, [])
 
-  // ── Init epub.js ─────────────────────────────────────────────
+  // ── Init epub.js ─────────────────────────────────────────────────
   useEffect(() => {
     if (!book?.fileUrl || !viewerRef.current) return
 
@@ -490,12 +618,37 @@ const EpubReaderPage = () => {
     })
     renditionRef.current = rendition
 
-    // Apply initial theme
     applyTheme(rendition, colorMode, fontSize, fontFamily)
+
+    let locationsReady = false
+
+    const calcProgress = (cfi) => {
+      if (!cfi) return
+      if (locationsReady) {
+        try {
+          const pct = epubBook.locations.percentageFromCfi(cfi)
+          if (typeof pct === 'number' && !isNaN(pct)) {
+            setProgress(Math.round(pct * 100))
+            return
+          }
+        } catch {}
+      }
+      try {
+        const spineItems = epubBook.spine?.items || epubBook.spine?.spineItems || []
+        const total = spineItems.length
+        if (total === 0) return
+        const match = cfi.match(/^epubcfi\(\/6\/(\d+)/)
+        if (match) {
+          const spineIndex = (parseInt(match[1]) / 2) - 1
+          setProgress(Math.round((spineIndex / Math.max(total - 1, 1)) * 100))
+        }
+      } catch {}
+    }
 
     epubBook.ready
       .then(() => {
-        const savedCfi = localStorage.getItem(keys.progress)
+        const cfiFromState = location.state?.cfi
+        const savedCfi = cfiFromState || localStorage.getItem(keys.progress)
         if (savedCfi) {
           return rendition.display(savedCfi).catch(() => {
             localStorage.removeItem(keys.progress)
@@ -504,21 +657,14 @@ const EpubReaderPage = () => {
         }
         return rendition.display()
       })
-      // FIX #5: Generate more locations for accurate progress %
-      .then(() => epubBook.locations.generate(2000))
       .then(() => {
         setIsReady(true)
-        // Recalculate progress after locations are ready
-        try {
-          const loc = rendition.currentLocation()
-          const cfi = loc?.start?.cfi
-          if (cfi) {
-            const pct = epubBook.locations.percentageFromCfi(cfi)
-            if (typeof pct === 'number' && !isNaN(pct)) {
-              setProgress(Math.round(pct * 100))
-            }
-          }
-        } catch {}
+        calcProgress(currentCfiRef.current)
+        return epubBook.locations.generate(2000)
+      })
+      .then(() => {
+        locationsReady = true
+        calcProgress(currentCfiRef.current)
       })
       .catch(err => {
         console.error('EPUB init error:', err)
@@ -526,7 +672,6 @@ const EpubReaderPage = () => {
         setIsReady(true)
       })
 
-    // TOC
     epubBook.loaded.navigation.then(nav => {
       const flattenToc = (items, depth = 0) =>
         items.flatMap(item => [
@@ -536,24 +681,20 @@ const EpubReaderPage = () => {
       setToc(flattenToc(nav.toc))
     }).catch(() => setToc([]))
 
-    // FIX #5: Location tracking — use percentageFromCfi (not percentageFromPage)
     rendition.on('locationChanged', location => {
       setCurrentLocation(location)
-      const cfi = location?.start?.cfi || location?.startCfi || null
+      const cfi = typeof location?.start === 'string'
+        ? location.start
+        : location?.start?.cfi || null
       if (cfi) {
+        currentCfiRef.current = cfi
         localStorage.setItem(keys.progress, cfi)
-        try {
-          const pct = epubBook.locations.percentageFromCfi(cfi)
-          if (typeof pct === 'number' && !isNaN(pct)) {
-            setProgress(Math.round(pct * 100))
-          }
-        } catch {}
         const bms = JSON.parse(localStorage.getItem(keys.bookmarks) || '[]')
         setIsBookmarked(bms.some(b => b.cfi === cfi))
       }
+      calcProgress(cfi)
     })
 
-    // FIX #4: Text selection popup
     rendition.on('selected', (cfiRange, contents) => {
       try {
         const selText = contents.window.getSelection()?.toString()?.trim()
@@ -573,32 +714,47 @@ const EpubReaderPage = () => {
       }
     })
 
-    // FIX #4: Mobile swipe — only handle on touch, respect nav
-    const viewerEl = viewerRef.current
-    let touchStartX = 0, touchStartY = 0
-    const onTouchStart = e => {
-      touchStartX = e.changedTouches[0].screenX
-      touchStartY = e.changedTouches[0].screenY
-    }
-    const onTouchEnd = e => {
-      const diffX = touchStartX - e.changedTouches[0].screenX
-      const diffY = Math.abs(touchStartY - e.changedTouches[0].screenY)
-      if (Math.abs(diffX) > 50 && Math.abs(diffX) > diffY) {
-        setSelection(null)
-        diffX > 0 ? rendition.next() : rendition.prev()
+    const attachedDocs = new WeakSet()
+    let startX = 0, startY = 0
+
+    const makeTouchHandlers = () => {
+      const onStart = (e) => {
+        if (e.touches.length !== 1) return
+        startX = e.touches[0].clientX
+        startY = e.touches[0].clientY
       }
+      const onEnd = (e) => {
+        const t = e.changedTouches[0]
+        const diffX = startX - t.clientX
+        const diffY = Math.abs(startY - t.clientY)
+        if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) {
+          setSelection(null)
+          if (diffX > 0) handleNextRef.current?.()
+          else           handlePrevRef.current?.()
+        }
+      }
+      return { onStart, onEnd }
     }
-    viewerEl.addEventListener('touchstart', onTouchStart, { passive: true })
-    viewerEl.addEventListener('touchend',   onTouchEnd,   { passive: true })
 
-    return () => {
-      viewerEl.removeEventListener('touchstart', onTouchStart)
-      viewerEl.removeEventListener('touchend',   onTouchEnd)
-      try { epubBook.destroy() } catch {}
+    const attachToIframeDoc = (iframeDoc) => {
+      if (!iframeDoc || attachedDocs.has(iframeDoc)) return
+      attachedDocs.add(iframeDoc)
+      const { onStart, onEnd } = makeTouchHandlers()
+      iframeDoc.addEventListener('touchstart', onStart, { passive: true })
+      iframeDoc.addEventListener('touchend',   onEnd,   { passive: true })
     }
-  }, [book]) // eslint-disable-line — intentionally only re-run when book changes
 
-  // ── Re-apply highlights after ready ─────────────────────────────
+    rendition.on('rendered', (_section, view) => {
+      try {
+        const doc = view?.contents?.document
+        if (doc) attachToIframeDoc(doc)
+      } catch {}
+    })
+
+    return () => { try { epubBook.destroy() } catch {} }
+  }, [book]) // eslint-disable-line
+
+  // ── Re-apply highlights setelah ready ───────────────────────────
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     annotations.forEach(ann => {
@@ -608,29 +764,61 @@ const EpubReaderPage = () => {
     })
   }, [isReady, annotations])
 
-  // ── Apply theme when preferences change ─────────────────────────
+  // ── Apply theme + re-anchor posisi saat font size berubah ───────
+  const prevFontSizeRef = useRef(fontSize)
+
   useEffect(() => {
     if (!renditionRef.current) return
+    const fontSizeChanged = prevFontSizeRef.current !== fontSize
+    prevFontSizeRef.current = fontSize
     applyTheme(renditionRef.current, colorMode, fontSize, fontFamily)
-    localStorage.setItem(keys.colorMode,   colorMode)
-    localStorage.setItem(keys.fontSize,    fontSize)
-    localStorage.setItem(keys.fontFamily,  fontFamily)
+    localStorage.setItem(keys.colorMode,  colorMode)
+    localStorage.setItem(keys.fontSize,   String(fontSize))
+    localStorage.setItem(keys.fontFamily, fontFamily)
+    if (!fontSizeChanged) return
+    const cfi = currentCfiRef.current || localStorage.getItem(keys.progress)
+    if (!cfi) return
+    const timer = setTimeout(() => {
+      const r = renditionRef.current
+      if (!r) return
+      try { r.resize('100%', '100%') } catch {}
+      setTimeout(() => { r.display(cfi).catch(() => {}) }, 100)
+    }, 150)
+    return () => clearTimeout(timer)
   }, [colorMode, fontSize, fontFamily, applyTheme]) // eslint-disable-line
 
-  // ── Persist annotations/bookmarks to localStorage ────────────────
+  // ── Persist annotations/bookmarks ───────────────────────────────
   useEffect(() => { localStorage.setItem(keys.annotations, JSON.stringify(annotations)) }, [annotations]) // eslint-disable-line
   useEffect(() => { localStorage.setItem(keys.bookmarks,   JSON.stringify(bookmarks))   }, [bookmarks])   // eslint-disable-line
 
-  // ── Navigation ────────────────────────────────────────────────────
+  // ── handleNext / handlePrev ──────────────────────────────────────
   const handleNext = useCallback(() => {
     setSelection(null)
     renditionRef.current?.next()
   }, [])
 
-  const handlePrev = useCallback(() => {
+  const handlePrev = useCallback(async () => {
     setSelection(null)
-    renditionRef.current?.prev()
+    const rendition = renditionRef.current
+    const epubBook  = bookRef.current
+    if (!rendition || !epubBook) return
+    const locBefore  = rendition.currentLocation()
+    const hrefBefore = locBefore?.start?.href || ''
+    await rendition.prev()
+    const locAfter  = rendition.currentLocation()
+    const hrefAfter = locAfter?.start?.href || ''
+    if (!hrefAfter || !hrefBefore || hrefAfter === hrefBefore) return
+    const lastCfi = await getLastElementCfi(epubBook, hrefAfter)
+    if (lastCfi) {
+      try { await rendition.display(lastCfi) }
+      catch (err) { console.warn('[handlePrev] re-anchor gagal:', err) }
+    }
   }, [])
+
+  const handleNextRef = useRef(handleNext)
+  const handlePrevRef = useRef(handlePrev)
+  useEffect(() => { handleNextRef.current = handleNext }, [handleNext])
+  useEffect(() => { handlePrevRef.current = handlePrev }, [handlePrev])
 
   // ── TOC ───────────────────────────────────────────────────────────
   const handleTocClick = useCallback(async (href) => {
@@ -654,15 +842,19 @@ const EpubReaderPage = () => {
   }, [])
 
   // ── Bookmark ──────────────────────────────────────────────────────
-  const handleBookmarkClick  = (cfi) => { renditionRef.current?.display(cfi); setShowSidebar(false); setSelection(null) }
+  const handleBookmarkClick   = (cfi) => { renditionRef.current?.display(cfi); setShowSidebar(false); setSelection(null) }
   const handleAnnotationClick = (cfi) => { renditionRef.current?.display(cfi); setShowSidebar(false); setSelection(null) }
 
   const handleToggleBookmark = async () => {
     const rendition = renditionRef.current
     if (!rendition) return
-    let cfi = null
-    try { const loc = rendition.currentLocation(); cfi = loc?.start?.cfi || null } catch {}
-    cfi = cfi || currentLocation?.start?.cfi || null
+    let cfi = currentCfiRef.current
+    if (!cfi) {
+      try {
+        const loc = rendition.currentLocation()
+        cfi = typeof loc?.start === 'string' ? loc.start : loc?.start?.cfi || null
+      } catch {}
+    }
     if (!cfi) return
 
     if (isBookmarked) {
@@ -679,6 +871,8 @@ const EpubReaderPage = () => {
       const nb = { cfi, text, createdAt: Date.now() }
       setBookmarks(prev => [...prev, nb])
       setIsBookmarked(true)
+      // ← TAMBAHAN: trigger banner saat tamu menambah bookmark
+      triggerGuestNotice()
       if (isAuthenticated) {
         setIsSyncing(true)
         try {
@@ -699,13 +893,15 @@ const EpubReaderPage = () => {
     }
   }
 
-  // ── Annotations ─────────────────────────────────────────────────
+  // ── Annotations ──────────────────────────────────────────────────
   const handleHighlight = async (color) => {
     if (!selection) return
     try { renditionRef.current?.annotations.highlight(selection.cfi, {}, null, 'epub-highlight', { fill: color, 'fill-opacity': '0.4' }) } catch {}
     const na = { cfi: selection.cfi, text: selection.text, color, note: '', createdAt: Date.now() }
     setAnnotations(prev => [...prev, na])
     setSelection(null)
+    // ← TAMBAHAN: trigger banner saat tamu pertama kali highlight
+    triggerGuestNotice()
     if (isAuthenticated) {
       setIsSyncing(true)
       try {
@@ -725,6 +921,8 @@ const EpubReaderPage = () => {
     setAnnotations(prev => [...prev, na])
     setShowNoteModal(false)
     setSelection(null)
+    // ← TAMBAHAN: trigger banner saat tamu menyimpan catatan
+    triggerGuestNotice()
     if (isAuthenticated) {
       setIsSyncing(true)
       try {
@@ -817,29 +1015,10 @@ const EpubReaderPage = () => {
         </div>
       </header>
 
-      {showSettings && (
-        <SettingsPanel
-          fontSize={fontSize} onFontSizeChange={setFontSize}
-          colorMode={colorMode} onColorModeChange={setColorMode}
-          fontFamily={fontFamily} onFontChange={setFontFamily}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
-
       {/* ── BODY ── */}
       <div className="flex flex-1 overflow-hidden">
-        {showSidebar && (
-          <aside className="w-72 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden">
-            <SidebarPanel
-              activeTab="toc" toc={toc} bookmarks={bookmarks} annotations={annotations}
-              onTocClick={handleTocClick} onBookmarkClick={handleBookmarkClick}
-              onAnnotationClick={handleAnnotationClick} onDeleteBookmark={handleDeleteBookmark}
-              onDeleteAnnotation={handleDeleteAnnotation} onClose={() => setShowSidebar(false)}
-            />
-          </aside>
-        )}
-
         <div className="flex flex-1 overflow-hidden relative">
+
           {/* Desktop prev button */}
           <button onClick={handlePrev}
             className="hidden md:flex items-center justify-center w-12 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5 transition group" title="Sebelumnya (←)">
@@ -876,18 +1055,36 @@ const EpubReaderPage = () => {
             <ChevronRight size={20} className="text-gray-300 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition" />
           </button>
         </div>
+
+        {showSidebar && (
+          <aside className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden">
+            <SidebarPanel
+              activeTab="toc" toc={toc} bookmarks={bookmarks} annotations={annotations}
+              onTocClick={handleTocClick} onBookmarkClick={handleBookmarkClick}
+              onAnnotationClick={handleAnnotationClick} onDeleteBookmark={handleDeleteBookmark}
+              onDeleteAnnotation={handleDeleteAnnotation} onClose={() => setShowSidebar(false)}
+            />
+          </aside>
+        )}
+
+        {showSettings && (
+          <aside className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden">
+            <SettingsPanel
+              fontSize={fontSize} onFontSizeChange={setFontSize}
+              colorMode={colorMode} onColorModeChange={setColorMode}
+              fontFamily={fontFamily} onFontChange={setFontFamily}
+              onClose={() => setShowSettings(false)}
+            />
+          </aside>
+        )}
       </div>
 
       {/* ── BOTTOM BAR (mobile only) ── */}
-      {/* FIX #4: Mobile uses swipe gesture (registered above). Buttons here as fallback. */}
-      <footer className={`md:hidden flex items-center justify-between px-6 py-2 border-t flex-shrink-0 ${isDark ? 'bg-gray-900 border-gray-700' : colorMode === 'cream' ? 'bg-[#f0e6d3] border-[#d6c5aa]' : 'bg-white border-gray-200'}`}>
-        <button onClick={handlePrev} className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-800 transition">
-          <ChevronLeft size={16} /> Prev
-        </button>
-        <span className="text-xs text-gray-400">{progress}%</span>
-        <button onClick={handleNext} className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-800 transition">
-          Next <ChevronRight size={16} />
-        </button>
+      <footer className={`md:hidden flex items-center gap-3 px-5 py-2.5 border-t flex-shrink-0 ${isDark ? 'bg-gray-900 border-gray-700' : colorMode === 'cream' ? 'bg-[#f0e6d3] border-[#d6c5aa]' : 'bg-white border-gray-200'}`}>
+        <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">{progress}%</span>
       </footer>
 
       {/* ── Selection popup ── */}
@@ -899,6 +1096,20 @@ const EpubReaderPage = () => {
       {showNoteModal && selection && (
         <NoteModal selectedText={selection.text} onSave={handleSaveNote} onClose={() => { setShowNoteModal(false); setSelection(null) }} />
       )}
+
+      {/* ← TAMBAHAN: Guest notice banner ── */}
+      {/* Muncul saat tamu pertama kali menyimpan highlight/bookmark/catatan.  */}
+      {/* Tidak pernah muncul untuk user yang sudah login.                      */}
+      {/* Setelah di-dismiss, flag disimpan di localStorage agar tidak muncul   */}
+      {/* lagi di kunjungan berikutnya.                                         */}
+      {showGuestNotice && !isAuthenticated && (
+        <GuestNoticeBanner
+          onDismiss={dismissGuestNotice}
+          onRegister={() => { dismissGuestNotice(); navigate('/daftar') }}
+          onLogin={() => { dismissGuestNotice(); navigate('/masuk') }}
+        />
+      )}
+
     </div>
   )
 }

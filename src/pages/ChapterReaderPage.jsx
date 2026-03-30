@@ -1,11 +1,5 @@
 // ============================================
 // FILE: src/pages/ChapterReaderPage.jsx
-// PERUBAHAN:
-//   1. Import CorrectionModal
-//   2. State: showCorrectionModal, correctionContext
-//   3. Handler: handleOpenCorrection, handleSubmitCorrection
-//   4. Prop onReportTypo ke TextSelectionPopup
-//   5. Render CorrectionModal
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
@@ -16,7 +10,6 @@ import useChapterNavigation from '../hooks/useChapterNavigation'
 import useFootnoteHandler from '../hooks/useFootnoteHandler'
 import useTextSelection from '../hooks/useTextSelection'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
-import { buildChapterUrl } from '../hooks/useChapterNavigation'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import SEO from '../components/Common/SEO'
 import {
@@ -29,16 +22,12 @@ import TTSControlPanel from '../components/Reader/TTSControlPanel'
 import TTSVoiceSetupBanner from '../components/Reader/TTSVoiceSetupBanner'
 import ChapterRating from '../components/Reader/ChapterRating'
 import SearchInBook from '../components/Reader/SearchInBook'
-import ExportAnnotations from '../components/Reader/ExportAnnotations'
 import LoginPromptModal from '../components/Reader/LoginPromptModal'
 import FootnotePopup from '../components/Reader/FootnotePopup'
 import ChapterContent from '../components/Reader/ChapterContent'
-import TextSelectionPopup from '../components/Reader/TextSelectionPopup'
-import BottomToolbar from '../components/Reader/BottomToolbar'
-import AnnotationPanel from '../components/Reader/AnnotationPanel'
 import ReviewsSection from '../components/Reader/ReviewsSection'
-import CorrectionModal from '../components/Reader/CorrectionModal'   // ← BARU
-import { Volume2, Highlighter, Bookmark, Search, CheckCircle, Circle } from 'lucide-react'
+import CorrectionModal from '../components/Reader/CorrectionModal'
+import { Volume2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import '../styles/epub-styles.css'
 
 const hideScrollbarStyle = `
@@ -66,6 +55,57 @@ const hideScrollbarStyle = `
     text-align: justify !important; text-justify: inter-word !important;
   }`
 
+// ── Slug yang tidak bisa dikoreksi ────────────────────────────────────────────
+const NON_CORRECTABLE_SLUGS = ['judul', 'kolofon', 'uncopyright']
+
+const isCorrectableChapter = (path) => {
+  if (!path) return false
+  const slug = path.split('/').pop().toLowerCase()
+  return !NON_CORRECTABLE_SLUGS.includes(slug)
+}
+
+// ── Popup khusus typo ─────────────────────────────────────────────────────────
+const TypoSelectionPopup = ({ selectedText, coords, onReport, onClose, onMouseDown, onTouchStart }) => (
+  <div
+    className="fixed z-[100] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-amber-300 dark:border-amber-700"
+    style={{
+      top: `${coords.top}px`,
+      left: `${coords.left}px`,
+      transform: 'translateX(-50%)',
+      maxWidth: '90vw',
+      width: '260px',
+    }}
+    onMouseDown={onMouseDown}
+    onTouchStart={onTouchStart}
+  >
+    <div className="p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          Teks dipilih
+        </span>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition text-sm leading-none"
+        >
+          ✕
+        </button>
+      </div>
+      <p className="mb-3 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs italic text-gray-700 dark:text-gray-300 line-clamp-2">
+        "{selectedText.substring(0, 100)}{selectedText.length > 100 ? '…' : ''}"
+      </p>
+      <button
+        onClick={onReport}
+        className="w-full py-2 flex items-center justify-center gap-2
+          bg-amber-500 hover:bg-amber-600 text-white
+          rounded-lg text-sm font-medium transition"
+      >
+        ⚠ Laporkan Typo
+      </button>
+    </div>
+  </div>
+)
+
+// ═════════════════════════════════════════════════════════════════════════════
 const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const { bookSlug } = useParams()
   const navigate = useNavigate()
@@ -77,44 +117,19 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const [chapter, setChapter] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [annotations, setAnnotations] = useState({ bookmarks: [], highlights: [], notes: [] })
   const [reviews, setReviews] = useState([])
 
-  const [showToolbar, setShowToolbar] = useState(false)
   const [showSearchModal, setShowSearchModal] = useState(false)
-  const [showExportModal, setShowExportModal] = useState(false)
   const [isInteractingWithPopup, setIsInteractingWithPopup] = useState(false)
-
-  const [showTTSLoginPrompt, setShowTTSLoginPrompt] = useState(false)
-  const [showAnnotationLoginPrompt, setShowAnnotationLoginPrompt] = useState(false)
-  const [showBookmarkLoginPrompt, setShowBookmarkLoginPrompt] = useState(false)
-  const [showSearchLoginPrompt, setShowSearchLoginPrompt] = useState(false)
-  const [showExportLoginPrompt, setShowExportLoginPrompt] = useState(false)
   const [showTTSPanel, setShowTTSPanel] = useState(true)
-
-  const [isChapterCompleted, setIsChapterCompleted] = useState(false)
-  const [isMarkingComplete, setIsMarkingComplete] = useState(false)
   const [readingMode, setReadingMode] = useState(() => localStorage.getItem('readingMode') === 'true')
-  const [progressData, setProgressData] = useState({ position: 0, readingTimeSeconds: 0, startTime: Date.now() })
 
-  // ── BARU: State untuk fitur koreksi typo ─────────────────────────────────
   const [showCorrectionModal, setShowCorrectionModal] = useState(false)
-  /**
-   * correctionContext menyimpan info selection saat user klik "Laporkan Typo":
-   * {
-   *   selectedText,    // teks yang di-select
-   *   contextBefore,   // 50 char sebelum selection
-   *   contextAfter,    // 50 char sesudah selection
-   *   startPosition,   // character offset (dari selectionRange)
-   *   endPosition,
-   * }
-   * Disimpan terpisah karena selection bisa hilang sebelum modal terbuka.
-   */
   const [correctionContext, setCorrectionContext] = useState(null)
-  // ─────────────────────────────────────────────────────────────────────────
 
   const fullChapterPath = chapterPath || ''
   const stopTTSOnUnmount = useRef(true)
+  const canCorrect = isCorrectableChapter(fullChapterPath)
 
   const { isTracking } = useReadingTracker(bookSlug, chapter, isAuthenticated)
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(bookSlug, chapter, () => {
@@ -126,74 +141,39 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   useEffect(() => { setIsInteractingWithPopup(false); clearSelection() }, [fullChapterPath, chapter?.chapterNumber])
   useEffect(() => { if (!selectedText) setIsInteractingWithPopup(false) }, [selectedText])
 
-  // ── BARU: Handler buka correction modal ─────────────────────────────────
-  /**
-   * Dipanggil saat user klik "Laporkan Typo" di TextSelectionPopup.
-   *
-   * Sebelum modal dibuka, kita capture context (50 char sebelum/sesudah)
-   * dari contentRef DOM karena selection akan hilang setelah popup ditutup.
-   */
   const handleOpenCorrection = () => {
-    if (!selectedText || !selectionRange) return
+    if (!canCorrect || !selectedText || !selectionRange) return
 
-    // Ambil 50 char sebelum dan sesudah selection dari plain text chapter
     let contextBefore = ''
     let contextAfter  = ''
     let startPosition = selectionRange.startOffset || 0
     let endPosition   = selectionRange.endOffset   || 0
 
     try {
-      // Coba ambil dari DOM node yang sebenarnya
       const anchorNode = window.getSelection()?.anchorNode
       if (anchorNode?.nodeType === Node.TEXT_NODE) {
         const fullText = anchorNode.textContent || ''
         const selStart = selectionRange.startOffset
         const selEnd   = selectionRange.endOffset
-
         contextBefore = fullText.slice(Math.max(0, selStart - 50), selStart)
         contextAfter  = fullText.slice(selEnd, Math.min(fullText.length, selEnd + 50))
         startPosition = selStart
         endPosition   = selEnd
       }
-    } catch (e) {
-      // Fallback: tidak ada konteks (replace masih bisa berjalan, hanya kurang presisi)
-    }
+    } catch {}
 
-    // Simpan konteks SEBELUM clearSelection dipanggil
-    setCorrectionContext({
-      selectedText,
-      contextBefore,
-      contextAfter,
-      startPosition,
-      endPosition,
-    })
-
-    // Tutup selection popup
+    setCorrectionContext({ selectedText, contextBefore, contextAfter, startPosition, endPosition })
     clearSelection()
     setIsInteractingWithPopup(false)
-
-    // Buka correction modal
     setShowCorrectionModal(true)
   }
 
-  /**
-   * Dipanggil saat user submit form di CorrectionModal.
-   * Memanggil API POST .../corrections di backend.
-   */
   const handleSubmitCorrection = async (correctionData) => {
     if (!chapter?.chapterNumber) throw new Error('Chapter tidak ditemukan')
-
-    await chapterService.submitCorrection(
-      bookSlug,
-      parseInt(chapter.chapterNumber),
-      correctionData
-    )
-    // Modal akan auto-close setelah success (dihandle di CorrectionModal)
+    await chapterService.submitCorrection(bookSlug, parseInt(chapter.chapterNumber), correctionData)
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   const handleTTSToggle = () => {
-    if (!isAuthenticated) { setShowTTSLoginPrompt(true); return }
     if (!chapter?.htmlContent) return
     stopTTSOnUnmount.current = false
     tts.toggle(chapter.htmlContent)
@@ -201,66 +181,30 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   }
 
   const handleTTSStop = () => { stopTTSOnUnmount.current = true; tts.stop(); setShowTTSPanel(false) }
-  const handleToggleTTSPanel = () => setShowTTSPanel(!showTTSPanel)
-  const handleSearchClick = () => { if (!isAuthenticated) { setShowSearchLoginPrompt(true); return }; setShowSearchModal(true) }
-  const handleExportClick = () => { if (!isAuthenticated) { setShowExportLoginPrompt(true); return }; setShowExportModal(true) }
 
-  const handleMarkComplete = async () => {
-    if (!isAuthenticated) { navigate('/masuk', { state: { from: location.pathname } }); return }
-    if (!chapter?.chapterNumber || isMarkingComplete) return
-    setIsMarkingComplete(true)
-    const newCompletedState = !isChapterCompleted
-    try {
-      await chapterService.saveProgress(bookSlug, parseInt(chapter.chapterNumber), {
-        position: window.scrollY, readingTimeSeconds: 0, isCompleted: newCompletedState
-      })
-      setIsChapterCompleted(newCompletedState)
-    } catch { alert('✗ Gagal memperbarui status bab') }
-    finally { setIsMarkingComplete(false) }
+  const handleSearchClick = () => {
+    setShowSearchModal(true)
   }
 
   useKeyboardShortcuts({
     chapter, isAuthenticated, isTTSPlaying: tts.isPlaying,
-    footnotePopup, showSearchModal, showExportModal,
+    footnotePopup, showSearchModal, showExportModal: false,
     onPrevChapter: handlePrevChapter, onNextChapter: handleNextChapter,
     onTTSToggle: handleTTSToggle, onSearchOpen: handleSearchClick,
     onFootnoteClose: () => setFootnotePopup(null),
     onSearchClose: () => setShowSearchModal(false),
-    onExportClose: () => setShowExportModal(false)
+    onExportClose: () => {},
   })
 
   useEffect(() => { localStorage.setItem('readingMode', readingMode) }, [readingMode])
-
-  useEffect(() => {
-    if (!isAuthenticated || !chapter?.chapterNumber) return
-    const interval = setInterval(() => {
-      const currentTime = Date.now()
-      const elapsedSeconds = Math.floor((currentTime - progressData.startTime) / 1000)
-      const contentHeight = document.documentElement.scrollHeight
-      const viewportHeight = window.innerHeight
-      const scrollableHeight = contentHeight - viewportHeight
-      const scrollProgress = scrollableHeight > 0 ? Math.min(100, Math.round((window.scrollY / scrollableHeight) * 100)) : 100
-      const isCompleted = scrollProgress >= 90
-      chapterService.saveProgress(bookSlug, parseInt(chapter.chapterNumber), {
-        position: window.scrollY, readingTimeSeconds: elapsedSeconds, isCompleted
-      }).catch(() => {})
-      if (isCompleted && !isChapterCompleted) setIsChapterCompleted(true)
-      setProgressData(prev => ({ ...prev, startTime: currentTime, readingTimeSeconds: 0 }))
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [isAuthenticated, chapter, bookSlug, progressData.startTime, isChapterCompleted])
 
   useEffect(() => {
     return () => { if (isAuthenticated && stopTTSOnUnmount.current) tts.stop() }
   }, [fullChapterPath, isAuthenticated, tts])
 
   useEffect(() => {
-    const initializeChapterData = async () => {
-      if (!fullChapterPath) return
-      await fetchChapter()
-      if (isAuthenticated) fetchAnnotations()
-    }
-    initializeChapterData()
+    if (!fullChapterPath) return
+    fetchChapter()
   }, [bookSlug, fullChapterPath, isAuthenticated])
 
   useEffect(() => {
@@ -272,20 +216,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   useEffect(() => {
     if (!loading) {
-      if (location.state?.highlightId && contentRef.current) {
+      if (location.state?.scrollTo !== undefined) {
         setTimeout(() => {
-          const el = contentRef.current.querySelector(`mark[data-highlight-id="${location.state.highlightId}"]`)
-          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'; setTimeout(() => { el.style.boxShadow = '' }, 2000) }
+          window.scrollTo({ top: location.state.scrollTo, behavior: 'smooth' })
           window.history.replaceState({}, document.title)
-        }, 800)
-      } else if (location.state?.noteId && contentRef.current) {
-        setTimeout(() => {
-          const el = contentRef.current.querySelector(`mark[data-note-id="${location.state.noteId}"]`)
-          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'; setTimeout(() => { el.style.boxShadow = '' }, 2000) }
-          window.history.replaceState({}, document.title)
-        }, 800)
-      } else if (location.state?.scrollTo !== undefined) {
-        setTimeout(() => { window.scrollTo({ top: location.state.scrollTo, behavior: 'smooth' }); window.history.replaceState({}, document.title) }, 500)
+        }, 500)
       } else {
         window.scrollTo(0, 0)
       }
@@ -322,16 +257,11 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       setLoading(true)
       const response = await chapterService.readChapterByPath(bookSlug, fullChapterPath)
       setChapter(response)
-      if (response?.isCompleted !== undefined) setIsChapterCompleted(response.isCompleted)
-    } catch (error) { console.error('Error fetching chapter:', error) }
-    finally { setLoading(false) }
-  }
-
-  const fetchAnnotations = async () => {
-    try {
-      const data = await chapterService.getAllBookAnnotations(bookSlug)
-      setAnnotations({ bookmarks: data.bookmarks || [], highlights: data.highlights || [], notes: data.notes || [] })
-    } catch { setAnnotations({ bookmarks: [], highlights: [], notes: [] }) }
+    } catch (error) {
+      console.error('Error fetching chapter:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const fetchReviews = async () => {
@@ -339,65 +269,20 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     try {
       const response = await chapterService.getChapterReviews(bookSlug, parseInt(chapter.chapterNumber))
       setReviews(response.data?.data || response.data || [])
-    } catch { setReviews([]) }
-  }
-
-  const handleAddBookmark = async () => {
-    if (!isAuthenticated) { setShowBookmarkLoginPrompt(true); return }
-    try {
-      await chapterService.addBookmark(bookSlug, parseInt(chapter.chapterNumber), { position: String(window.scrollY) })
-      setShowToolbar(false); fetchAnnotations(); alert('✓ Penanda buku ditambahkan!')
-    } catch { alert('✗ Gagal menambahkan penanda buku') }
-  }
-
-  const handleAddHighlight = async (color) => {
-    if (!isAuthenticated) { setShowAnnotationLoginPrompt(true); clearSelection(); return }
-    if (!selectedText || !selectionRange) return
-    try {
-      await chapterService.addHighlight(bookSlug, parseInt(chapter.chapterNumber), {
-        highlightedText: selectedText, color,
-        startPosition: selectionRange.startOffset, endPosition: selectionRange.endOffset
-      })
-      clearSelection(); fetchAnnotations(); alert('✓ Highlight ditambahkan!')
-    } catch { alert('✗ Gagal menambahkan highlight') }
-  }
-
-  const handleAddNote = async (noteContent) => {
-    if (!isAuthenticated) { setShowAnnotationLoginPrompt(true); clearSelection(); return }
-    if (!noteContent.trim() || !selectedText || !selectionRange) return
-    try {
-      await chapterService.addNote(bookSlug, parseInt(chapter.chapterNumber), {
-        content: noteContent, selectedText,
-        startPosition: selectionRange.startOffset, endPosition: selectionRange.endOffset
-      })
-      clearSelection(); setShowToolbar(false); fetchAnnotations(); alert('✓ Catatan ditambahkan!')
-    } catch { alert('✗ Gagal menambahkan catatan') }
-  }
-
-  const handleDeleteBookmark = async (bookmarkId) => {
-    if (!confirm('Hapus penanda buku ini?')) return
-    try { await chapterService.deleteBookmark(bookSlug, parseInt(chapter.chapterNumber), bookmarkId); fetchAnnotations(); alert('✓ Penanda buku dihapus!') }
-    catch { alert('✗ Gagal menghapus penanda buku') }
-  }
-
-  const handleDeleteHighlight = async (highlightId) => {
-    if (!confirm('Hapus highlight ini?')) return
-    try { await chapterService.deleteHighlight(bookSlug, parseInt(chapter.chapterNumber), highlightId); fetchAnnotations(); alert('✓ Highlight dihapus!') }
-    catch { alert('✗ Gagal menghapus highlight') }
-  }
-
-  const handleDeleteNote = async (noteId) => {
-    if (!confirm('Hapus catatan ini?')) return
-    try { await chapterService.deleteNote(bookSlug, parseInt(chapter.chapterNumber), noteId); fetchAnnotations(); alert('✓ Catatan dihapus!') }
-    catch { alert('✗ Gagal menghapus catatan') }
+    } catch {
+      setReviews([])
+    }
   }
 
   const handleAddReview = async (reviewContent) => {
     if (!isAuthenticated) { navigate('/masuk', { state: { from: location.pathname } }); return }
     try {
       await chapterService.addChapterReview(bookSlug, parseInt(chapter.chapterNumber), { comment: reviewContent, isSpoiler: false })
-      fetchReviews(); alert('✓ Review ditambahkan!')
-    } catch (error) { alert('✗ Gagal menambahkan review: ' + (error.response?.data?.message || error.message)) }
+      fetchReviews()
+      alert('✓ Review ditambahkan!')
+    } catch (error) {
+      alert('✗ Gagal menambahkan review: ' + (error.response?.data?.message || error.message))
+    }
   }
 
   const handleLikeReview = async (reviewId, isLiked) => {
@@ -406,71 +291,64 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
       if (isLiked) await chapterService.unlikeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
       else await chapterService.likeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
       fetchReviews()
-    } catch (error) { console.error('Error liking review:', error) }
+    } catch (error) {
+      console.error('Error liking review:', error)
+    }
   }
 
   const handleReplyToReview = async (reviewId, replyContent) => {
     if (!isAuthenticated) { navigate('/masuk', { state: { from: location.pathname } }); return }
     try {
       await chapterService.replyToChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId, { comment: replyContent })
-      fetchReviews(); alert('✓ Balasan ditambahkan!')
-    } catch (error) { alert('✗ Gagal menambahkan balasan: ' + (error.response?.data?.message || error.message)) }
-  }
-
-  const buildChapterPath = (breadcrumbs) => breadcrumbs?.length ? breadcrumbs.map(b => b.slug).join('/') : ''
-
-  const handleAnnotationClick = (e, annotation) => {
-    e.preventDefault(); e.stopPropagation(); setShowToolbar(false)
-    if (annotation.chapterNumber === parseInt(chapter?.chapterNumber)) {
-      if (annotation.highlightedText && !annotation.content && contentRef.current) {
-        setTimeout(() => {
-          const el = contentRef.current.querySelector(`mark[data-highlight-id="${annotation.id}"]`)
-          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'; setTimeout(() => { el.style.boxShadow = '' }, 2000) }
-        }, 100); return
-      }
-      if (annotation.content && annotation.selectedText && contentRef.current) {
-        setTimeout(() => {
-          const el = contentRef.current.querySelector(`mark[data-note-id="${annotation.id}"]`)
-          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)'; setTimeout(() => { el.style.boxShadow = '' }, 2000) }
-        }, 100); return
-      }
-      window.scrollTo({ top: parseInt(annotation.position) || 0, behavior: 'smooth' })
-    } else {
-      if (annotation.chapterSlug) {
-        const targetUrl = buildChapterUrl(bookSlug, annotation.chapterSlug)
-        if (annotation.highlightedText && !annotation.content) navigate(targetUrl, { state: { highlightId: annotation.id } })
-        else if (annotation.content && annotation.selectedText) navigate(targetUrl, { state: { noteId: annotation.id } })
-        else navigate(targetUrl, { state: { scrollTo: parseInt(annotation.position) || 0 } })
-      } else {
-        alert(`Anotasi ini berada di "${annotation.chapterTitle || `Bab ${annotation.chapterNumber}`}". Navigasi ke bab tersebut untuk melihatnya.`)
-      }
+      fetchReviews()
+      alert('✓ Balasan ditambahkan!')
+    } catch (error) {
+      alert('✗ Gagal menambahkan balasan: ' + (error.response?.data?.message || error.message))
     }
   }
 
   const handleTTSApplySettings = () => {
-    if (!isAuthenticated) return
     tts.applySettings({ rate: tts.rate, pitch: tts.pitch, voiceIndex: tts.voiceIndex })
   }
 
   const memoizedContent = useMemo(() => chapter?.htmlContent || '', [chapter?.htmlContent])
-  const currentChapterHighlights = useMemo(() => annotations.highlights.filter(h => h.chapterNumber === parseInt(chapter?.chapterNumber)), [annotations.highlights, chapter?.chapterNumber])
-  const currentChapterNotes = useMemo(() => annotations.notes.filter(n => n.chapterNumber === parseInt(chapter?.chapterNumber)), [annotations.notes, chapter?.chapterNumber])
 
-  const buildFullChapterPath = (breadcrumbs) => breadcrumbs?.length ? breadcrumbs.map(b => b.slug).join('/') : ''
-  const chapterUrl = chapter ? `/buku/${bookSlug}/${buildFullChapterPath(chapter.breadcrumbs)}` : ''
+  const buildFullChapterPath = (breadcrumbs) =>
+    breadcrumbs?.length ? breadcrumbs.map(b => b.slug).join('/') : ''
+
+  const buildChapterPath = (breadcrumbs) =>
+    breadcrumbs?.length ? breadcrumbs.map(b => b.slug).join('/') : ''
+
+  const chapterUrl = chapter
+    ? `/buku/${bookSlug}/${buildFullChapterPath(chapter.breadcrumbs)}`
+    : ''
 
   const breadcrumbs = chapter ? [
     { name: 'Beranda', url: '/' },
     { name: chapter.bookTitle, url: `/buku/${bookSlug}` },
     ...(chapter.breadcrumbs || []).map((crumb, index) => ({
       name: crumb.title,
-      url: index === chapter.breadcrumbs.length - 1 ? '#' : `/buku/${bookSlug}/${buildFullChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`
+      url: index === chapter.breadcrumbs.length - 1
+        ? '#'
+        : `/buku/${bookSlug}/${buildFullChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`
     }))
   ] : []
 
-  const bookForSchema = chapter ? { title: chapter.bookTitle, slug: bookSlug, authorNames: chapter.authorNames || '', authorSlugs: chapter.authorSlugs || '' } : null
-  const structuredData = chapter && bookForSchema ? combineStructuredData(generateBreadcrumbStructuredData(breadcrumbs), generateChapterStructuredData(chapter, bookForSchema)) : null
-  const metaDescription = chapter?.htmlContent ? generateMetaDescription(chapter.htmlContent, 160) : `Baca ${chapter?.chapterTitle || 'bab ini'} dari ${chapter?.bookTitle || 'buku'} secara gratis di MasasilaM.`
+  const bookForSchema = chapter
+    ? { title: chapter.bookTitle, slug: bookSlug, authorNames: chapter.authorNames || '', authorSlugs: chapter.authorSlugs || '' }
+    : null
+
+  const structuredData = chapter && bookForSchema
+    ? combineStructuredData(
+        generateBreadcrumbStructuredData(breadcrumbs),
+        generateChapterStructuredData(chapter, bookForSchema)
+      )
+    : null
+
+  const metaDescription = chapter?.htmlContent
+    ? generateMetaDescription(chapter.htmlContent, 160)
+    : `Baca ${chapter?.chapterTitle || 'bab ini'} dari ${chapter?.bookTitle || 'buku'} secara gratis di MasasilaM.`
+
   const keywords = `${chapter?.bookTitle || ''}, ${chapter?.chapterTitle || ''}, ${chapter?.authorNames || ''}, baca online gratis, buku domain publik`
 
   if (loading) return <div className="flex items-center justify-center py-20"><LoadingSpinner /></div>
@@ -496,22 +374,25 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         structuredData={structuredData} canonical={`https://masasilam.com${chapterUrl}`}
       />
 
-      <div className="relative pb-20" lang="id">
+      <div className="relative pb-16" lang="id">
         <style>{hideScrollbarStyle}</style>
 
-        {/* ── Login Prompts ── */}
-        {showTTSLoginPrompt && <LoginPromptModal icon={Volume2} title="Fitur Text-to-Speech" description="Masuk sekarang untuk mendengarkan bab ini dibacakan!" onClose={() => setShowTTSLoginPrompt(false)} onLogin={() => navigate('/masuk', { state: { from: location.pathname } })} onRegister={() => navigate('/daftar', { state: { from: location.pathname } })} />}
-        {showAnnotationLoginPrompt && <LoginPromptModal icon={Highlighter} title="Fitur Anotasi" description="Masuk sekarang untuk menyimpan anotasi Anda!" onClose={() => setShowAnnotationLoginPrompt(false)} onLogin={() => navigate('/masuk', { state: { from: location.pathname } })} onRegister={() => navigate('/daftar', { state: { from: location.pathname } })} />}
-        {showBookmarkLoginPrompt && <LoginPromptModal icon={Bookmark} title="Fitur Penanda Buku" description="Masuk sekarang untuk menyimpan penanda Anda!" onClose={() => setShowBookmarkLoginPrompt(false)} onLogin={() => navigate('/masuk', { state: { from: location.pathname } })} onRegister={() => navigate('/daftar', { state: { from: location.pathname } })} />}
-        {showSearchLoginPrompt && <LoginPromptModal icon={Search} title="Fitur Pencarian" description="Masuk sekarang untuk mencari kata atau frasa dalam buku ini!" onClose={() => setShowSearchLoginPrompt(false)} onLogin={() => navigate('/masuk', { state: { from: location.pathname } })} onRegister={() => navigate('/daftar', { state: { from: location.pathname } })} />}
-        {showExportLoginPrompt && <LoginPromptModal icon={Search} title="Fitur Ekspor Anotasi" description="Masuk sekarang untuk mengekspor semua catatan dan highlight Anda!" onClose={() => setShowExportLoginPrompt(false)} onLogin={() => navigate('/masuk', { state: { from: location.pathname } })} onRegister={() => navigate('/daftar', { state: { from: location.pathname } })} />}
+        {showSearchModal && (
+          <SearchInBook bookSlug={bookSlug} onClose={() => setShowSearchModal(false)} />
+        )}
 
-        {showSearchModal && <SearchInBook bookSlug={bookSlug} onClose={() => setShowSearchModal(false)} />}
-        {showExportModal && <ExportAnnotations bookSlug={bookSlug} onClose={() => setShowExportModal(false)} />}
-        {footnotePopup && <FootnotePopup content={footnotePopup.content} onClose={() => setFootnotePopup(null)} onGoToFootnote={handleGoToFootnote} isLocal={footnotePopup.isLocal} sourceChapter={footnotePopup.sourceChapter} />}
+        {footnotePopup && (
+          <FootnotePopup
+            content={footnotePopup.content}
+            onClose={() => setFootnotePopup(null)}
+            onGoToFootnote={handleGoToFootnote}
+            isLocal={footnotePopup.isLocal}
+            sourceChapter={footnotePopup.sourceChapter}
+          />
+        )}
 
-        {/* ── BARU: Correction Modal ── */}
-        {showCorrectionModal && correctionContext && (
+        {/* ── Correction Modal ── */}
+        {canCorrect && showCorrectionModal && correctionContext && (
           <CorrectionModal
             selectedText={correctionContext.selectedText}
             contextBefore={correctionContext.contextBefore}
@@ -520,20 +401,35 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             endPosition={correctionContext.endPosition}
             onSave={handleSubmitCorrection}
             onClose={() => { setShowCorrectionModal(false); setCorrectionContext(null) }}
+            onNavigateToLogin={() => {
+              setShowCorrectionModal(false)
+              setCorrectionContext(null)
+              navigate('/masuk', { state: { from: location.pathname } })
+            }}
           />
         )}
 
+        {/* ── Breadcrumb ── */}
         {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
           <nav className="mb-6 text-sm" aria-label="Breadcrumb">
             <ol className="flex items-center gap-2 flex-wrap">
-              <li><Link to={`/buku/${bookSlug}`} className="text-primary hover:underline">{chapter.bookTitle}</Link></li>
+              <li>
+                <Link to={`/buku/${bookSlug}`} className="text-primary hover:underline">
+                  {chapter.bookTitle}
+                </Link>
+              </li>
               {chapter.breadcrumbs.map((crumb, index) => (
                 <li key={crumb.chapterId} className="flex items-center gap-2">
                   <span className="text-gray-400">/</span>
                   {index === chapter.breadcrumbs.length - 1 ? (
                     <span className="font-semibold">{crumb.title}</span>
                   ) : (
-                    <Link to={`/buku/${bookSlug}/${buildChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`} className="text-primary hover:underline">{crumb.title}</Link>
+                    <Link
+                      to={`/buku/${bookSlug}/${buildChapterPath(chapter.breadcrumbs.slice(0, index + 1))}`}
+                      className="text-primary hover:underline"
+                    >
+                      {crumb.title}
+                    </Link>
                   )}
                 </li>
               ))}
@@ -541,57 +437,193 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           </nav>
         )}
 
-        {isAuthenticated && tts.availableVoices.length > 0 && <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />}
-        {isAuthenticated && tts.isEnabled && showTTSPanel && (
-          <TTSControlPanel isPlaying={tts.isPlaying} progress={tts.progress} rate={tts.rate} pitch={tts.pitch} voiceIndex={tts.voiceIndex} availableVoices={tts.availableVoices} showSettings={tts.showSettings} onTogglePlay={handleTTSToggle} onStop={handleTTSStop} onPrevChapter={handlePrevChapter} onNextChapter={handleNextChapter} onToggleSettings={tts.toggleSettings} onRateChange={(val) => tts.updateSettings({ rate: val })} onPitchChange={(val) => tts.updateSettings({ pitch: val })} onVoiceChange={(val) => tts.updateSettings({ voiceIndex: val })} onApplySettings={handleTTSApplySettings} hasPrevChapter={!!chapter?.previousChapter} hasNextChapter={!!chapter?.nextChapter} onMinimize={() => setShowTTSPanel(false)} />
+        {/* ── TTS Panel ── */}
+        {tts.availableVoices.length > 0 && (
+          <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
+        )}
+        {tts.isEnabled && showTTSPanel && (
+          <TTSControlPanel
+            isPlaying={tts.isPlaying}
+            progress={tts.progress}
+            rate={tts.rate}
+            pitch={tts.pitch}
+            voiceIndex={tts.voiceIndex}
+            availableVoices={tts.availableVoices}
+            showSettings={tts.showSettings}
+            onTogglePlay={handleTTSToggle}
+            onStop={handleTTSStop}
+            onPrevChapter={handlePrevChapter}
+            onNextChapter={handleNextChapter}
+            onToggleSettings={tts.toggleSettings}
+            onRateChange={(val) => tts.updateSettings({ rate: val })}
+            onPitchChange={(val) => tts.updateSettings({ pitch: val })}
+            onVoiceChange={(val) => tts.updateSettings({ voiceIndex: val })}
+            onApplySettings={handleTTSApplySettings}
+            hasPrevChapter={!!chapter?.previousChapter}
+            hasNextChapter={!!chapter?.nextChapter}
+            onMinimize={() => setShowTTSPanel(false)}
+          />
         )}
 
-        <BottomToolbar chapter={chapter} isAuthenticated={isAuthenticated} isTTSPlaying={tts.isPlaying} readingMode={readingMode} showTTSPanel={showTTSPanel} onPrevChapter={handlePrevChapter} onNextChapter={handleNextChapter} onTTSToggle={handleTTSToggle} onToggleTTSPanel={handleToggleTTSPanel} onSearchClick={handleSearchClick} onToolbarToggle={() => { if (!isAuthenticated) { setShowAnnotationLoginPrompt(true); return }; setShowToolbar(!showToolbar) }} onBookmarkClick={handleAddBookmark} onExportClick={handleExportClick} onReadingModeToggle={() => setReadingMode(!readingMode)} />
+        {/* ── Banner kontribusi ── */}
+        {canCorrect && (
+          <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+            <div className="flex items-stretch">
+              <div className="w-1 bg-amber-500 flex-shrink-0 rounded-l-xl" />
+              <div className="px-4 py-3.5 flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#BA7517" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#BA7517" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">
+                    Bantu kami menjaga kualitas teks
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Temukan typo atau kesalahan ketik?{' '}
+                    <strong className="text-gray-700 dark:text-gray-300 font-medium">Pilih teksnya</strong>, lalu klik{' '}
+                    <strong className="text-gray-700 dark:text-gray-300 font-medium">Laporkan Typo</strong>{' '}
+                    — kontribusimu membantu orang lain untuk mendapatkan bacaan yang lebih baik.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* ── TextSelectionPopup dengan prop onReportTypo ── */}
-        {selectedText && selectionCoords && (
-          <TextSelectionPopup
+        {/* ── Typo Popup ── */}
+        {canCorrect && selectedText && selectionCoords && (
+          <TypoSelectionPopup
             selectedText={selectedText}
             coords={selectionCoords}
-            isAuthenticated={isAuthenticated}
+            onReport={handleOpenCorrection}
             onClose={() => { clearSelection(); setIsInteractingWithPopup(false) }}
-            onHighlight={(color) => { handleAddHighlight(color); setIsInteractingWithPopup(false) }}
-            onAddNote={(noteContent) => { handleAddNote(noteContent); setIsInteractingWithPopup(false) }}
-            onReportTypo={handleOpenCorrection}   // ← BARU
-            onNavigateToLogin={() => { clearSelection(); setIsInteractingWithPopup(false); navigate('/masuk', { state: { from: location.pathname } }) }}
             onMouseDown={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true) }}
             onTouchStart={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true) }}
           />
         )}
 
-        {isAuthenticated && showToolbar && (
-          <AnnotationPanel annotations={annotations} currentChapterNumber={chapter.chapterNumber} onClose={() => setShowToolbar(false)} onAnnotationClick={handleAnnotationClick} onDeleteBookmark={handleDeleteBookmark} onDeleteHighlight={handleDeleteHighlight} onDeleteNote={handleDeleteNote} />
-        )}
-
+        {/* ── Konten Bab ── */}
         <article ref={contentRef} lang="id">
           <header className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              {chapter.chapterTitle || `Bab ${chapter.chapterNumber}`}
+            </h1>
             <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
-            {chapter.bookSubtitle && <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">{chapter.bookSubtitle}</p>}
+            {chapter.bookSubtitle && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">{chapter.bookSubtitle}</p>
+            )}
           </header>
 
-          <div lang="id" className={`transition-colors duration-300 rounded-lg my-8 mx-auto ${readingMode ? 'reading-mode-bg shadow-inner border border-gray-300' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800'}`} style={{ maxWidth: '42em', padding: '1.25em' }}>
-            <ChapterContent htmlContent={memoizedContent} fontSize={fontSize} readingMode={readingMode} highlights={currentChapterHighlights} notes={currentChapterNotes} />
+          <div
+            lang="id"
+            className={`transition-colors duration-300 rounded-lg my-8 mx-auto ${
+              readingMode
+                ? 'reading-mode-bg shadow-inner border border-gray-300'
+                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800'
+            }`}
+            style={{ maxWidth: '42em', padding: '1.25em' }}
+          >
+            <ChapterContent
+              htmlContent={memoizedContent}
+              fontSize={fontSize}
+              readingMode={readingMode}
+              highlights={[]}
+              notes={[]}
+            />
           </div>
 
-          {isAuthenticated && (
-            <div className="flex justify-center my-6">
-              <button onClick={handleMarkComplete} disabled={isMarkingComplete} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border ${isChapterCompleted ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'} disabled:opacity-60 disabled:cursor-not-allowed`}>
-                {isChapterCompleted ? <CheckCircle size={18} className="text-green-600 dark:text-green-400" /> : <Circle size={18} className="text-gray-400" />}
-                <span>{isMarkingComplete ? 'Menyimpan...' : isChapterCompleted ? 'Selesai Dibaca' : 'Tandai Selesai'}</span>
-              </button>
-            </div>
-          )}
+          {/* ── Rating Bab ── */}
+          <div className="my-8">
+            <ChapterRating
+              bookSlug={bookSlug}
+              chapterNumber={parseInt(chapter.chapterNumber)}
+              chapterTitle={chapter.chapterTitle}
+              isAuthenticated={isAuthenticated}
+            />
+          </div>
 
-          <div className="my-8"><ChapterRating bookSlug={bookSlug} chapterNumber={parseInt(chapter.chapterNumber)} chapterTitle={chapter.chapterTitle} isAuthenticated={isAuthenticated} /></div>
-          <ReviewsSection reviews={reviews} isAuthenticated={isAuthenticated} onAddReview={handleAddReview} onLikeReview={handleLikeReview} onReplyToReview={handleReplyToReview} onNavigateToLogin={() => navigate('/masuk', { state: { from: location.pathname } })} />
+          {/* ── Review Bab ── */}
+          <ReviewsSection
+            reviews={reviews}
+            isAuthenticated={isAuthenticated}
+            onAddReview={handleAddReview}
+            onLikeReview={handleLikeReview}
+            onReplyToReview={handleReplyToReview}
+            onNavigateToLogin={() => navigate('/masuk', { state: { from: location.pathname } })}
+          />
         </article>
       </div>
+
+      {/* ══ FOOTER FIXED ══════════════════════════════════════════════════════ */}
+      <footer className="fixed bottom-0 left-0 right-0 z-30 h-14 flex items-center px-4
+        border-t border-gray-200 dark:border-gray-700
+        bg-white dark:bg-gray-900">
+
+        <button
+          onClick={handlePrevChapter}
+          disabled={!chapter.previousChapter}
+          className="flex items-center justify-center w-9 h-9 rounded-lg
+            border border-gray-300 dark:border-gray-600
+            hover:bg-gray-100 dark:hover:bg-gray-800
+            disabled:opacity-40 disabled:cursor-not-allowed transition"
+          title="Bab sebelumnya"
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setReadingMode(!readingMode)}
+            className={`flex items-center justify-center w-9 h-9 rounded-lg border text-base transition ${
+              readingMode
+                ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
+                : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+            title="Mode baca"
+          >
+            📄
+          </button>
+
+          <button
+            onClick={handleSearchClick}
+            className="flex items-center justify-center w-9 h-9 rounded-lg
+              border border-gray-300 dark:border-gray-600
+              hover:bg-gray-100 dark:hover:bg-gray-800 transition
+              text-gray-500 dark:text-gray-400"
+            title="Cari dalam buku"
+          >
+            <Search size={17} />
+          </button>
+
+          <button
+            onClick={handleTTSToggle}
+            className={`flex items-center justify-center w-9 h-9 rounded-lg border transition ${
+              tts.isPlaying
+                ? 'bg-primary text-white border-primary'
+                : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+            title={tts.isPlaying ? 'Stop TTS' : 'Dengarkan bab ini'}
+          >
+            <Volume2 size={17} />
+          </button>
+        </div>
+
+        <button
+          onClick={handleNextChapter}
+          disabled={!chapter.nextChapter}
+          className="flex items-center justify-center w-9 h-9 rounded-lg
+            border border-gray-300 dark:border-gray-600
+            hover:bg-gray-100 dark:hover:bg-gray-800
+            disabled:opacity-40 disabled:cursor-not-allowed transition"
+          title="Bab berikutnya"
+        >
+          <ChevronRight size={18} />
+        </button>
+
+      </footer>
     </>
   )
 }

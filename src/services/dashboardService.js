@@ -84,11 +84,6 @@ export const dashboardService = {
   /**
    * Admin: Setujui koreksi.
    * POST /api/dashboard/corrections/{id}/approve
-   *
-   * Efek di backend:
-   *  1. UPDATE book_chapter.html_content
-   *  2. EVICT cache chapter
-   *  3. Trigger async epub rebuild (Cloudinary overwrite)
    */
   approveCorrection: (correctionId) =>
     api.post(`/dashboard/corrections/${correctionId}/approve`)
@@ -97,8 +92,6 @@ export const dashboardService = {
   /**
    * Admin: Tolak koreksi.
    * POST /api/dashboard/corrections/{id}/reject
-   *
-   * @param {string|null} note - alasan penolakan (opsional)
    */
   rejectCorrection: (correctionId, note = null) =>
     api.post(`/dashboard/corrections/${correctionId}/reject`, { note })
