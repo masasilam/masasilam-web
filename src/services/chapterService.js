@@ -1,6 +1,5 @@
 // ============================================
 // FILE: src/services/chapterService.js
-// PERUBAHAN: Tambah submitCorrection dan getPendingCorrectionPositions
 // ============================================
 import api from './api'
 
@@ -103,7 +102,9 @@ export const chapterService = {
   },
 
   // ============================================
-  // READING ACTIVITY TRACKING
+  // CHAPTER READING ACTIVITY TRACKING
+  // Dipakai oleh chapter reader (bukan EPUB reader)
+  // Endpoint: /books/{slug}/chapters/reading/...
   // ============================================
   startReading: async (slug, sessionData) => {
     const response = await api.post(`/books/${slug}/chapters/reading/start`, sessionData)
@@ -126,18 +127,46 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // Setelah getReadingPattern, sebelum searchInBook:
+  // ============================================
+  // EPUB READING ACTIVITY TRACKING
+  // Dipakai oleh EpubReaderPage — endpoint berbeda dari chapter reader.
+  // Endpoint: /books/{slug}/reading/... (tanpa /chapters/)
+  //           → EpubAnnotationController
+  // ============================================
+
+  /**
+   * Dipanggil saat EpubReaderPage mount.
+   * Hanya untuk increment read count pada first-time read.
+   * Session record dibuat oleh recordEpubSession.
+   *
+   * POST /api/books/{slug}/reading/start
+   */
+  epubStartReading: async (slug, sessionData) => {
+    const response = await api.post(`/books/${slug}/reading/start`, sessionData)
+    return response.data?.data || response.data
+  },
+
+  /**
+   * No-op untuk EPUB — tersedia untuk konsistensi API.
+   * Data sesi direkam via recordEpubSession.
+   *
+   * POST /api/books/{slug}/reading/end
+   */
+  epubEndReading: async (slug, sessionData) => {
+    const response = await api.post(`/books/${slug}/reading/end`, sessionData)
+    return response.data?.data || response.data
+  },
 
   /**
    * Kirim data sesi baca EPUB ke backend saat user meninggalkan halaman.
    * Dipanggil dari EpubReaderPage cleanup (unmount / navigasi internal React).
    * Untuk tab ditutup, EpubReaderPage menggunakan fetch+keepalive langsung.
    *
-   * POST /api/books/{slug}/chapters/reading/epub-session
+   * POST /api/books/{slug}/reading/epub-session
    */
   recordEpubSession: async (slug, sessionData) => {
     const response = await api.post(
-      `/books/${slug}/chapters/reading/epub-session`,
+      `/books/${slug}/reading/epub-session`,
       sessionData
     )
     return response.data?.data || response.data
@@ -222,27 +251,8 @@ export const chapterService = {
   },
 
   // ============================================
-  // CONTENT CORRECTIONS (Lapor Typo) ← BARU
+  // CONTENT CORRECTIONS (Lapor Typo)
   // ============================================
-
-  /**
-   * User submit laporan typo dari ChapterReaderPage.
-   *
-   * POST /api/books/{slug}/chapters/{chapterNumber}/corrections
-   *
-   * @param {string} slug            - slug buku
-   * @param {number} chapterNumber   - nomor chapter
-   * @param {object} correctionData  - dari CorrectionModal:
-   *   {
-   *     originalText,   // teks yang salah (dari selection)
-   *     correctedText,  // usulan perbaikan dari user
-   *     contextBefore,  // 50 char sebelum (untuk presisi)
-   *     contextAfter,   // 50 char sesudah (untuk presisi)
-   *     startPosition,  // character offset
-   *     endPosition,
-   *     userNote,       // catatan opsional
-   *   }
-   */
   submitCorrection: async (slug, chapterNumber, correctionData) => {
     const response = await api.post(
       `/books/${slug}/chapters/${chapterNumber}/corrections`,
@@ -250,15 +260,6 @@ export const chapterService = {
     )
     return response.data?.data || response.data
   },
-
-  /**
-   * Ambil posisi (integer list) semua koreksi PENDING di chapter ini.
-   * Dipakai untuk render indikator ✎ di atas teks yang dilaporkan.
-   *
-   * GET /api/books/{slug}/chapters/{chapterNumber}/corrections/pending-positions
-   *
-   * @returns {number[]} list startPosition
-   */
   getPendingCorrectionPositions: async (slug, chapterNumber) => {
     const response = await api.get(
       `/books/${slug}/chapters/${chapterNumber}/corrections/pending-positions`

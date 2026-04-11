@@ -1,50 +1,23 @@
 // ============================================
-// FILE: src/pages/EpubReaderPage.jsx
-// Route: /buku/:bookSlug/baca
-//
-// FIXES APPLIED (ditandai // ← FIX):
-//   - Import chapterService untuk recordEpubSession
-//   - sessionIdRef: ID unik per sesi baca EPUB
-//   - sessionStartRef: waktu mulai baca
-//   - latestProgressRef: progress terkini (selalu sync, tidak stale di closure)
-//   - useEffect sync latestProgressRef setiap progress berubah
-//   - useEffect tracking sesi: kirim recordEpubSession saat unmount (navigasi
-//     internal React) DAN saat beforeunload (tab ditutup / refresh)
-//   - generateSessionId: helper tanpa dependensi eksternal
-//
-// FIX TAMBAHAN:
-//   - Panggil chapterService.startReading saat EPUB ready agar readCount
-//     terupdate di backend (BookDetailPage tidak lagi bertanggung jawab ini)
+// src/pages/EpubReaderPage.jsx
+// FIX yang diterapkan:
+//   1. findActiveChapter: normalisasi href lebih robust (handle path penuh vs relatif)
+//   2. lastCfi dikirim dalam payload epub-session agar backend bisa simpan ke current_position
+//   3. EpubReaderPage membaca lastCfi dari location.state untuk resume posisi tepat
 // ============================================
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import ePub from 'epubjs'
 import bookService from '../services/bookService'
-import { chapterService } from '../services/chapterService' // ← FIX: import untuk recordEpubSession & startReading
+import { chapterService } from '../services/chapterService'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import {
-  ArrowLeft,
-  BookOpen,
-  Bookmark,
-  BookmarkCheck,
-  ChevronLeft,
-  ChevronRight,
-  Highlighter,
-  Minus,
-  Moon,
-  Plus,
-  Settings,
-  Sun,
-  X,
-  List,
-  StickyNote,
-  Trash2,
-  Coffee,
-  Type,
+  ArrowLeft, BookOpen, Bookmark, BookmarkCheck,
+  ChevronLeft, ChevronRight, Highlighter, Minus, Moon,
+  Plus, Settings, Sun, X, List, StickyNote, Trash2, Coffee, Type,
 } from 'lucide-react'
 import api from '../services/api'
 
-// ─── Highlight Colors ─────────────────────────────────────────────────────────
 const HIGHLIGHT_COLORS = [
   { name: 'Kuning', value: '#FDE68A', text: '#92400E' },
   { name: 'Hijau',  value: '#A7F3D0', text: '#065F46' },
@@ -53,7 +26,6 @@ const HIGHLIGHT_COLORS = [
   { name: 'Ungu',   value: '#DDD6FE', text: '#5B21B6' },
 ]
 
-// ─── Font Options ──────────────────────────────────────────────────────────────
 const FONT_OPTIONS = [
   { label: 'Serif (Default)', value: "'Georgia', 'Times New Roman', serif" },
   { label: 'Garamond',        value: "'Garamond', 'Adobe Garamond Pro', 'Times New Roman', serif" },
@@ -62,14 +34,12 @@ const FONT_OPTIONS = [
   { label: 'Monospace',       value: "'Courier New', 'Courier', monospace" },
 ]
 
-// ─── Color Modes ──────────────────────────────────────────────────────────────
 const COLOR_MODES = {
   light: { bg: '#FFFFFF', color: '#1F2937', label: 'Terang',  icon: Sun    },
   cream: { bg: '#f6eee3', color: '#2d1f0e', label: 'Krem',    icon: Coffee },
   dark:  { bg: '#111827', color: '#E5E7EB', label: 'Gelap',   icon: Moon   },
 }
 
-// ─── API Service ──────────────────────────────────────────────────────────────
 const epubAnnotationService = {
   getAll: async (slug) => {
     const res = await api.get(`/books/${slug}/epub-annotations`)
@@ -103,11 +73,58 @@ const epubAnnotationService = {
   },
 }
 
-// ─── FIX: Helper generate session ID tanpa dependensi eksternal ──────────────
 const generateSessionId = () =>
   `epub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 
-// ─── Note Modal ───────────────────────────────────────────────────────────────
+const getDeviceType = () =>
+  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
+
+const extractSpineIndex = (cfi) => {
+  if (!cfi) return 0
+  try {
+    const match = cfi.match(/^epubcfi\(\/6\/(\d+)/)
+    if (match) {
+      const n = parseInt(match[1], 10)
+      return Math.max(0, Math.floor(n / 2) - 1)
+    }
+  } catch {}
+  return 0
+}
+
+// FIX: Normalisasi href lebih robust.
+// epub.js bisa mengembalikan href dalam berbagai format:
+//   - "OEBPS/Text/chapter1.xhtml"
+//   - "Text/chapter1.xhtml"
+//   - "chapter1.xhtml"
+// TOC item href juga bisa dalam format berbeda.
+// Solusi: bandingkan filename saja (bagian setelah '/'), lalu hash jika ada.
+const normalizeHref = (href) => {
+  if (!href) return ''
+  // Hapus hash
+  const withoutHash = href.split('#')[0]
+  // Ambil filename saja
+  return withoutHash.split('/').pop() || ''
+}
+
+// FIX: findActiveChapter yang diperbaiki dengan normalisasi filename
+const findActiveChapter = (tocItems, currentHref) => {
+  if (!currentHref || !tocItems?.length) return null
+
+  const currentFile = normalizeHref(currentHref)
+  if (!currentFile) return null
+
+  // Prioritaskan match di chapter top-level (depth 0)
+  const topLevel = tocItems.filter(t => t.depth === 0)
+  let match = topLevel.find(item => normalizeHref(item.href) === currentFile)
+
+  // Fallback: cari di semua depth
+  if (!match) {
+    match = tocItems.find(item => normalizeHref(item.href) === currentFile)
+  }
+
+  return match || null
+}
+
 const NoteModal = ({ selectedText, onSave, onClose }) => {
   const [noteText, setNoteText] = useState('')
   const [color, setColor] = useState(HIGHLIGHT_COLORS[0].value)
@@ -153,12 +170,9 @@ const NoteModal = ({ selectedText, onSave, onClose }) => {
   )
 }
 
-// ─── Selection Popup ──────────────────────────────────────────────────────────
 const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
   if (!position) return null
-  const popupWidth = 220
-  const popupHeight = 44
-  const margin = 8
+  const popupWidth = 220, popupHeight = 44, margin = 8
   const left = Math.min(Math.max(margin, position.x - popupWidth / 2), window.innerWidth - popupWidth - margin)
   const top  = Math.max(margin, position.y - popupHeight - 12)
   return (
@@ -170,9 +184,8 @@ const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
           style={{ backgroundColor: c.value }} title={`Highlight ${c.name}`} />
       ))}
       <div className="w-px h-5 bg-white/20 mx-1" />
-      <button onClick={onNote} className="flex items-center gap-1 px-2 py-1 rounded-lg text-white text-xs hover:bg-white/10 transition" title="Tambah Catatan">
-        <StickyNote size={14} />
-        <span>Catatan</span>
+      <button onClick={onNote} className="flex items-center gap-1 px-2 py-1 rounded-lg text-white text-xs hover:bg-white/10 transition">
+        <StickyNote size={14} /><span>Catatan</span>
       </button>
       <button onClick={onClose} className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition">
         <X size={14} />
@@ -181,7 +194,6 @@ const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
   )
 }
 
-// ─── Sidebar Panel ────────────────────────────────────────────────────────────
 const SidebarPanel = ({ activeTab, toc, bookmarks, annotations, onTocClick, onBookmarkClick, onAnnotationClick, onDeleteBookmark, onDeleteAnnotation, onClose }) => {
   const tabs = [
     { id: 'toc',         label: 'Daftar Isi', icon: List        },
@@ -257,7 +269,6 @@ const SidebarPanel = ({ activeTab, toc, bookmarks, annotations, onTocClick, onBo
   )
 }
 
-// ─── Settings Panel ───────────────────────────────────────────────────────────
 const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChange, fontFamily, onFontChange, onClose }) => (
   <div className="flex flex-col h-full bg-white dark:bg-gray-900">
     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -294,8 +305,7 @@ const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChang
               <button key={key} onClick={() => onColorModeChange(key)}
                 className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-medium transition border-2 ${colorMode === key ? 'border-amber-500 shadow' : 'border-transparent'}`}
                 style={{ background: cfg.bg, color: cfg.color }}>
-                <Icon size={14} />
-                {cfg.label}
+                <Icon size={14} />{cfg.label}
               </button>
             )
           })}
@@ -305,52 +315,23 @@ const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChang
   </div>
 )
 
-// ─── Guest Notice Banner ──────────────────────────────────────────────────────
 const GuestNoticeBanner = ({ onDismiss, onRegister, onLogin }) => (
-  <div className="fixed bottom-12 left-3 right-3 z-50 md:left-auto md:right-4 md:bottom-6 md:w-80
-    bg-white dark:bg-gray-800
-    border border-amber-200 dark:border-amber-700
-    rounded-xl shadow-lg
-    p-3 flex items-start gap-3
-    animate-in slide-in-from-bottom-2 duration-200">
-    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40
-      flex items-center justify-center mt-0.5">
+  <div className="fixed bottom-12 left-3 right-3 z-50 md:left-auto md:right-4 md:bottom-6 md:w-80 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-xl shadow-lg p-3 flex items-start gap-3 animate-in slide-in-from-bottom-2 duration-200">
+    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center mt-0.5">
       <Highlighter size={15} className="text-amber-600 dark:text-amber-400" />
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mb-0.5">
-        Highlight tersimpan di browser ini saja
-      </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">
-        Daftar gratis untuk menyimpan permanen dan sync di semua perangkat.
-      </p>
+      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mb-0.5">Highlight tersimpan di browser ini saja</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">Daftar gratis untuk menyimpan permanen dan sync di semua perangkat.</p>
       <div className="flex items-center gap-2">
-        <button
-          onClick={onRegister}
-          className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white
-            text-xs font-medium rounded-lg transition">
-          Daftar gratis
-        </button>
-        <button
-          onClick={onLogin}
-          className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300
-            hover:text-gray-800 dark:hover:text-white transition">
-          Masuk
-        </button>
+        <button onClick={onRegister} className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition">Daftar gratis</button>
+        <button onClick={onLogin} className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition">Masuk</button>
       </div>
     </div>
-    <button
-      onClick={onDismiss}
-      className="flex-shrink-0 text-gray-300 hover:text-gray-500
-        dark:text-gray-600 dark:hover:text-gray-400 transition mt-0.5">
-      <X size={14} />
-    </button>
+    <button onClick={onDismiss} className="flex-shrink-0 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition mt-0.5"><X size={14} /></button>
   </div>
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CFI helpers
-// ═══════════════════════════════════════════════════════════════════════════════
 const resolveCanonicalHref = (epubBook, sectionHref) => {
   const filename = sectionHref.split('/').pop()
   const items = epubBook.spine?.items || []
@@ -393,7 +374,6 @@ const resolveAnchorToCfi = async (epubBook, canonicalHref, anchor) => {
   return { cfi: `${canonicalHref}#${anchor}`, method: 'direct-href' }
 }
 
-// ─── localStorage keys ────────────────────────────────────────────────────────
 const localKeys = (bookSlug) => ({
   annotations:     `epub_annotations_${bookSlug}`,
   bookmarks:       `epub_bookmarks_${bookSlug}`,
@@ -404,62 +384,54 @@ const localKeys = (bookSlug) => ({
   guestNoticeSeen: 'epub_guest_notice_seen',
 })
 
-// ─── Helper: ambil CFI last element dari sebuah section ───────────────────────
 const getLastElementCfi = async (epubBook, href) => {
   try {
     const section    = epubBook.spine.get(href)
     if (!section) return null
     const sectionDoc = await section.load(epubBook.load.bind(epubBook))
     if (!sectionDoc) return null
-    const candidates = sectionDoc.querySelectorAll(
-      'p, h1, h2, h3, h4, h5, h6, li, td, blockquote'
-    )
-    const lastElem = candidates[candidates.length - 1]
+    const candidates = sectionDoc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, td, blockquote')
+    const lastElem   = candidates[candidates.length - 1]
     if (!lastElem) { section.unload(); return null }
     const cfi = section.cfiFromElement(lastElem)
     section.unload()
     return cfi || null
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
-// ─── FIX: Helper deteksi device type ─────────────────────────────────────────
-const getDeviceType = () =>
-  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ═══════════════════════════════════════════════════════════════════════════════
 const EpubReaderPage = () => {
   const { bookSlug } = useParams()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate     = useNavigate()
+  const location     = useLocation()
   const isAuthenticated = !!localStorage.getItem('token')
 
-  const [book, setBook] = useState(null)
+  const [book,    setBook]    = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error,   setError]   = useState(null)
 
-  const viewerRef    = useRef(null)
-  const bookRef      = useRef(null)
-  const renditionRef = useRef(null)
+  const viewerRef     = useRef(null)
+  const bookRef       = useRef(null)
+  const renditionRef  = useRef(null)
   const currentCfiRef = useRef(null)
 
-  const [toc, setToc] = useState([])
+  const [toc, setToc]                         = useState([])
+  const tocRef                                 = useRef([])
   const [currentLocation, setCurrentLocation] = useState(null)
 
   const keys = localKeys(bookSlug)
 
-  // ── FIX: Refs untuk session tracking ───────────────────────────
-  // sessionIdRef   : ID unik per kunjungan halaman ini
-  // sessionStartRef: timestamp saat komponen mount
-  // latestProgressRef: selalu berisi progress terkini (tidak stale di closure)
-  const sessionIdRef      = useRef(generateSessionId())   // ← FIX
-  const sessionStartRef   = useRef(Date.now())            // ← FIX
-  const latestProgressRef = useRef(0)                     // ← FIX
+  const sessionIdRef      = useRef(generateSessionId())
+  const sessionStartRef   = useRef(Date.now())
+  const latestProgressRef = useRef(0)
+  const spineIndexRef      = useRef(0)
+  const totalSpineItemsRef = useRef(0)
 
-  // ── Persisted preferences ──────────────────────────────────────
+  const currentChapterLabelRef = useRef('')
+  const currentChapterIndexRef = useRef(0)
+  const totalChaptersRef       = useRef(0)
+
+  const [currentChapterLabel, setCurrentChapterLabel] = useState('')
+
   const [colorMode,  setColorMode]  = useState(() => localStorage.getItem(keys.colorMode)  || 'light')
   const [fontSize,   setFontSize]   = useState(() => parseInt(localStorage.getItem(keys.fontSize) || '16'))
   const [fontFamily, setFontFamily] = useState(() => localStorage.getItem(keys.fontFamily) || FONT_OPTIONS[0].value)
@@ -468,10 +440,10 @@ const EpubReaderPage = () => {
 
   const [showSidebar,  setShowSidebar]  = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [progress,  setProgress]  = useState(0)
-  const [isReady,   setIsReady]   = useState(false)
-  const [epubError, setEpubError] = useState(null)
-  const [isSyncing, setIsSyncing] = useState(false)
+  const [progress,     setProgress]     = useState(0)
+  const [isReady,      setIsReady]      = useState(false)
+  const [epubError,    setEpubError]    = useState(null)
+  const [isSyncing,    setIsSyncing]    = useState(false)
 
   const [annotations, setAnnotations] = useState(() => {
     try { return JSON.parse(localStorage.getItem(keys.annotations) || '[]') } catch { return [] }
@@ -480,15 +452,14 @@ const EpubReaderPage = () => {
     try { return JSON.parse(localStorage.getItem(keys.bookmarks) || '[]') } catch { return [] }
   })
 
-  const [selection,     setSelection]     = useState(null)
-  const [showNoteModal, setShowNoteModal] = useState(false)
-  const [isBookmarked,  setIsBookmarked]  = useState(false)
+  const [selection,       setSelection]       = useState(null)
+  const [showNoteModal,   setShowNoteModal]   = useState(false)
+  const [isBookmarked,    setIsBookmarked]    = useState(false)
   const [showGuestNotice, setShowGuestNotice] = useState(false)
 
   const triggerGuestNotice = useCallback(() => {
     if (isAuthenticated) return
-    const alreadySeen = localStorage.getItem(keys.guestNoticeSeen)
-    if (!alreadySeen) setShowGuestNotice(true)
+    if (!localStorage.getItem(keys.guestNoticeSeen)) setShowGuestNotice(true)
   }, [isAuthenticated, keys.guestNoticeSeen])
 
   const dismissGuestNotice = useCallback(() => {
@@ -496,43 +467,39 @@ const EpubReaderPage = () => {
     localStorage.setItem(keys.guestNoticeSeen, '1')
   }, [keys.guestNoticeSeen])
 
-  // ── FIX: Sync latestProgressRef setiap progress berubah ────────
-  // Ini penting agar closure di beforeunload / cleanup tidak stale.
-  useEffect(() => {
-    latestProgressRef.current = progress
-  }, [progress]) // ← FIX
+  useEffect(() => { latestProgressRef.current = progress }, [progress])
 
-  // ── FIX: Session tracking — kirim ke backend saat unmount / tab ditutup ──
-  // Dipanggil HANYA jika user sudah login (isAuthenticated).
-  // Untuk guest, data tidak dikirim ke server (tidak ada akun untuk disimpan).
+  // ── Session tracking ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isAuthenticated) return // ← FIX: skip untuk guest
+    if (!isAuthenticated) return
 
-    const sessionId    = sessionIdRef.current
-    const startTime    = sessionStartRef.current
-    const deviceType   = getDeviceType()
+    const sessionId  = sessionIdRef.current
+    const startTime  = sessionStartRef.current
+    const deviceType = getDeviceType()
 
     const handleBeforeUnload = () => {
       const durationSeconds = Math.round((Date.now() - startTime) / 1000)
       if (durationSeconds < 5) return
 
       const payload = JSON.stringify({
-        sessionId,
-        durationSeconds,
-        progressPercent: latestProgressRef.current,
-        deviceType,
+          sessionId,
+          durationSeconds,
+          progressPercent:  latestProgressRef.current,
+          deviceType,
+          spineIndex:       spineIndexRef.current,
+          totalSpineItems:  totalSpineItemsRef.current,
+          chapterLabel:     currentChapterLabelRef.current,
+          chapterIndex:     currentChapterIndexRef.current,
+          totalChapters:    totalChaptersRef.current,
+          lastCfi:          currentCfiRef.current,
       })
 
       const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
       const token   = localStorage.getItem('token')
 
-      // sendBeacon tidak support Authorization header → diganti fetch+keepalive
-      fetch(`${apiBase}/books/${bookSlug}/chapters/reading/epub-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+      fetch(`${apiBase}/books/${bookSlug}/reading/epub-session`, {
+        method:    'POST',
+        headers:   { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body:      payload,
         keepalive: true,
       }).catch(() => {})
@@ -540,29 +507,29 @@ const EpubReaderPage = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload)
 
-    // Cleanup: dipanggil saat React unmount (navigasi internal / back button)
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
 
       const durationSeconds = Math.round((Date.now() - startTime) / 1000)
-      if (durationSeconds < 5) return // abaikan sesi terlalu singkat
+      if (durationSeconds < 5) return
 
-      // Untuk navigasi internal, masih bisa pakai fetch biasa dengan token
       chapterService.recordEpubSession(bookSlug, {
         sessionId,
         durationSeconds,
-        progressPercent: latestProgressRef.current, // ← FIX: selalu terkini
+        progressPercent:  latestProgressRef.current,
         deviceType,
-      }).catch(err =>
-        console.warn('[EpubReader] Gagal merekam sesi:', err.message)
-      )
+        spineIndex:       spineIndexRef.current,
+        totalSpineItems:  totalSpineItemsRef.current,
+        chapterLabel:     currentChapterLabelRef.current,
+        chapterIndex:     currentChapterIndexRef.current,
+        totalChapters:    totalChaptersRef.current,
+        // FIX: sertakan CFI posisi terakhir
+        lastCfi:          currentCfiRef.current,
+      }).catch(err => console.warn('[EpubReader] Gagal merekam sesi:', err.message))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookSlug, isAuthenticated]) // ← FIX: sengaja tidak memasukkan progress agar
-                                  // tidak re-run setiap progress berubah.
-                                  // Nilai terkini diambil dari latestProgressRef.
+  }, [bookSlug, isAuthenticated])
 
-  // ── Fetch book ──────────────────────────────────────────────────
   useEffect(() => {
     const fetchBook = async () => {
       try {
@@ -578,7 +545,6 @@ const EpubReaderPage = () => {
     fetchBook()
   }, [bookSlug])
 
-  // ── Load anotasi dari server ────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !bookSlug) return
     const loadFromServer = async () => {
@@ -597,7 +563,6 @@ const EpubReaderPage = () => {
     loadFromServer()
   }, [bookSlug, isAuthenticated]) // eslint-disable-line
 
-  // ── Apply theme helper ──────────────────────────────────────────
   const applyTheme = useCallback((rendition, mode, size, family) => {
     if (!rendition) return
     const cfg = COLOR_MODES[mode] || COLOR_MODES.light
@@ -614,60 +579,45 @@ const EpubReaderPage = () => {
     const separatorColor   = isDarkMode ? '#999'    : isCreamMode ? '#8c7055' : '#666'
     const codeBg           = isDarkMode ? '#1e1e1e' : isCreamMode ? '#ede3d6' : '#f6f6f6'
     const imgFilter        = isDarkMode ? 'invert(1)' : 'none'
-    const imgNoInvertFilter = 'none'
 
     rendition.themes.register('reader-theme', {
-      'html': { 'background': cfg.bg + ' !important' },
-      'body': {
-        'background-color':       cfg.bg + ' !important',
-        'color':                  cfg.color + ' !important',
-        'font-size':              `${size}px !important`,
-        'font-family':            family,
-        '-webkit-font-smoothing': 'antialiased',
-      },
-      'p':                    { 'color': cfg.color },
-      'h1,h2,h3,h4,h5,h6':   { 'color': cfg.color },
-      'a':                    { 'color': isDarkMode ? '#93c5fd' : isCreamMode ? '#7a5c3a' : '' },
-      'li':                   { 'color': cfg.color },
-      'td':                   { 'color': cfg.color, 'border-color': tdBorder },
-      'th':                   { 'color': cfg.color, 'background-color': thBg, 'border-color': tdBorder },
-      'blockquote':           { 'border-left-color': blockquoteBorder, 'color': cfg.color },
-      'code':                 { 'background-color': codeBg, 'color': cfg.color },
-      'pre':                  { 'background-color': codeBg, 'color': cfg.color },
-      'p.separator':          { 'color': separatorColor },
-      'p.ornament':           { 'color': separatorColor },
-      'p.divider':            { 'color': separatorColor },
-      '.scene-break':         { 'color': separatorColor },
-      '.note':                { 'color': cfg.color },
-      '.image-caption':       { 'color': separatorColor },
-      '.info-box': {
-        'background-color': infoBoxBg + ' !important',
-        'border-color':     infoBoxBorder + ' !important',
-        'color':            cfg.color + ' !important',
-      },
-      '.info-box p': { 'color': cfg.color + ' !important' },
-      '.letter': {
-        'background-color': letterBg + ' !important',
-        'border-color':     letterBorder + ' !important',
-        'color':            cfg.color + ' !important',
-      },
-      '.letter p':            { 'color': cfg.color },
-      '.letter .date':        { 'color': cfg.color },
-      '.letter .salutation':  { 'color': cfg.color },
-      '.letter .closing':     { 'color': cfg.color },
-      '.letter .signature':   { 'color': cfg.color },
-      'img':                            { 'filter': imgFilter },
-      'img.photo':                      { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
-      'img.illustration':               { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
-      'img.colored':                    { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
-      '.chapter img.no-invert':         { 'filter': imgNoInvertFilter, 'opacity': isDarkMode ? '0.9' : '1' },
-      '.image-inline':                  { 'filter': imgFilter, 'opacity': isDarkMode ? '0.9' : '1' },
-      '.epub-highlight':                { 'opacity': '0.4' },
+      'html':                   { 'background': cfg.bg + ' !important' },
+      'body':                   { 'background-color': cfg.bg + ' !important', 'color': cfg.color + ' !important', 'font-size': `${size}px !important`, 'font-family': family, '-webkit-font-smoothing': 'antialiased' },
+      'p':                      { 'color': cfg.color },
+      'h1,h2,h3,h4,h5,h6':     { 'color': cfg.color },
+      'a':                      { 'color': isDarkMode ? '#93c5fd' : isCreamMode ? '#7a5c3a' : '' },
+      'li':                     { 'color': cfg.color },
+      'td':                     { 'color': cfg.color, 'border-color': tdBorder },
+      'th':                     { 'color': cfg.color, 'background-color': thBg, 'border-color': tdBorder },
+      'blockquote':             { 'border-left-color': blockquoteBorder, 'color': cfg.color },
+      'code':                   { 'background-color': codeBg, 'color': cfg.color },
+      'pre':                    { 'background-color': codeBg, 'color': cfg.color },
+      'p.separator':            { 'color': separatorColor },
+      'p.ornament':             { 'color': separatorColor },
+      'p.divider':              { 'color': separatorColor },
+      '.scene-break':           { 'color': separatorColor },
+      '.note':                  { 'color': cfg.color },
+      '.image-caption':         { 'color': separatorColor },
+      '.info-box':              { 'background-color': infoBoxBg + ' !important', 'border-color': infoBoxBorder + ' !important', 'color': cfg.color + ' !important' },
+      '.info-box p':            { 'color': cfg.color + ' !important' },
+      '.letter':                { 'background-color': letterBg + ' !important', 'border-color': letterBorder + ' !important', 'color': cfg.color + ' !important' },
+      '.letter p':              { 'color': cfg.color },
+      '.letter .date':          { 'color': cfg.color },
+      '.letter .salutation':    { 'color': cfg.color },
+      '.letter .closing':       { 'color': cfg.color },
+      '.letter .signature':     { 'color': cfg.color },
+      'img':                    { 'filter': imgFilter },
+      'img.photo':              { 'filter': 'none', 'opacity': isDarkMode ? '0.9' : '1' },
+      'img.illustration':       { 'filter': 'none', 'opacity': isDarkMode ? '0.9' : '1' },
+      'img.colored':            { 'filter': 'none', 'opacity': isDarkMode ? '0.9' : '1' },
+      '.chapter img.no-invert': { 'filter': 'none', 'opacity': isDarkMode ? '0.9' : '1' },
+      '.image-inline':          { 'filter': imgFilter, 'opacity': isDarkMode ? '0.9' : '1' },
+      '.epub-highlight':        { 'opacity': '0.4' },
     })
     rendition.themes.select('reader-theme')
   }, [])
 
-  // ── Init epub.js ─────────────────────────────────────────────────
+  // ── Init epub.js ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!book?.fileUrl || !viewerRef.current) return
 
@@ -679,12 +629,8 @@ const EpubReaderPage = () => {
     bookRef.current = epubBook
 
     const rendition = epubBook.renderTo(viewerRef.current, {
-      width:                '100%',
-      height:               '100%',
-      flow:                 'paginated',
-      spread:               'none',
-      allowScriptedContent: false,
-      manager:              'default',
+      width: '100%', height: '100%', flow: 'paginated',
+      spread: 'none', allowScriptedContent: false, manager: 'default',
     })
     renditionRef.current = rendition
 
@@ -717,8 +663,13 @@ const EpubReaderPage = () => {
 
     epubBook.ready
       .then(() => {
-        const cfiFromState = location.state?.cfi
-        const savedCfi = cfiFromState || localStorage.getItem(keys.progress)
+        const spineItems = epubBook.spine?.items || epubBook.spine?.spineItems || []
+        totalSpineItemsRef.current = spineItems.length
+
+        // Tampilkan dulu dari localStorage/state sebagai initial render
+        const cfiFromState = location.state?.lastCfi
+        const savedCfi     = cfiFromState || localStorage.getItem(keys.progress)
+
         if (savedCfi) {
           return rendition.display(savedCfi).catch(() => {
             localStorage.removeItem(keys.progress)
@@ -731,24 +682,22 @@ const EpubReaderPage = () => {
         setIsReady(true)
         calcProgress(currentCfiRef.current)
 
-        // ── FIX: Kirim startReading ke backend saat EPUB siap ──────────────
-        // Ini yang menyebabkan readCount bertambah di backend (via
-        // bookMapper.incrementReadCount) hanya pada sesi pertama user.
-        // BookDetailPage tidak lagi bertanggung jawab untuk ini.
-        // Hanya dilakukan untuk user yang sudah login — guest tidak memiliki
-        // akun sehingga tidak ada yang perlu direkam.
         if (isAuthenticated) {
-          chapterService.startReading(bookSlug, {
+          chapterService.epubStartReading(bookSlug, {
             sessionId:     sessionIdRef.current,
-            chapterNumber: 1,          // chapter pertama sebagai proxy untuk EPUB
             deviceType:    getDeviceType(),
             source:        'epub',
-            startPosition: 0,
-          }).catch(err =>
-            console.warn('[EpubReader] startReading gagal (non-fatal):', err.message)
-          )
+            chapterLabel:  currentChapterLabelRef.current,
+            chapterIndex:  currentChapterIndexRef.current,
+            totalChapters: totalChaptersRef.current,
+          }).then(res => {
+            // ✅ Prioritas server CFI (sync antar device)
+            const data = res?.data?.data ?? res?.data
+            if (data && !data.firstTime && data.lastCfi) {
+              renditionRef.current?.display(data.lastCfi).catch(() => {})
+            }
+          }).catch(err => console.warn('[EpubReader] epubStartReading gagal (non-fatal):', err.message))
         }
-        // ── END FIX ────────────────────────────────────────────────────────
 
         return epubBook.locations.generate(2000)
       })
@@ -762,27 +711,62 @@ const EpubReaderPage = () => {
         setIsReady(true)
       })
 
+    // ── Load TOC & simpan ke ref ────────────────────────────────────────────
     epubBook.loaded.navigation.then(nav => {
       const flattenToc = (items, depth = 0) =>
         items.flatMap(item => [
           { label: item.label?.trim() || '', href: item.href, depth },
           ...flattenToc(item.subitems || [], depth + 1),
         ])
-      setToc(flattenToc(nav.toc))
-    }).catch(() => setToc([]))
+      const flat = flattenToc(nav.toc)
+      setToc(flat)
+      tocRef.current = flat
+      totalChaptersRef.current = flat.filter(t => t.depth === 0).length
+    }).catch(() => {
+      setToc([])
+      tocRef.current = []
+    })
 
-    rendition.on('locationChanged', location => {
-      setCurrentLocation(location)
-      const cfi = typeof location?.start === 'string'
-        ? location.start
-        : location?.start?.cfi || null
+    rendition.on('locationChanged', loc => {
+      setCurrentLocation(loc)
+      const cfi = typeof loc?.start === 'string' ? loc.start : loc?.start?.cfi || null
       if (cfi) {
         currentCfiRef.current = cfi
         localStorage.setItem(keys.progress, cfi)
         const bms = JSON.parse(localStorage.getItem(keys.bookmarks) || '[]')
         setIsBookmarked(bms.some(b => b.cfi === cfi))
+        spineIndexRef.current = extractSpineIndex(cfi)
       }
       calcProgress(cfi)
+
+      // FIX: Deteksi chapter aktif menggunakan normalisasi href yang lebih robust
+      // epub.js mengembalikan href dalam format "OEBPS/Text/chapter1.xhtml"
+      // TOC item href bisa "Text/chapter1.xhtml" atau "chapter1.xhtml"
+      // Solusi: bandingkan filename saja
+      const currentHref = loc?.start?.href || ''
+      if (currentHref && tocRef.current.length > 0) {
+        const active = findActiveChapter(tocRef.current, currentHref)
+        if (active) {
+            const topLevel = tocRef.current.filter(t => t.depth === 0)
+            const idx      = topLevel.indexOf(active)
+            const label    = active.label || ''
+
+            setCurrentChapterLabel(label)
+            currentChapterLabelRef.current = label
+            // FIX: idx >= 0 artinya TOC sudah load dan chapter ditemukan
+            // Jika idx = -1 (sub-chapter atau TOC belum ready), pertahankan nilai sebelumnya
+            if (idx >= 0) {
+                currentChapterIndexRef.current = idx
+            }
+            // Jika idx < 0 tapi active ditemukan di sub-chapter, cari parent-nya
+            else {
+                const parentIdx = topLevel.findIndex(t =>
+                    normalizeHref(t.href) === normalizeHref(active.href)
+                )
+                if (parentIdx >= 0) currentChapterIndexRef.current = parentIdx
+            }
+        }
+      }
     })
 
     rendition.on('selected', (cfiRange, contents) => {
@@ -791,14 +775,18 @@ const EpubReaderPage = () => {
         if (!selText || selText.length < 2) return
         const sel = contents.window.getSelection()
         if (!sel || sel.rangeCount === 0) return
-        const range = sel.getRangeAt(0)
+        const range     = sel.getRangeAt(0)
         const rangeRect = range.getBoundingClientRect()
-        const iframe = viewerRef.current?.querySelector('iframe')
+        const iframe    = viewerRef.current?.querySelector('iframe')
         if (!iframe) return
         const iframeRect = iframe.getBoundingClientRect()
-        const x = iframeRect.left + rangeRect.left + rangeRect.width / 2
-        const y = iframeRect.top  + rangeRect.top
-        setSelection({ text: selText, cfi: cfiRange, position: { x, y } })
+        setSelection({
+          text: selText, cfi: cfiRange,
+          position: {
+            x: iframeRect.left + rangeRect.left + rangeRect.width / 2,
+            y: iframeRect.top  + rangeRect.top,
+          },
+        })
       } catch (err) {
         console.warn('[Selection] Error:', err.message)
       }
@@ -808,12 +796,8 @@ const EpubReaderPage = () => {
     let startX = 0, startY = 0
 
     const makeTouchHandlers = () => {
-      const onStart = (e) => {
-        if (e.touches.length !== 1) return
-        startX = e.touches[0].clientX
-        startY = e.touches[0].clientY
-      }
-      const onEnd = (e) => {
+      const onStart = (e) => { if (e.touches.length !== 1) return; startX = e.touches[0].clientX; startY = e.touches[0].clientY }
+      const onEnd   = (e) => {
         const t = e.changedTouches[0]
         const diffX = startX - t.clientX
         const diffY = Math.abs(startY - t.clientY)
@@ -841,53 +825,35 @@ const EpubReaderPage = () => {
 
         attachToIframeDoc(doc)
 
-        // ── FIX: Intersep semua klik link di dalam EPUB ──────────────
         doc.addEventListener('click', async (e) => {
           const anchor = e.target.closest('a')
           if (!anchor) return
-
           const href = anchor.getAttribute('href')
           if (!href) return
+          e.preventDefault(); e.stopPropagation()
 
-          e.preventDefault()
-          e.stopPropagation()
-
-          // 1. Link eksternal → buka di tab baru via parent frame (tidak kena sandbox)
           if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
-            window.open(href, '_blank', 'noopener,noreferrer')
-            return
+            window.open(href, '_blank', 'noopener,noreferrer'); return
           }
+          if (href.startsWith('mailto:') || href.startsWith('tel:')) { window.open(href); return }
 
-          // 2. mailto / tel → buka langsung
-          if (href.startsWith('mailto:') || href.startsWith('tel:')) {
-            window.open(href)
-            return
-          }
-
-          // 3. Link internal EPUB → navigasi via epub.js
           const rendition = renditionRef.current
           const epubBook  = bookRef.current
           if (!rendition || !epubBook) return
 
           try {
             const currentHref = _section?.href || ''
-            const baseHref    = currentHref.includes('/')
-              ? currentHref.substring(0, currentHref.lastIndexOf('/') + 1)
-              : ''
-
-            let fullHref = href
-            if (!href.startsWith('/') && !href.startsWith('#')) {
-              fullHref = baseHref + href
-            }
+            const baseHref    = currentHref.includes('/') ? currentHref.substring(0, currentHref.lastIndexOf('/') + 1) : ''
+            let fullHref      = href
+            if (!href.startsWith('/') && !href.startsWith('#')) fullHref = baseHref + href
 
             const hashIndex   = fullHref.indexOf('#')
             const sectionPath = hashIndex !== -1 ? fullHref.slice(0, hashIndex) : fullHref
             const anchorId    = hashIndex !== -1 ? fullHref.slice(hashIndex + 1) : null
 
             if (!sectionPath && anchorId) {
-              // Pure anchor (#id) di section yang sama
               const canonical = resolveCanonicalHref(epubBook, currentHref)
-              const { cfi } = await resolveAnchorToCfi(epubBook, canonical, anchorId)
+              const { cfi }   = await resolveAnchorToCfi(epubBook, canonical, anchorId)
               await rendition.display(cfi)
             } else if (sectionPath) {
               const canonical = resolveCanonicalHref(epubBook, sectionPath)
@@ -902,16 +868,13 @@ const EpubReaderPage = () => {
             console.warn('[LinkClick] Navigasi internal gagal:', err.message)
             try { await renditionRef.current?.display(href) } catch {}
           }
-        }, true) // useCapture=true agar intercept sebelum handler epub.js
-        // ── END FIX ──────────────────────────────────────────────────
-
+        }, true)
       } catch {}
     })
 
     return () => { try { epubBook.destroy() } catch {} }
   }, [book]) // eslint-disable-line
 
-  // ── Re-apply highlights setelah ready ───────────────────────────
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     annotations.forEach(ann => {
@@ -921,7 +884,6 @@ const EpubReaderPage = () => {
     })
   }, [isReady, annotations])
 
-  // ── Apply theme + re-anchor posisi saat font size berubah ───────
   const prevFontSizeRef = useRef(fontSize)
 
   useEffect(() => {
@@ -944,11 +906,9 @@ const EpubReaderPage = () => {
     return () => clearTimeout(timer)
   }, [colorMode, fontSize, fontFamily, applyTheme]) // eslint-disable-line
 
-  // ── Persist annotations/bookmarks ───────────────────────────────
   useEffect(() => { localStorage.setItem(keys.annotations, JSON.stringify(annotations)) }, [annotations]) // eslint-disable-line
   useEffect(() => { localStorage.setItem(keys.bookmarks,   JSON.stringify(bookmarks))   }, [bookmarks])   // eslint-disable-line
 
-  // ── handleNext / handlePrev ──────────────────────────────────────
   const handleNext = useCallback(() => {
     setSelection(null)
     renditionRef.current?.next()
@@ -977,7 +937,6 @@ const EpubReaderPage = () => {
   useEffect(() => { handleNextRef.current = handleNext }, [handleNext])
   useEffect(() => { handlePrevRef.current = handlePrev }, [handlePrev])
 
-  // ── TOC ───────────────────────────────────────────────────────────
   const handleTocClick = useCallback(async (href) => {
     const rendition = renditionRef.current
     const epubBook  = bookRef.current
@@ -998,7 +957,6 @@ const EpubReaderPage = () => {
     }
   }, [])
 
-  // ── Bookmark ──────────────────────────────────────────────────────
   const handleBookmarkClick   = (cfi) => { renditionRef.current?.display(cfi); setShowSidebar(false); setSelection(null) }
   const handleAnnotationClick = (cfi) => { renditionRef.current?.display(cfi); setShowSidebar(false); setSelection(null) }
 
@@ -1025,7 +983,7 @@ const EpubReaderPage = () => {
     } else {
       const page = rendition.currentLocation()?.start?.displayed?.page
       const text = page ? `Halaman ${page}` : `Posisi ${Math.round(progress)}%`
-      const nb = { cfi, text, createdAt: Date.now() }
+      const nb   = { cfi, text, createdAt: Date.now() }
       setBookmarks(prev => [...prev, nb])
       setIsBookmarked(true)
       triggerGuestNotice()
@@ -1049,7 +1007,6 @@ const EpubReaderPage = () => {
     }
   }
 
-  // ── Annotations ──────────────────────────────────────────────────
   const handleHighlight = async (color) => {
     if (!selection) return
     try { renditionRef.current?.annotations.highlight(selection.cfi, {}, null, 'epub-highlight', { fill: color, 'fill-opacity': '0.4' }) } catch {}
@@ -1097,7 +1054,6 @@ const EpubReaderPage = () => {
     }
   }
 
-  // ── Keyboard shortcuts ────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
@@ -1109,7 +1065,6 @@ const EpubReaderPage = () => {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleNext, handlePrev])
 
-  // ── Render guards ─────────────────────────────────────────────────
   if (loading) return <div className="flex items-center justify-center min-h-screen"><LoadingSpinner /></div>
 
   if (error || !book?.fileUrl) {
@@ -1129,7 +1084,6 @@ const EpubReaderPage = () => {
   return (
     <div className={`flex flex-col h-screen select-none ${isDark ? 'dark bg-gray-950' : 'bg-gray-100'}`}>
 
-      {/* ── TOP BAR ── */}
       <header className={`flex items-center justify-between px-4 py-2 border-b z-20 flex-shrink-0 ${isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : colorMode === 'cream' ? 'bg-[#f0e6d3] border-[#d6c5aa] text-gray-800' : 'bg-white border-gray-200 text-gray-800'}`}>
         <div className="flex items-center gap-2 min-w-0">
           <button onClick={() => navigate(`/buku/${bookSlug}`)} className="p-1.5 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition flex-shrink-0" title="Kembali">
@@ -1137,11 +1091,12 @@ const EpubReaderPage = () => {
           </button>
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{book.title}</p>
-            <p className="text-xs text-gray-400 truncate">{book.authorNames}</p>
+            <p className="text-xs text-gray-400 truncate">
+              {currentChapterLabel || book.authorNames}
+            </p>
           </div>
         </div>
 
-        {/* Progress bar — desktop */}
         <div className="hidden md:flex flex-1 items-center px-8 gap-3">
           <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -1169,17 +1124,14 @@ const EpubReaderPage = () => {
         </div>
       </header>
 
-      {/* ── BODY ── */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 overflow-hidden relative">
 
-          {/* Desktop prev button */}
           <button onClick={handlePrev}
             className="hidden md:flex items-center justify-center w-12 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5 transition group" title="Sebelumnya (←)">
             <ChevronLeft size={20} className="text-gray-300 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition" />
           </button>
 
-          {/* EPUB viewer */}
           <div className="flex-1 overflow-hidden relative" style={{ background: modeCfg.bg }}>
             <div ref={viewerRef} className="w-full h-full" style={{ userSelect: 'text' }} />
 
@@ -1203,7 +1155,6 @@ const EpubReaderPage = () => {
             )}
           </div>
 
-          {/* Desktop next button */}
           <button onClick={handleNext}
             className="hidden md:flex items-center justify-center w-12 flex-shrink-0 hover:bg-black/5 dark:hover:bg-white/5 transition group" title="Berikutnya (→)">
             <ChevronRight size={20} className="text-gray-300 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition" />
@@ -1233,7 +1184,6 @@ const EpubReaderPage = () => {
         )}
       </div>
 
-      {/* ── BOTTOM BAR (mobile only) ── */}
       <footer className={`md:hidden flex items-center gap-3 px-5 py-2.5 border-t flex-shrink-0 ${isDark ? 'bg-gray-900 border-gray-700' : colorMode === 'cream' ? 'bg-[#f0e6d3] border-[#d6c5aa]' : 'bg-white border-gray-200'}`}>
         <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -1241,17 +1191,14 @@ const EpubReaderPage = () => {
         <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">{progress}%</span>
       </footer>
 
-      {/* ── Selection popup ── */}
       {selection && !showNoteModal && (
         <SelectionPopup position={selection.position} onHighlight={handleHighlight} onNote={handleOpenNote} onClose={() => setSelection(null)} />
       )}
 
-      {/* ── Note modal ── */}
       {showNoteModal && selection && (
         <NoteModal selectedText={selection.text} onSave={handleSaveNote} onClose={() => { setShowNoteModal(false); setSelection(null) }} />
       )}
 
-      {/* ── Guest notice banner ── */}
       {showGuestNotice && !isAuthenticated && (
         <GuestNoticeBanner
           onDismiss={dismissGuestNotice}
@@ -1259,7 +1206,6 @@ const EpubReaderPage = () => {
           onLogin={() => { dismissGuestNotice(); navigate('/masuk') }}
         />
       )}
-
     </div>
   )
 }

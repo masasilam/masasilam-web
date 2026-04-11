@@ -1,15 +1,7 @@
-// ============================================
 // src/pages/dashboard/DashboardOverview.jsx
-//
-// PERBAIKAN:
-//   - res.data sudah benar (normalize mengembalikan { success, data })
-//     tapi setData(res.data) perlu dijaga agar ambil field .data dari wrapper
-//   - Badge "Terakhir Dibaca": activityType dari backend adalah
-//     "completed" | "reading" | "started" — label disesuaikan
-//   - Key pada recent list: pakai index sebagai fallback saat lastReadAt null
-// ============================================
+
 import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { dashboardService } from '../../services/dashboardService'
 import {
@@ -17,6 +9,7 @@ import {
   Highlighter, MessageSquare, Award, Target, Calendar
 } from 'lucide-react'
 import LoadingSpinner from '../../components/Common/LoadingSpinner'
+import { readingPositionLabel } from '../../utils/epubUtils'
 
 const StatCard = ({ icon: Icon, label, value, color, subtitle }) => (
   <article className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow">
@@ -40,13 +33,12 @@ const QuickLink = ({ to, icon: Icon, label, count }) => (
   </Link>
 )
 
-// PERBAIKAN: label badge sesuai activityType dari RecentlyReadResponse backend
 const activityLabel = (type) => {
   switch (type) {
     case 'completed': return 'Selesai'
-    case 'reading':   return 'Sedang dibaca'
-    case 'started':   return 'Baru dimulai'
-    default:          return 'Dibaca'
+    case 'reading': return 'Sedang dibaca'
+    case 'started': return 'Baru dimulai'
+    default: return 'Dibaca'
   }
 }
 
@@ -61,11 +53,21 @@ const activityClass = (type) => {
   }
 }
 
+const buildBookUrl = (slug) => {
+  if (!slug) return '#'
+  return `/buku/${slug}/baca`
+}
+
+const buildBookState = (lastCfi) => {
+  return lastCfi ? { lastCfi } : {}
+}
+
 const DashboardOverview = () => {
   const { user } = useAuth()
-  const [data, setData]       = useState(null)
+  const navigate = useNavigate()
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     document.title = 'Dashboard - MasasilaM'
@@ -77,8 +79,6 @@ const DashboardOverview = () => {
         setLoading(true)
         setError(null)
         const res = await dashboardService.getMainDashboard()
-        // normalize() → { success, message, code, data }
-        // data di sini adalah DashboardMainResponse
         setData(res?.data || null)
       } catch (err) {
         setError('Gagal memuat dashboard')
@@ -90,15 +90,15 @@ const DashboardOverview = () => {
     fetchData()
   }, [])
 
-  const stats        = useMemo(() => data?.overviewStats     || {}, [data])
-  const reading      = useMemo(() => data?.booksInProgress   || [], [data])
-  const pattern      = useMemo(() => data?.readingPattern    || {}, [data])
-  const recent       = useMemo(() => data?.recentlyRead      || [], [data])
-  const notes        = useMemo(() => data?.annotationsSummary || {}, [data])
+  const stats = useMemo(() => data?.overviewStats || {}, [data])
+  const reading = useMemo(() => data?.booksInProgress || [], [data])
+  const pattern = useMemo(() => data?.readingPattern || {}, [data])
+  const recent = useMemo(() => data?.recentlyRead || [], [data])
+  const notes = useMemo(() => data?.annotationsSummary || {}, [data])
   const achievements = useMemo(() => data?.recentAchievements || [], [data])
 
   if (loading) return <LoadingSpinner />
-  if (error)   return <div className="text-red-500 text-center py-8" role="alert">{error}</div>
+  if (error) return <div className="text-red-500 text-center py-8" role="alert">{error}</div>
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -118,29 +118,25 @@ const DashboardOverview = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatCard
-          icon={Book}
-          label="Total Buku"
+          icon={Book} label="Total Buku"
           value={stats.totalBooks || 0}
           color="text-primary"
           subtitle={`${stats.booksCompleted || 0} selesai`}
         />
         <StatCard
-          icon={Clock}
-          label="Waktu Baca"
+          icon={Clock} label="Waktu Baca"
           value={`${stats.totalReadingTimeHours || 0}h`}
           color="text-blue-500"
           subtitle="Total jam"
         />
         <StatCard
-          icon={Flame}
-          label="Streak"
+          icon={Flame} label="Streak"
           value={stats.currentStreak || 0}
           color="text-orange-500"
           subtitle={`Terpanjang: ${stats.longestStreak || 0}`}
         />
         <StatCard
-          icon={Star}
-          label="Rating"
+          icon={Star} label="Rating"
           value={(stats.averageRating || 0).toFixed(1)}
           color="text-yellow-500"
           subtitle={`${(stats.completionRate || 0).toFixed(0)}% selesai`}
@@ -166,10 +162,13 @@ const DashboardOverview = () => {
           ) : (
             <div className="space-y-3 sm:space-y-4">
               {reading.map(b => (
-                <Link
+                <div
                   key={b.bookId}
-                  to={`/buku/${b.bookSlug}`}
-                  className="flex gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  onClick={() => navigate(buildBookUrl(b.bookSlug), { state: buildBookState(b.lastCfi) })}
+                  className="flex gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={e => e.key === 'Enter' && navigate(buildBookUrl(b.bookSlug), { state: buildBookState(b.lastCfi) })}
                 >
                   <img
                     src={b.coverImageUrl || '/placeholder.jpg'}
@@ -192,11 +191,12 @@ const DashboardOverview = () => {
                         aria-valuemax="100"
                       />
                     </div>
+                    {/* FIX #2: readingPositionLabel kini pakai CFI */}
                     <p className="text-xs text-gray-500">
-                      Bab {b.currentChapter || 0}/{b.totalChapters || 0} · {(b.progressPercentage || 0).toFixed(0)}%
+                      {readingPositionLabel(b.currentChapter, b.totalChapters, b.progressPercentage, b.lastCfi)}
                     </p>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -206,44 +206,20 @@ const DashboardOverview = () => {
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold mb-4">Pola Membaca</h2>
           <div className="space-y-3 sm:space-y-4">
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" aria-hidden="true" />
-                <span className="text-sm">Waktu Favorit</span>
+            {[
+              { icon: Clock, color: 'text-blue-500', label: 'Waktu Favorit', value: pattern.preferredReadingTime || '-' },
+              { icon: TrendingUp, color: 'text-green-500', label: 'Kecepatan', value: pattern.averageReadingSpeedWpm ? `${pattern.averageReadingSpeedWpm} wpm` : '-' },
+              { icon: Target, color: 'text-purple-500', label: 'Durasi Sesi', value: `${pattern.averageSessionMinutes || 0} menit` },
+              { icon: Flame, color: 'text-orange-500', label: 'Pace', value: pattern.readingPace || '-' },
+            ].map(({ icon: Icon, color, label, value }) => (
+              <div key={label} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} aria-hidden="true" />
+                  <span className="text-sm">{label}</span>
+                </div>
+                <span className="font-semibold text-sm sm:text-base">{value}</span>
               </div>
-              <span className="font-semibold text-sm sm:text-base">
-                {pattern.preferredReadingTime || '-'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" aria-hidden="true" />
-                <span className="text-sm">Kecepatan</span>
-              </div>
-              <span className="font-semibold text-sm sm:text-base">
-                {pattern.averageReadingSpeedWpm
-                  ? `${pattern.averageReadingSpeedWpm} wpm`
-                  : '-'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" aria-hidden="true" />
-                <span className="text-sm">Durasi Sesi</span>
-              </div>
-              <span className="font-semibold text-sm sm:text-base">
-                {pattern.averageSessionMinutes || 0} menit
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" aria-hidden="true" />
-                <span className="text-sm">Pace</span>
-              </div>
-              <span className="font-semibold text-sm sm:text-base">
-                {pattern.readingPace || '-'}
-              </span>
-            </div>
+            ))}
           </div>
         </section>
       </div>
@@ -264,11 +240,13 @@ const DashboardOverview = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {recent.slice(0, 6).map((r, idx) => (
-              // PERBAIKAN: key pakai bookId + idx (lastReadAt bisa null → key duplikat)
-              <Link
+              <div
                 key={`${r.bookId}-${idx}`}
-                to={`/buku/${r.bookSlug}`}
-                className="flex gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                onClick={() => navigate(buildBookUrl(r.bookSlug), { state: buildBookState(r.lastCfi) })}
+                className="flex gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                role="link"
+                tabIndex={0}
+                onKeyDown={e => e.key === 'Enter' && navigate(buildBookUrl(r.bookSlug), { state: buildBookState(r.lastCfi) })}
               >
                 <img
                   src={r.coverImageUrl || '/placeholder.jpg'}
@@ -281,12 +259,15 @@ const DashboardOverview = () => {
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate">
                     {r.authorName}
                   </p>
-                  {/* PERBAIKAN: gunakan helper activityLabel + activityClass */}
                   <span className={`inline-block px-2 py-0.5 text-xs rounded ${activityClass(r.activityType)}`}>
                     {activityLabel(r.activityType)}
                   </span>
+                  {/* FIX #2: tampilkan bab berdasarkan CFI */}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {readingPositionLabel(r.currentChapter, r.totalChapters, r.progressPercentage, r.lastCfi)}
+                  </p>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
@@ -298,26 +279,18 @@ const DashboardOverview = () => {
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold mb-4">Anotasi</h2>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-            <div className="text-center p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-              <Bookmark className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-yellow-600" aria-hidden="true" />
-              <div className="text-xl sm:text-2xl font-bold">{notes.totalBookmarks || 0}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Penanda</div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <Highlighter className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-blue-600" aria-hidden="true" />
-              <div className="text-xl sm:text-2xl font-bold">{notes.totalHighlights || 0}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Highlight</div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-green-600" aria-hidden="true" />
-              <div className="text-xl sm:text-2xl font-bold">{notes.totalNotes || 0}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Catatan</div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <Star className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-purple-600" aria-hidden="true" />
-              <div className="text-xl sm:text-2xl font-bold">{notes.totalReviews || 0}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Ulasan</div>
-            </div>
+            {[
+              { icon: Bookmark, bg: 'bg-yellow-50 dark:bg-yellow-900/20', color: 'text-yellow-600', count: notes.totalBookmarks || 0, label: 'Penanda' },
+              { icon: Highlighter, bg: 'bg-blue-50 dark:bg-blue-900/20', color: 'text-blue-600', count: notes.totalHighlights || 0, label: 'Highlight' },
+              { icon: MessageSquare, bg: 'bg-green-50 dark:bg-green-900/20', color: 'text-green-600', count: notes.totalNotes || 0, label: 'Catatan' },
+              { icon: Star, bg: 'bg-purple-50 dark:bg-purple-900/20', color: 'text-purple-600', count: notes.totalReviews || 0, label: 'Ulasan' },
+            ].map(({ icon: Icon, bg, color, count, label }) => (
+              <div key={label} className={`text-center p-3 sm:p-4 ${bg} rounded-lg`}>
+                <Icon className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 ${color}`} aria-hidden="true" />
+                <div className="text-xl sm:text-2xl font-bold">{count}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">{label}</div>
+              </div>
+            ))}
           </div>
           <Link
             to="/dasbor/anotasi"
@@ -362,10 +335,10 @@ const DashboardOverview = () => {
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-bold mb-4">Akses Cepat</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <QuickLink to="/dasbor/perpustakaan" icon={Book}       label="Perpustakaan" count={stats.totalBooks} />
-          <QuickLink to="/dasbor/statistik"    icon={TrendingUp} label="Statistik" />
-          <QuickLink to="/dasbor/kalender"     icon={Calendar}   label="Kalender" />
-          <QuickLink to="/dasbor/pencapaian"   icon={Award}      label="Pencapaian" />
+          <QuickLink to="/dasbor/perpustakaan" icon={Book} label="Perpustakaan" count={stats.totalBooks} />
+          <QuickLink to="/dasbor/statistik" icon={TrendingUp} label="Statistik" />
+          <QuickLink to="/dasbor/kalender" icon={Calendar} label="Kalender" />
+          <QuickLink to="/dasbor/pencapaian" icon={Award} label="Pencapaian" />
         </div>
       </section>
 
