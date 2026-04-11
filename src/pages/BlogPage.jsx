@@ -75,11 +75,10 @@ const BlogPage = () => {
             Blog & Artikel
           </span>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
-            Cerita, Ulasan &{' '}
-            <span className="text-primary">Pemikiran Mendalam</span>
+            Cerita & Ulasan{' '}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto mb-8">
-            Jelajahi artikel tentang buku, film, budaya, dan dunia literasi dari tim kami.
+            Jelajahi artikel tentang buku, film, budaya, dan dunia literasi.
           </p>
 
           {/* Search */}

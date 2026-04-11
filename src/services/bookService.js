@@ -1,10 +1,10 @@
 // ============================================
 // src/services/bookService.js - OPTIMIZED VERSION
-// Clean, fast, SEO-ready, <100 lines
+// Clean, fast, SEO-ready, with download progress support
 // ============================================
 import api from './api';
 
-const cleanParams = (params) => 
+const cleanParams = (params) =>
   Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null && v !== ''));
 
 const formatResponse = (data, limit) => ({
@@ -38,10 +38,10 @@ export const bookService = {
     return data?.list || (Array.isArray(data) ? data : []);
   },
 
-  downloadBook: async (slug) => {
-    const response = await api.get(`/books/${slug}/download`, { responseType: 'blob' });
-    return response.data;
-  },
+     getDownloadUrl: async (slug) => {
+       const response = await api.get(`/books/${slug}/download`);
+       return response.data; // { downloadUrl, filename }
+     },
 
   // Rating operations
   addRating: async (slug, ratingData) => {

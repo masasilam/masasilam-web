@@ -1,27 +1,26 @@
 // ============================================
 // FILE: src/pages/EpubReaderPage.jsx
 // Route: /buku/:bookSlug/baca
-// Install: npm install epubjs
 //
-// FIXES APPLIED:
-//   1. CSS: Inject EPUB's own stylesheet + minimal overrides only
-//   2. Font picker: 5 font choices persisted to localStorage
-//   3. Cream mode: bg #f6eee3 / text #2d1f0e
-//   4. Mobile swipe navigation (touch) + desktop arrow buttons
-//   5. Progress %: selalu dari epubBook.locations.percentageFromCfi (character-based,
-//      konsisten di semua ukuran font). Fallback spine-index saat locations belum siap.
-//   6. Sync: annotations/bookmarks POST ke API on add, DELETE on remove; load dari API on mount
-//   7. handlePrev: deteksi perpindahan section, re-anchor ke elemen terakhir section sebelumnya
-//      agar selalu mendarat di akhir bab — konsisten di semua ukuran font
-//   8. currentCfiRef: ref sinkron untuk CFI terkini, tidak bergantung React state lag
-//   9. locationChanged: baca CFI dari string langsung (location.start adalah string di epub.js)
-//  10. ← TAMBAHAN: GuestNoticeBanner — muncul saat tamu pertama kali highlight/bookmark,
-//      menjelaskan bahwa data hanya tersimpan di browser dan mengajak daftar/masuk.
+// FIXES APPLIED (ditandai // ← FIX):
+//   - Import chapterService untuk recordEpubSession
+//   - sessionIdRef: ID unik per sesi baca EPUB
+//   - sessionStartRef: waktu mulai baca
+//   - latestProgressRef: progress terkini (selalu sync, tidak stale di closure)
+//   - useEffect sync latestProgressRef setiap progress berubah
+//   - useEffect tracking sesi: kirim recordEpubSession saat unmount (navigasi
+//     internal React) DAN saat beforeunload (tab ditutup / refresh)
+//   - generateSessionId: helper tanpa dependensi eksternal
+//
+// FIX TAMBAHAN:
+//   - Panggil chapterService.startReading saat EPUB ready agar readCount
+//     terupdate di backend (BookDetailPage tidak lagi bertanggung jawab ini)
 // ============================================
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import ePub from 'epubjs'
 import bookService from '../services/bookService'
+import { chapterService } from '../services/chapterService' // ← FIX: import untuk recordEpubSession & startReading
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import {
   ArrowLeft,
@@ -103,6 +102,10 @@ const epubAnnotationService = {
     await api.delete(`/books/${slug}/epub-bookmarks/${bookmarkId}`)
   },
 }
+
+// ─── FIX: Helper generate session ID tanpa dependensi eksternal ──────────────
+const generateSessionId = () =>
+  `epub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 
 // ─── Note Modal ───────────────────────────────────────────────────────────────
 const NoteModal = ({ selectedText, onSave, onClose }) => {
@@ -262,7 +265,6 @@ const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChang
       <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"><X size={18} /></button>
     </div>
     <div className="flex-1 overflow-y-auto p-4 space-y-5">
-      {/* Font Size */}
       <div>
         <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Ukuran Font</label>
         <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
@@ -271,7 +273,6 @@ const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChang
           <button onClick={() => onFontSizeChange(Math.min(28, fontSize + 2))} className="flex-1 flex items-center justify-center h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300"><Plus size={14} /></button>
         </div>
       </div>
-      {/* Font Family */}
       <div>
         <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide flex items-center gap-1"><Type size={11} /> Font</label>
         <div className="space-y-1">
@@ -284,7 +285,6 @@ const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChang
           ))}
         </div>
       </div>
-      {/* Color Mode */}
       <div>
         <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Tema</label>
         <div className="flex gap-2">
@@ -306,9 +306,6 @@ const SettingsPanel = ({ fontSize, onFontSizeChange, colorMode, onColorModeChang
 )
 
 // ─── Guest Notice Banner ──────────────────────────────────────────────────────
-// ← TAMBAHAN: Komponen banner yang muncul saat tamu pertama kali menyimpan
-// highlight atau bookmark. Muncul sekali per sesi, dismiss-able, tidak
-// mengganggu pengalaman membaca (posisi fixed bottom, di atas bottom bar).
 const GuestNoticeBanner = ({ onDismiss, onRegister, onLogin }) => (
   <div className="fixed bottom-12 left-3 right-3 z-50 md:left-auto md:right-4 md:bottom-6 md:w-80
     bg-white dark:bg-gray-800
@@ -398,13 +395,13 @@ const resolveAnchorToCfi = async (epubBook, canonicalHref, anchor) => {
 
 // ─── localStorage keys ────────────────────────────────────────────────────────
 const localKeys = (bookSlug) => ({
-  annotations:       `epub_annotations_${bookSlug}`,
-  bookmarks:         `epub_bookmarks_${bookSlug}`,
-  progress:          `epub_progress_${bookSlug}`,
-  colorMode:         'epubColorMode',
-  fontSize:          'epubFontSize',
-  fontFamily:        'epubFontFamily',
-  guestNoticeSeen:   'epub_guest_notice_seen', // ← TAMBAHAN: flag agar banner hanya muncul sekali
+  annotations:     `epub_annotations_${bookSlug}`,
+  bookmarks:       `epub_bookmarks_${bookSlug}`,
+  progress:        `epub_progress_${bookSlug}`,
+  colorMode:       'epubColorMode',
+  fontSize:        'epubFontSize',
+  fontFamily:      'epubFontFamily',
+  guestNoticeSeen: 'epub_guest_notice_seen',
 })
 
 // ─── Helper: ambil CFI last element dari sebuah section ───────────────────────
@@ -426,6 +423,10 @@ const getLastElementCfi = async (epubBook, href) => {
     return null
   }
 }
+
+// ─── FIX: Helper deteksi device type ─────────────────────────────────────────
+const getDeviceType = () =>
+  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
@@ -449,6 +450,14 @@ const EpubReaderPage = () => {
   const [currentLocation, setCurrentLocation] = useState(null)
 
   const keys = localKeys(bookSlug)
+
+  // ── FIX: Refs untuk session tracking ───────────────────────────
+  // sessionIdRef   : ID unik per kunjungan halaman ini
+  // sessionStartRef: timestamp saat komponen mount
+  // latestProgressRef: selalu berisi progress terkini (tidak stale di closure)
+  const sessionIdRef      = useRef(generateSessionId())   // ← FIX
+  const sessionStartRef   = useRef(Date.now())            // ← FIX
+  const latestProgressRef = useRef(0)                     // ← FIX
 
   // ── Persisted preferences ──────────────────────────────────────
   const [colorMode,  setColorMode]  = useState(() => localStorage.getItem(keys.colorMode)  || 'light')
@@ -474,13 +483,8 @@ const EpubReaderPage = () => {
   const [selection,     setSelection]     = useState(null)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [isBookmarked,  setIsBookmarked]  = useState(false)
-
-  // ← TAMBAHAN: state banner tamu
-  // Tidak ditampilkan kalau sudah login, atau kalau sudah pernah di-dismiss sebelumnya
   const [showGuestNotice, setShowGuestNotice] = useState(false)
 
-  // ← TAMBAHAN: helper — tampilkan banner hanya sekali per browser (bukan per sesi),
-  // agar tidak muncul berulang dan mengganggu pembaca yang memang tidak mau daftar.
   const triggerGuestNotice = useCallback(() => {
     if (isAuthenticated) return
     const alreadySeen = localStorage.getItem(keys.guestNoticeSeen)
@@ -491,6 +495,72 @@ const EpubReaderPage = () => {
     setShowGuestNotice(false)
     localStorage.setItem(keys.guestNoticeSeen, '1')
   }, [keys.guestNoticeSeen])
+
+  // ── FIX: Sync latestProgressRef setiap progress berubah ────────
+  // Ini penting agar closure di beforeunload / cleanup tidak stale.
+  useEffect(() => {
+    latestProgressRef.current = progress
+  }, [progress]) // ← FIX
+
+  // ── FIX: Session tracking — kirim ke backend saat unmount / tab ditutup ──
+  // Dipanggil HANYA jika user sudah login (isAuthenticated).
+  // Untuk guest, data tidak dikirim ke server (tidak ada akun untuk disimpan).
+  useEffect(() => {
+    if (!isAuthenticated) return // ← FIX: skip untuk guest
+
+    const sessionId    = sessionIdRef.current
+    const startTime    = sessionStartRef.current
+    const deviceType   = getDeviceType()
+
+    const handleBeforeUnload = () => {
+      const durationSeconds = Math.round((Date.now() - startTime) / 1000)
+      if (durationSeconds < 5) return
+
+      const payload = JSON.stringify({
+        sessionId,
+        durationSeconds,
+        progressPercent: latestProgressRef.current,
+        deviceType,
+      })
+
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+      const token   = localStorage.getItem('token')
+
+      // sendBeacon tidak support Authorization header → diganti fetch+keepalive
+      fetch(`${apiBase}/books/${bookSlug}/chapters/reading/epub-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body:      payload,
+        keepalive: true,
+      }).catch(() => {})
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Cleanup: dipanggil saat React unmount (navigasi internal / back button)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+
+      const durationSeconds = Math.round((Date.now() - startTime) / 1000)
+      if (durationSeconds < 5) return // abaikan sesi terlalu singkat
+
+      // Untuk navigasi internal, masih bisa pakai fetch biasa dengan token
+      chapterService.recordEpubSession(bookSlug, {
+        sessionId,
+        durationSeconds,
+        progressPercent: latestProgressRef.current, // ← FIX: selalu terkini
+        deviceType,
+      }).catch(err =>
+        console.warn('[EpubReader] Gagal merekam sesi:', err.message)
+      )
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookSlug, isAuthenticated]) // ← FIX: sengaja tidak memasukkan progress agar
+                                  // tidak re-run setiap progress berubah.
+                                  // Nilai terkini diambil dari latestProgressRef.
 
   // ── Fetch book ──────────────────────────────────────────────────
   useEffect(() => {
@@ -660,6 +730,26 @@ const EpubReaderPage = () => {
       .then(() => {
         setIsReady(true)
         calcProgress(currentCfiRef.current)
+
+        // ── FIX: Kirim startReading ke backend saat EPUB siap ──────────────
+        // Ini yang menyebabkan readCount bertambah di backend (via
+        // bookMapper.incrementReadCount) hanya pada sesi pertama user.
+        // BookDetailPage tidak lagi bertanggung jawab untuk ini.
+        // Hanya dilakukan untuk user yang sudah login — guest tidak memiliki
+        // akun sehingga tidak ada yang perlu direkam.
+        if (isAuthenticated) {
+          chapterService.startReading(bookSlug, {
+            sessionId:     sessionIdRef.current,
+            chapterNumber: 1,          // chapter pertama sebagai proxy untuk EPUB
+            deviceType:    getDeviceType(),
+            source:        'epub',
+            startPosition: 0,
+          }).catch(err =>
+            console.warn('[EpubReader] startReading gagal (non-fatal):', err.message)
+          )
+        }
+        // ── END FIX ────────────────────────────────────────────────────────
+
         return epubBook.locations.generate(2000)
       })
       .then(() => {
@@ -747,7 +837,74 @@ const EpubReaderPage = () => {
     rendition.on('rendered', (_section, view) => {
       try {
         const doc = view?.contents?.document
-        if (doc) attachToIframeDoc(doc)
+        if (!doc) return
+
+        attachToIframeDoc(doc)
+
+        // ── FIX: Intersep semua klik link di dalam EPUB ──────────────
+        doc.addEventListener('click', async (e) => {
+          const anchor = e.target.closest('a')
+          if (!anchor) return
+
+          const href = anchor.getAttribute('href')
+          if (!href) return
+
+          e.preventDefault()
+          e.stopPropagation()
+
+          // 1. Link eksternal → buka di tab baru via parent frame (tidak kena sandbox)
+          if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+            window.open(href, '_blank', 'noopener,noreferrer')
+            return
+          }
+
+          // 2. mailto / tel → buka langsung
+          if (href.startsWith('mailto:') || href.startsWith('tel:')) {
+            window.open(href)
+            return
+          }
+
+          // 3. Link internal EPUB → navigasi via epub.js
+          const rendition = renditionRef.current
+          const epubBook  = bookRef.current
+          if (!rendition || !epubBook) return
+
+          try {
+            const currentHref = _section?.href || ''
+            const baseHref    = currentHref.includes('/')
+              ? currentHref.substring(0, currentHref.lastIndexOf('/') + 1)
+              : ''
+
+            let fullHref = href
+            if (!href.startsWith('/') && !href.startsWith('#')) {
+              fullHref = baseHref + href
+            }
+
+            const hashIndex   = fullHref.indexOf('#')
+            const sectionPath = hashIndex !== -1 ? fullHref.slice(0, hashIndex) : fullHref
+            const anchorId    = hashIndex !== -1 ? fullHref.slice(hashIndex + 1) : null
+
+            if (!sectionPath && anchorId) {
+              // Pure anchor (#id) di section yang sama
+              const canonical = resolveCanonicalHref(epubBook, currentHref)
+              const { cfi } = await resolveAnchorToCfi(epubBook, canonical, anchorId)
+              await rendition.display(cfi)
+            } else if (sectionPath) {
+              const canonical = resolveCanonicalHref(epubBook, sectionPath)
+              if (anchorId) {
+                const { cfi } = await resolveAnchorToCfi(epubBook, canonical, anchorId)
+                await rendition.display(cfi)
+              } else {
+                await rendition.display(canonical)
+              }
+            }
+          } catch (err) {
+            console.warn('[LinkClick] Navigasi internal gagal:', err.message)
+            try { await renditionRef.current?.display(href) } catch {}
+          }
+        }, true) // useCapture=true agar intercept sebelum handler epub.js
+        // ── END FIX ──────────────────────────────────────────────────
+
       } catch {}
     })
 
@@ -871,7 +1028,6 @@ const EpubReaderPage = () => {
       const nb = { cfi, text, createdAt: Date.now() }
       setBookmarks(prev => [...prev, nb])
       setIsBookmarked(true)
-      // ← TAMBAHAN: trigger banner saat tamu menambah bookmark
       triggerGuestNotice()
       if (isAuthenticated) {
         setIsSyncing(true)
@@ -900,7 +1056,6 @@ const EpubReaderPage = () => {
     const na = { cfi: selection.cfi, text: selection.text, color, note: '', createdAt: Date.now() }
     setAnnotations(prev => [...prev, na])
     setSelection(null)
-    // ← TAMBAHAN: trigger banner saat tamu pertama kali highlight
     triggerGuestNotice()
     if (isAuthenticated) {
       setIsSyncing(true)
@@ -921,7 +1076,6 @@ const EpubReaderPage = () => {
     setAnnotations(prev => [...prev, na])
     setShowNoteModal(false)
     setSelection(null)
-    // ← TAMBAHAN: trigger banner saat tamu menyimpan catatan
     triggerGuestNotice()
     if (isAuthenticated) {
       setIsSyncing(true)
@@ -1097,11 +1251,7 @@ const EpubReaderPage = () => {
         <NoteModal selectedText={selection.text} onSave={handleSaveNote} onClose={() => { setShowNoteModal(false); setSelection(null) }} />
       )}
 
-      {/* ← TAMBAHAN: Guest notice banner ── */}
-      {/* Muncul saat tamu pertama kali menyimpan highlight/bookmark/catatan.  */}
-      {/* Tidak pernah muncul untuk user yang sudah login.                      */}
-      {/* Setelah di-dismiss, flag disimpan di localStorage agar tidak muncul   */}
-      {/* lagi di kunjungan berikutnya.                                         */}
+      {/* ── Guest notice banner ── */}
       {showGuestNotice && !isAuthenticated && (
         <GuestNoticeBanner
           onDismiss={dismissGuestNotice}

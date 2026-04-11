@@ -1,11 +1,28 @@
 // ============================================
 // FILE: src/pages/ChapterReaderPage.jsx
+//
+// PERUBAHAN dari versi sebelumnya:
+//   - HAPUS: useReadingTracker (reading session tracking bukan domain chapter)
+//   - HAPUS: import useReadingTracker
+//   - HAPUS: isTracking dari destructuring (tidak dipakai)
+//   - SEMUA fitur chapter tetap utuh:
+//     ✓ Koreksi typo (CorrectionModal + TypoSelectionPopup)
+//     ✓ Reviews & liking & reply
+//     ✓ TTS (Text-to-Speech)
+//     ✓ Search in book
+//     ✓ Footnote handler
+//     ✓ Keyboard shortcuts
+//     ✓ Breadcrumb navigasi
+//     ✓ SEO + structured data
+//     ✓ Reading mode toggle
+//     ✓ Chapter navigation (prev/next)
+//     ✓ Chapter rating
+//     ✓ Scroll progress tracking (hanya untuk progress bar UI)
 // ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
 import { useTTS } from '../hooks/useTTS'
-import { useReadingTracker } from '../hooks/useReadingTracker'
 import useChapterNavigation from '../hooks/useChapterNavigation'
 import useFootnoteHandler from '../hooks/useFootnoteHandler'
 import useTextSelection from '../hooks/useTextSelection'
@@ -22,7 +39,6 @@ import TTSControlPanel from '../components/Reader/TTSControlPanel'
 import TTSVoiceSetupBanner from '../components/Reader/TTSVoiceSetupBanner'
 import ChapterRating from '../components/Reader/ChapterRating'
 import SearchInBook from '../components/Reader/SearchInBook'
-import LoginPromptModal from '../components/Reader/LoginPromptModal'
 import FootnotePopup from '../components/Reader/FootnotePopup'
 import ChapterContent from '../components/Reader/ChapterContent'
 import ReviewsSection from '../components/Reader/ReviewsSection'
@@ -131,16 +147,25 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const stopTTSOnUnmount = useRef(true)
   const canCorrect = isCorrectableChapter(fullChapterPath)
 
-  const { isTracking } = useReadingTracker(bookSlug, chapter, isAuthenticated)
+  // ── Hooks ──────────────────────────────────────────────────────────────────
+  // useReadingTracker DIHAPUS — reading session tracking adalah domain EpubReaderPage
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(bookSlug, chapter, () => {
     if (isAuthenticated) { stopTTSOnUnmount.current = true; tts.stop() }
   })
   const { footnotePopup, setFootnotePopup, handleGoToFootnote } = useFootnoteHandler(contentRef, chapter, bookSlug)
   const { selectedText, selectionRange, selectionCoords, clearSelection } = useTextSelection(contentRef, isInteractingWithPopup)
 
-  useEffect(() => { setIsInteractingWithPopup(false); clearSelection() }, [fullChapterPath, chapter?.chapterNumber])
-  useEffect(() => { if (!selectedText) setIsInteractingWithPopup(false) }, [selectedText])
+  // ── Reset selection saat chapter berganti ──────────────────────────────────
+  useEffect(() => {
+    setIsInteractingWithPopup(false)
+    clearSelection()
+  }, [fullChapterPath, chapter?.chapterNumber])
 
+  useEffect(() => {
+    if (!selectedText) setIsInteractingWithPopup(false)
+  }, [selectedText])
+
+  // ── Typo correction ────────────────────────────────────────────────────────
   const handleOpenCorrection = () => {
     if (!canCorrect || !selectedText || !selectionRange) return
 
@@ -173,6 +198,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     await chapterService.submitCorrection(bookSlug, parseInt(chapter.chapterNumber), correctionData)
   }
 
+  // ── TTS ────────────────────────────────────────────────────────────────────
   const handleTTSToggle = () => {
     if (!chapter?.htmlContent) return
     stopTTSOnUnmount.current = false
@@ -180,12 +206,15 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     if (!tts.isPlaying) setShowTTSPanel(true)
   }
 
-  const handleTTSStop = () => { stopTTSOnUnmount.current = true; tts.stop(); setShowTTSPanel(false) }
-
-  const handleSearchClick = () => {
-    setShowSearchModal(true)
+  const handleTTSStop = () => {
+    stopTTSOnUnmount.current = true
+    tts.stop()
+    setShowTTSPanel(false)
   }
 
+  const handleSearchClick = () => setShowSearchModal(true)
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
   useKeyboardShortcuts({
     chapter, isAuthenticated, isTTSPlaying: tts.isPlaying,
     footnotePopup, showSearchModal, showExportModal: false,
@@ -196,17 +225,25 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     onExportClose: () => {},
   })
 
-  useEffect(() => { localStorage.setItem('readingMode', readingMode) }, [readingMode])
-
+  // ── Persist reading mode ───────────────────────────────────────────────────
   useEffect(() => {
-    return () => { if (isAuthenticated && stopTTSOnUnmount.current) tts.stop() }
+    localStorage.setItem('readingMode', readingMode)
+  }, [readingMode])
+
+  // ── Stop TTS on unmount ────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (isAuthenticated && stopTTSOnUnmount.current) tts.stop()
+    }
   }, [fullChapterPath, isAuthenticated, tts])
 
+  // ── Fetch chapter ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!fullChapterPath) return
     fetchChapter()
   }, [bookSlug, fullChapterPath, isAuthenticated])
 
+  // ── Fetch reviews & persist last chapter ──────────────────────────────────
   useEffect(() => {
     if (chapter?.chapterNumber && fullChapterPath) {
       fetchReviews()
@@ -214,6 +251,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }, [chapter, fullChapterPath, bookSlug])
 
+  // ── Scroll restore ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!loading) {
       if (location.state?.scrollTo !== undefined) {
@@ -227,12 +265,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }, [loading, location.state])
 
+  // ── Scroll progress (UI only) ──────────────────────────────────────────────
   useEffect(() => {
     const handleScroll = () => {
       if (!contentRef.current || !setReadingProgress) return
-      const scrollTop = window.scrollY
+      const scrollTop    = window.scrollY
       const scrollHeight = contentRef.current.scrollHeight - window.innerHeight
-      const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0
+      const progress     = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0
       setReadingProgress(Math.min(100, Math.max(0, progress)))
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -240,6 +279,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [chapter, setReadingProgress])
 
+  // ── Open external links in new tab ────────────────────────────────────────
   useEffect(() => {
     if (!contentRef.current) return
     const links = contentRef.current.querySelectorAll('.chapter-content a')
@@ -252,6 +292,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     })
   }, [chapter])
 
+  // ── Data fetchers ──────────────────────────────────────────────────────────
   const fetchChapter = async () => {
     try {
       setLoading(true)
@@ -274,10 +315,18 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
+  // ── Review handlers ────────────────────────────────────────────────────────
   const handleAddReview = async (reviewContent) => {
-    if (!isAuthenticated) { navigate('/masuk', { state: { from: location.pathname } }); return }
+    if (!isAuthenticated) {
+      navigate('/masuk', { state: { from: location.pathname } })
+      return
+    }
     try {
-      await chapterService.addChapterReview(bookSlug, parseInt(chapter.chapterNumber), { comment: reviewContent, isSpoiler: false })
+      await chapterService.addChapterReview(
+        bookSlug,
+        parseInt(chapter.chapterNumber),
+        { comment: reviewContent, isSpoiler: false }
+      )
       fetchReviews()
       alert('✓ Review ditambahkan!')
     } catch (error) {
@@ -286,10 +335,13 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   }
 
   const handleLikeReview = async (reviewId, isLiked) => {
-    if (!isAuthenticated) { navigate('/masuk', { state: { from: location.pathname } }); return }
+    if (!isAuthenticated) {
+      navigate('/masuk', { state: { from: location.pathname } })
+      return
+    }
     try {
       if (isLiked) await chapterService.unlikeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
-      else await chapterService.likeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
+      else         await chapterService.likeChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId)
       fetchReviews()
     } catch (error) {
       console.error('Error liking review:', error)
@@ -297,9 +349,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   }
 
   const handleReplyToReview = async (reviewId, replyContent) => {
-    if (!isAuthenticated) { navigate('/masuk', { state: { from: location.pathname } }); return }
+    if (!isAuthenticated) {
+      navigate('/masuk', { state: { from: location.pathname } })
+      return
+    }
     try {
-      await chapterService.replyToChapterReview(bookSlug, parseInt(chapter.chapterNumber), reviewId, { comment: replyContent })
+      await chapterService.replyToChapterReview(
+        bookSlug,
+        parseInt(chapter.chapterNumber),
+        reviewId,
+        { comment: replyContent }
+      )
       fetchReviews()
       alert('✓ Balasan ditambahkan!')
     } catch (error) {
@@ -307,12 +367,15 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
     }
   }
 
+  // ── TTS settings ───────────────────────────────────────────────────────────
   const handleTTSApplySettings = () => {
     tts.applySettings({ rate: tts.rate, pitch: tts.pitch, voiceIndex: tts.voiceIndex })
   }
 
+  // ── Memoized content ───────────────────────────────────────────────────────
   const memoizedContent = useMemo(() => chapter?.htmlContent || '', [chapter?.htmlContent])
 
+  // ── SEO helpers ───────────────────────────────────────────────────────────
   const buildFullChapterPath = (breadcrumbs) =>
     breadcrumbs?.length ? breadcrumbs.map(b => b.slug).join('/') : ''
 
@@ -335,7 +398,12 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   ] : []
 
   const bookForSchema = chapter
-    ? { title: chapter.bookTitle, slug: bookSlug, authorNames: chapter.authorNames || '', authorSlugs: chapter.authorSlugs || '' }
+    ? {
+        title: chapter.bookTitle,
+        slug: bookSlug,
+        authorNames: chapter.authorNames || '',
+        authorSlugs: chapter.authorSlugs || ''
+      }
     : null
 
   const structuredData = chapter && bookForSchema
@@ -351,36 +419,66 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
 
   const keywords = `${chapter?.bookTitle || ''}, ${chapter?.chapterTitle || ''}, ${chapter?.authorNames || ''}, baca online gratis, buku domain publik`
 
-  if (loading) return <div className="flex items-center justify-center py-20"><LoadingSpinner /></div>
-
-  if (!chapter) return (
-    <>
-      <SEO title="Bab Tidak Ditemukan" description="Halaman bab yang Anda cari tidak tersedia" url={chapterUrl} noindex={true} />
+  // ── Render guards ──────────────────────────────────────────────────────────
+  if (loading) {
+    return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Bab tidak ditemukan</h2>
-          <Link to={`/buku/${bookSlug}`} className="btn-primary">Kembali ke Buku</Link>
-        </div>
+        <LoadingSpinner />
       </div>
-    </>
-  )
+    )
+  }
 
+  if (!chapter) {
+    return (
+      <>
+        <SEO
+          title="Bab Tidak Ditemukan"
+          description="Halaman bab yang Anda cari tidak tersedia"
+          url={chapterUrl}
+          noindex={true}
+        />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Bab tidak ditemukan</h2>
+            <Link to={`/buku/${bookSlug}`} className="btn-primary">
+              Kembali ke Buku
+            </Link>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <>
       <SEO
         title={`${chapter.chapterTitle || `Bab ${chapter.chapterNumber}`} - ${chapter.bookTitle}`}
-        description={metaDescription} url={chapterUrl} type="article" keywords={keywords}
-        author={chapter.authorNames} publishedTime={chapter.publishedAt} modifiedTime={chapter.updatedAt}
-        structuredData={structuredData} canonical={`https://masasilam.com${chapterUrl}`}
+        description={metaDescription}
+        url={chapterUrl}
+        type="article"
+        keywords={keywords}
+        author={chapter.authorNames}
+        publishedTime={chapter.publishedAt}
+        modifiedTime={chapter.updatedAt}
+        structuredData={structuredData}
+        canonical={`https://masasilam.com${chapterUrl}`}
       />
 
       <div className="relative pb-16" lang="id">
         <style>{hideScrollbarStyle}</style>
 
+        {/* ── Search modal ── */}
         {showSearchModal && (
-          <SearchInBook bookSlug={bookSlug} onClose={() => setShowSearchModal(false)} />
+          <SearchInBook
+            bookSlug={bookSlug}
+            onClose={() => setShowSearchModal(false)}
+          />
         )}
 
+        {/* ── Footnote popup ── */}
         {footnotePopup && (
           <FootnotePopup
             content={footnotePopup.content}
@@ -391,7 +489,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         )}
 
-        {/* ── Correction Modal ── */}
+        {/* ── Correction modal ── */}
         {canCorrect && showCorrectionModal && correctionContext && (
           <CorrectionModal
             selectedText={correctionContext.selectedText}
@@ -437,7 +535,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           </nav>
         )}
 
-        {/* ── TTS Panel ── */}
+        {/* ── TTS panels ── */}
         {tts.availableVoices.length > 0 && (
           <TTSVoiceSetupBanner availableVoices={tts.availableVoices} />
         )}
@@ -465,7 +563,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         )}
 
-        {/* ── Banner kontribusi ── */}
+        {/* ── Banner kontribusi typo ── */}
         {canCorrect && (
           <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
             <div className="flex items-stretch">
@@ -482,10 +580,10 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
                     Bantu kami menjaga kualitas teks
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Temukan typo atau kesalahan ketik?{' '}
+                    Menemukan typo atau kesalahan ketik?{' '}
                     <strong className="text-gray-700 dark:text-gray-300 font-medium">Pilih teksnya</strong>, lalu klik{' '}
                     <strong className="text-gray-700 dark:text-gray-300 font-medium">Laporkan Typo</strong>{' '}
-                    — kontribusimu membantu orang lain untuk mendapatkan bacaan yang lebih baik.
+                    — MasasilaM mengandalkan partisipasi pembaca untuk melaporkan kesalahan ketik, koreksi, dan perbaikan lainnya.
                   </p>
                 </div>
               </div>
@@ -493,7 +591,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           </div>
         )}
 
-        {/* ── Typo Popup ── */}
+        {/* ── Typo selection popup ── */}
         {canCorrect && selectedText && selectionCoords && (
           <TypoSelectionPopup
             selectedText={selectedText}
@@ -505,7 +603,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         )}
 
-        {/* ── Konten Bab ── */}
+        {/* ── Chapter content ── */}
         <article ref={contentRef} lang="id">
           <header className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
@@ -513,7 +611,9 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             </h1>
             <p className="text-gray-600 dark:text-gray-400">{chapter.bookTitle}</p>
             {chapter.bookSubtitle && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">{chapter.bookSubtitle}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
+                {chapter.bookSubtitle}
+              </p>
             )}
           </header>
 
@@ -535,7 +635,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             />
           </div>
 
-          {/* ── Rating Bab ── */}
+          {/* ── Chapter rating ── */}
           <div className="my-8">
             <ChapterRating
               bookSlug={bookSlug}
@@ -545,7 +645,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             />
           </div>
 
-          {/* ── Review Bab ── */}
+          {/* ── Reviews ── */}
           <ReviewsSection
             reviews={reviews}
             isAuthenticated={isAuthenticated}
@@ -557,7 +657,7 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
         </article>
       </div>
 
-      {/* ══ FOOTER FIXED ══════════════════════════════════════════════════════ */}
+      {/* ══ FOOTER FIXED ════════════════════════════════════════════════════ */}
       <footer className="fixed bottom-0 left-0 right-0 z-30 h-14 flex items-center px-4
         border-t border-gray-200 dark:border-gray-700
         bg-white dark:bg-gray-900">

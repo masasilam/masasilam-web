@@ -6,36 +6,61 @@ import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { Clock, Film as FilmIcon, Play, Video } from 'lucide-react'
 
-// Konversi URL Wikimedia ke thumbnail kecil lalu proxy via weserv.nl
-// untuk menghindari 429 Too Many Requests dari Wikimedia
-const getThumb = (url, w = 300) => {
+/**
+ * Konversi URL Wikimedia Commons ke URL thumbnail.
+ * PENTING: regex pakai [^/] bukan [a-f0-9] karena hash dir
+ * bisa berisi huruf kapital, angka, dan karakter lain —
+ * contoh: "d/da/", "8/8e/", "2/24/", "0/08/" semua valid.
+ */
+const getWikimediaThumb = (url, w = 300) => {
   if (!url) return null
+  // Jika sudah URL thumb, kembalikan apa adanya
+  if (url.includes('/thumb/')) return url
 
-  let thumbUrl = url
+  // Cocokkan pola upload.wikimedia.org/wikipedia/{namespace}/{hash}/{filename}
+  const m = url.match(
+    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
+  )
+  if (!m) return url // bukan URL Wikimedia — kembalikan apa adanya
 
-  // Buat URL thumbnail Wikimedia yang lebih kecil (hemat 80-95% ukuran)
-  const m = url.match(/^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)([a-f0-9]\/[a-f0-9]{2}\/)(.+)$/)
-  if (m) {
-    const [, base, hash, filename] = m
-    const isSvg = filename.toLowerCase().endsWith('.svg')
-    const thumbName = isSvg ? `${filename}.png` : filename
-    thumbUrl = `${base}thumb/${hash}${filename}/${w}px-${thumbName}`
-  }
-
-  // Proxy via images.weserv.nl untuk bypass 429
-  return `https://images.weserv.nl/?url=${encodeURIComponent(thumbUrl)}&w=${w}&q=80&output=webp`
+  const [, base, hash, filename] = m
+  const isSvg = filename.toLowerCase().endsWith('.svg')
+  // SVG perlu ekstensi .png di nama thumb
+  const thumbFilename = isSvg ? `${filename}.png` : filename
+  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
 }
 
 const FilmCard = memo(({ film }) => {
   const [imgStatus, setImgStatus] = useState('loading') // 'loading' | 'loaded' | 'error'
-  const year = film.tahunRilis ? new Date(film.tahunRilis).getFullYear() : null
-  const thumbUrl = getThumb(film.posterUrl, 300)
 
-  // Fallback bertingkat: proxy gagal → coba URL asli → tampilkan icon
+  const year = film.tahunRilis
+    ? (typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4
+        ? film.tahunRilis
+        : new Date(film.tahunRilis).getFullYear())
+    : null
+
+  // Coba semua kemungkinan field poster dari API
+  const rawPosterUrl =
+    film.posterUrl ||
+    film.poster_url ||
+    film.poster ||
+    film.thumbnailUrl ||
+    film.thumbnail ||
+    film.coverUrl ||
+    film.imageUrl ||
+    (typeof film.imageUrls === 'string' && film.imageUrls
+      ? film.imageUrls.split(',')[0].trim()
+      : null) ||
+    null
+
+  const thumbUrl = getWikimediaThumb(rawPosterUrl, 300)
+
+  // Fallback bertingkat: thumb gagal → coba URL asli → tampilkan icon
   const handleError = (e) => {
     const currentSrc = e.target.src
-    if (currentSrc.includes('weserv.nl') && film.posterUrl) {
-      e.target.src = film.posterUrl
+    // Jika sedang pakai thumb URL dan URL asli berbeda, coba URL asli
+    if (rawPosterUrl && currentSrc !== rawPosterUrl && thumbUrl !== rawPosterUrl) {
+      e.target.src = rawPosterUrl
       return
     }
     setImgStatus('error')
@@ -43,13 +68,13 @@ const FilmCard = memo(({ film }) => {
 
   return (
     <Link
-      to={`/film/${film.slug}`}
+      to={`/film/${film.slug || film.id}`}
       className="group block bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700"
     >
       {/* Poster - PORTRAIT 2:3 */}
       <div className="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-700">
 
-        {/* Skeleton shimmer */}
+        {/* Skeleton shimmer saat loading */}
         {imgStatus === 'loading' && thumbUrl && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
         )}
@@ -68,8 +93,9 @@ const FilmCard = memo(({ film }) => {
             }`}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <FilmIcon className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-gray-900">
+            <FilmIcon className="w-10 h-10 text-blue-400/60 dark:text-blue-500/40" />
+            <p className="text-[9px] text-center text-gray-500 dark:text-gray-400 px-2 line-clamp-2">{film.judul}</p>
           </div>
         )}
 

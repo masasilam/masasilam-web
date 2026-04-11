@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, memo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, memo, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import bookService from '../services/bookService'
 import BookGrid from '../components/Book/BookGrid'
 import Button from '../components/Common/Button'
@@ -56,23 +56,92 @@ const SBtn = memo(({ opt, act, ord, load, onClick }) => (
   </button>
 ))
 
+// ── Input langsung ke nomor halaman ──────────────────────────────────────────
+const PageInput = memo(({ currentPage, totalPages, onGo, disabled }) => {
+  const [val, setVal] = useState(String(currentPage))
+  const inputRef = useRef(null)
+
+  // Sync jika currentPage berubah dari luar (prev/next button)
+  useEffect(() => { setVal(String(currentPage)) }, [currentPage])
+
+  const commit = useCallback(() => {
+    const n = parseInt(val, 10)
+    if (!isNaN(n) && n >= 1 && n <= totalPages) {
+      onGo(n)
+    } else {
+      setVal(String(currentPage)) // kembalikan ke nilai valid
+    }
+  }, [val, currentPage, totalPages, onGo])
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Hal.</span>
+      <input
+        ref={inputRef}
+        type="number"
+        min={1}
+        max={totalPages}
+        value={val}
+        disabled={disabled}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && (commit(), inputRef.current?.blur())}
+        className="w-14 px-2 py-1.5 text-center text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+      />
+      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">dari {totalPages}</span>
+    </div>
+  )
+})
+PageInput.displayName = 'PageInput'
+
+const EMPTY_CRIT = {
+  searchTitle: '', searchInBook: '', authorName: '', contributor: '', genre: '',
+  minChapters: '', maxChapters: '', minFileSize: '', maxFileSize: '',
+  publicationYearFrom: '', publicationYearTo: '', difficultyLevel: '',
+  fileFormat: '', isFeatured: '', languageId: '', minRating: '',
+  minViewCount: '', minReadCount: ''
+}
+
 const BooksPage = () => {
   const navigate = useNavigate()
-  const [books, setBooks] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalBooks, setTotalBooks] = useState(0)
-  const [sortField, setSortField] = useState('updateAt')
-  const [sortOrder, setSortOrder] = useState('DESC')
-  const [showAdv, setShowAdv] = useState(false)
-  const [showSort, setShowSort] = useState(false)
-  const [crit, setCrit] = useState({ searchTitle: '', searchInBook: '', authorName: '', contributor: '', genre: '', minChapters: '', maxChapters: '', minFileSize: '', maxFileSize: '', publicationYearFrom: '', publicationYearTo: '', difficultyLevel: '', fileFormat: '', isFeatured: '', languageId: '', minRating: '', minViewCount: '', minReadCount: '' })
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const fetch = useCallback(async () => {
+  // ── Semua state utama dibaca dari URL agar browser Back berfungsi ───────────
+  const pageFromUrl   = parseInt(searchParams.get('page') || '1', 10)
+  const sortFromUrl   = searchParams.get('sortField') || 'updateAt'
+  const orderFromUrl  = searchParams.get('sortOrder') || 'DESC'
+
+  const [books,       setBooks]       = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [totalPages,  setTotalPages]  = useState(1)
+  const [totalBooks,  setTotalBooks]  = useState(0)
+  const [showAdv,     setShowAdv]     = useState(false)
+  const [showSort,    setShowSort]    = useState(false)
+  const [crit,        setCrit]        = useState(EMPTY_CRIT)
+
+  // ── Helper: update URL params tanpa reset param lain ─────────────────────────
+  const updateParams = useCallback((updates) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v === null || v === undefined || v === '') next.delete(k)
+        else next.set(k, String(v))
+      })
+      return next
+    }, { replace: false }) // replace:false agar masuk history → Back berfungsi
+  }, [setSearchParams])
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────────
+  const fetchBooks = useCallback(async (page, sortField, sortOrder, criteria) => {
     try {
       setLoading(true)
-      const params = { page: currentPage, limit: 12, sortField, sortOrder, ...Object.fromEntries(Object.entries(crit).filter(([_, v]) => v)) }
+      const params = {
+        page,
+        limit: 12,
+        sortField,
+        sortOrder,
+        ...Object.fromEntries(Object.entries(criteria).filter(([, v]) => v))
+      }
       const res = await bookService.getBooks(params)
       setBooks(res.data?.data || [])
       const total = res.data?.total || 0
@@ -84,50 +153,68 @@ const BooksPage = () => {
     } finally {
       setLoading(false)
     }
-  }, [currentPage, sortField, sortOrder, crit])
+  }, [])
 
-  useEffect(() => { fetch() }, [fetch])
+  // Fetch ulang setiap kali URL params berubah
+  useEffect(() => {
+    fetchBooks(pageFromUrl, sortFromUrl, orderFromUrl, crit)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageFromUrl, sortFromUrl, orderFromUrl])
 
-  const handleSort = useCallback((f) => {
-    if (sortField === f) {
-      setSortOrder(o => o === 'DESC' ? 'ASC' : 'DESC')
-    } else {
-      setSortField(f)
-      setSortOrder('DESC')
-    }
-    setCurrentPage(1)
-  }, [sortField])
+  // Simpan URL BooksPage ke sessionStorage agar BookDetailPage bisa kembali ke halaman yang benar
+  useEffect(() => {
+    sessionStorage.setItem('booksPageUrl', window.location.pathname + window.location.search)
+  }, [searchParams])
+
+  // ── Navigasi halaman ──────────────────────────────────────────────────────────
+  const goToPage = useCallback((page) => {
+    updateParams({ page: page === 1 ? null : page })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [updateParams])
+
+  // ── Sort ──────────────────────────────────────────────────────────────────────
+  const handleSort = useCallback((field) => {
+    const newOrder = sortFromUrl === field
+      ? (orderFromUrl === 'DESC' ? 'ASC' : 'DESC')
+      : 'DESC'
+    updateParams({ sortField: field, sortOrder: newOrder, page: null })
+  }, [sortFromUrl, orderFromUrl, updateParams])
+
+  // ── Filter ────────────────────────────────────────────────────────────────────
   const handleChange = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
-  const handleApply = useCallback(() => { setCurrentPage(1); fetch() }, [fetch])
-  const handleReset = useCallback(() => { setCrit({ searchTitle: '', searchInBook: '', authorName: '', contributor: '', genre: '', minChapters: '', maxChapters: '', minFileSize: '', maxFileSize: '', publicationYearFrom: '', publicationYearTo: '', difficultyLevel: '', fileFormat: '', isFeatured: '', languageId: '', minRating: '', minViewCount: '', minReadCount: '' }); setCurrentPage(1); setTimeout(fetch, 100) }, [fetch])
 
-  // Generate SEO data
+  const handleApply = useCallback(() => {
+    updateParams({ page: null })
+    fetchBooks(1, sortFromUrl, orderFromUrl, crit)
+  }, [fetchBooks, sortFromUrl, orderFromUrl, crit, updateParams])
+
+  const handleReset = useCallback(() => {
+    setCrit(EMPTY_CRIT)
+    updateParams({ page: null })
+    fetchBooks(1, sortFromUrl, orderFromUrl, EMPTY_CRIT)
+  }, [fetchBooks, sortFromUrl, orderFromUrl, updateParams])
+
+  // ── SEO ───────────────────────────────────────────────────────────────────────
   const breadcrumbs = [
     { name: 'Beranda', url: '/' },
     { name: 'Koleksi Buku', url: '#' }
   ]
-
   const collectionSchema = generateCollectionPageStructuredData(
     'books',
     books.map(b => ({ ...b, slug: b.slug || b.id })),
-    currentPage,
-    totalBooks,
-    12
+    pageFromUrl, totalBooks, 12
   )
-
   const breadcrumbSchema = generateBreadcrumbStructuredData(breadcrumbs)
 
   const pageTitle = crit.searchTitle
     ? `${crit.searchTitle} - Koleksi Buku`
-    : `Koleksi Buku Digital - Halaman ${currentPage}`
-
+    : `Koleksi Buku Digital - Halaman ${pageFromUrl}`
   const pageDescription = crit.searchTitle
     ? `Hasil pencarian "${crit.searchTitle}" - Temukan buku yang Anda cari di perpustakaan digital kami`
-    : `Jelajahi ${totalBooks.toLocaleString('id-ID')} buku digital gratis. Halaman ${currentPage} dari ${totalPages}. Baca buku klasik domain publik dengan fitur smart reading.`
-
-  const pageUrl = currentPage > 1 ? `/buku?page=${currentPage}` : '/buku'
-  const prevUrl = currentPage > 1 ? (currentPage === 2 ? '/buku' : `/buku?page=${currentPage - 1}`) : null
-  const nextUrl = currentPage < totalPages ? `/buku?page=${currentPage + 1}` : null
+    : `Jelajahi ${totalBooks.toLocaleString('id-ID')} buku digital gratis. Halaman ${pageFromUrl} dari ${totalPages}.`
+  const pageUrl  = pageFromUrl > 1 ? `/buku?page=${pageFromUrl}` : '/buku'
+  const prevUrl  = pageFromUrl > 1 ? (pageFromUrl === 2 ? '/buku' : `/buku?page=${pageFromUrl - 1}`) : null
+  const nextUrl  = pageFromUrl < totalPages ? `/buku?page=${pageFromUrl + 1}` : null
 
   return (
     <>
@@ -159,35 +246,84 @@ const BooksPage = () => {
             </p>
           </header>
 
+          {/* ── Search & controls ─────────────────────────────────── */}
           <div className="mb-4 space-y-3">
             <div className="flex gap-2">
-              <Input type="text" placeholder="Cari judul..." value={crit.searchTitle} onChange={(e) => handleChange('searchTitle', e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApply()} />
-              <Button variant="primary" onClick={handleApply}><Search className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Cari</span></Button>
-              <Button variant={showSort ? 'primary' : 'secondary'} onClick={() => setShowSort(!showSort)}><ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Urutkan</span></Button>
-              <Button variant={showAdv ? 'primary' : 'secondary'} onClick={() => setShowAdv(!showAdv)}><SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" /><span className="hidden sm:inline">Filter</span></Button>
+              <Input
+                type="text"
+                placeholder="Cari judul..."
+                value={crit.searchTitle}
+                onChange={(e) => handleChange('searchTitle', e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleApply()}
+              />
+              <Button variant="primary" onClick={handleApply}>
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+                <span className="hidden sm:inline">Cari</span>
+              </Button>
+              <Button variant={showSort ? 'primary' : 'secondary'} onClick={() => setShowSort(!showSort)}>
+                <ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+                <span className="hidden sm:inline">Urutkan</span>
+              </Button>
+              <Button variant={showAdv ? 'primary' : 'secondary'} onClick={() => setShowAdv(!showAdv)}>
+                <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+                <span className="hidden sm:inline">Filter</span>
+              </Button>
             </div>
+
             {showSort && (
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Urutkan:</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">{sortOrder === 'DESC' ? '↓' : '↑'}</span>
-                    <button onClick={() => setShowSort(false)} className="text-gray-500 hover:text-gray-700" aria-label="Close"><X className="w-4 h-4" /></button>
+                    <span className="text-xs text-gray-500">{orderFromUrl === 'DESC' ? '↓' : '↑'}</span>
+                    <button onClick={() => setShowSort(false)} className="text-gray-500 hover:text-gray-700" aria-label="Close">
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {SORTS.map(o => <SBtn key={o.v} opt={o} act={sortField === o.v} ord={sortOrder} load={loading} onClick={() => handleSort(o.v)} />)}
+                  {SORTS.map(o => (
+                    <SBtn key={o.v} opt={o} act={sortFromUrl === o.v} ord={orderFromUrl} load={loading} onClick={() => handleSort(o.v)} />
+                  ))}
                 </div>
               </div>
             )}
           </div>
-          {showAdv && <Filt crit={crit} onChange={handleChange} onApply={handleApply} onReset={handleReset} onClose={() => setShowAdv(false)} />}
+
+          {showAdv && (
+            <Filt crit={crit} onChange={handleChange} onApply={handleApply} onReset={handleReset} onClose={() => setShowAdv(false)} />
+          )}
+
           <BookGrid books={books} loading={loading} />
+
+          {/* ── Pagination ────────────────────────────────────────── */}
           {totalPages > 1 && (
-            <nav className="mt-8 flex justify-center gap-2" aria-label="Pagination">
-              <Button variant="secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || loading}>Prev</Button>
-              <span className="flex items-center px-3 text-xs text-gray-600 dark:text-gray-400">{currentPage}/{totalPages}</span>
-              <Button variant="secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || loading}>Next</Button>
+            <nav className="mt-8 flex items-center justify-center flex-wrap gap-2" aria-label="Pagination">
+              {/* Prev */}
+              <Button
+                variant="secondary"
+                onClick={() => goToPage(Math.max(1, pageFromUrl - 1))}
+                disabled={pageFromUrl === 1 || loading}
+              >
+                Prev
+              </Button>
+
+              {/* Input halaman langsung */}
+              <PageInput
+                currentPage={pageFromUrl}
+                totalPages={totalPages}
+                onGo={goToPage}
+                disabled={loading}
+              />
+
+              {/* Next */}
+              <Button
+                variant="secondary"
+                onClick={() => goToPage(Math.min(totalPages, pageFromUrl + 1))}
+                disabled={pageFromUrl === totalPages || loading}
+              >
+                Next
+              </Button>
             </nav>
           )}
         </div>

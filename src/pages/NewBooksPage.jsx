@@ -32,7 +32,7 @@ const NewBooksPage = () => {
 
       const response = await bookService.getBooks({
         page: currentPage,
-        limit: 24,
+        limit: 12,
         sortField: 'updateAt',
         sortOrder: 'DESC',
       })
@@ -103,13 +103,10 @@ const NewBooksPage = () => {
           {/* ============ HEADER ============ */}
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                <Sparkles className="w-8 h-8 text-blue-600 dark:text-blue-400" aria-hidden="true" />
-              </div>
               <div>
-                <h1 className="text-4xl font-bold">Buku Terbaru</h1>
+                <h1 className="text-4xl font-bold">Buku Terbaru dan Terupdate</h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Buku yang baru saja ditambahkan ke perpustakaan
+                  Buku yang baru saja diperbarui dan ditambahkan ke perpustakaan
                 </p>
               </div>
             </div>
@@ -117,7 +114,7 @@ const NewBooksPage = () => {
             {/* Stats Badge */}
             {!loading && books.length > 0 && (
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
-                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+
                 <span className="text-gray-700 dark:text-gray-300">
                   Menampilkan {books.length} dari {totalBooks} buku terbaru
                 </span>

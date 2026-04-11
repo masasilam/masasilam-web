@@ -1,5 +1,5 @@
 // PART 1: Imports, RatingModal, and Component Setup
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Book, BookOpen, Calendar, Clock, Download, Eye, Heart, Share2, Star, User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp, ArrowLeft, Pencil } from 'lucide-react'
 import bookService from '../services/bookService'
@@ -88,6 +88,10 @@ const BookDetailPage = () => {
   const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
   const [downloadLoading, setDownloadLoading] = useState(false)
+  // ── FIX: state progress download ──────────────────────────────────────────────
+  // percent: 0-100 jika server kirim Content-Length, null jika chunked transfer
+  // loaded: bytes yang sudah diterima (selalu ada)
+  const [downloadProgress, setDownloadProgress] = useState(null) // { percent, loaded, total }
   const [readingLoading, setReadingLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
@@ -97,13 +101,40 @@ const BookDetailPage = () => {
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [showRatingStats, setShowRatingStats] = useState(false)
   const [showBookDetails, setShowBookDetails] = useState(false)
+  const [authorPhotos, setAuthorPhotos] = useState({})
+
+  const backUrl = useRef(sessionStorage.getItem('booksPageUrl') || '/buku')
 
   useEffect(() => {
-    fetchBookDetail()
-    if (isAuthenticated) fetchUserRating()
-    fetchRatingStats()
-    fetchRecentReviews()
-  }, [bookSlug, isAuthenticated])
+    let cancelled = false
+
+    const init = async () => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const bookData = await bookService.getBookBySlug(bookSlug)
+        if (!cancelled) setBook(bookData)
+      } catch {
+        if (!cancelled) setError('Buku tidak ditemukan')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+
+      if (!cancelled) {
+        const secondaryFetches = [
+          fetchRatingStats(),
+          fetchRecentReviews(),
+          ...(isAuthenticated ? [fetchUserRating()] : []),
+        ]
+        await Promise.allSettled(secondaryFetches)
+      }
+    }
+
+    init()
+
+    return () => { cancelled = true }
+  }, [bookSlug, isAuthenticated]) // eslint-disable-line
 
   useEffect(() => {
     if (book) {
@@ -111,17 +142,22 @@ const BookDetailPage = () => {
     }
   }, [book])
 
-  const fetchBookDetail = async () => {
+  const fetchAuthorPhotos = async (authorSlugs) => {
+    const slugs = authorSlugs.split(',').map(s => s.trim())
+    const photos = {}
     try {
-      setLoading(true)
-      setError(null)
-      setBook(await bookService.getBookBySlug(bookSlug))
-    } catch (error) {
-      setError('Buku tidak ditemukan')
-    } finally {
-      setLoading(false)
-    }
+      const res = await bookService.getAuthors(1, 1000)
+      slugs.forEach(slug => {
+        const found = res.data?.list?.find(a => a.slug === slug)
+        if (found?.photoUrl) photos[slug] = found.photoUrl
+      })
+    } catch {}
+    setAuthorPhotos(photos)
   }
+
+  useEffect(() => {
+    if (book?.authorSlugs) fetchAuthorPhotos(book.authorSlugs)
+  }, [book])
 
   const fetchUserRating = async () => {
     try {
@@ -149,6 +185,17 @@ const BookDetailPage = () => {
     }
   }
 
+  const handleRead = async () => {
+    try {
+      setReadingLoading(true)
+      navigate(`/buku/${bookSlug}/baca`)
+    } catch (error) {
+      alert(`Gagal memulai membaca: ${error.message}`)
+    } finally {
+      setReadingLoading(false)
+    }
+  }
+
   const handleStartReading = async () => {
     try {
       setReadingLoading(true)
@@ -162,31 +209,64 @@ const BookDetailPage = () => {
   }
 
   const handleDownload = async () => {
-    if (!book.fileUrl) return alert('File buku tidak tersedia')
-    try {
-      setDownloadLoading(true)
+  if (!book.fileUrl) return alert('File buku tidak tersedia');
+  try {
+    setDownloadLoading(true);
 
-      const response = await bookService.downloadBook(bookSlug)
-      const blob = new Blob([response], { type: 'application/epub+zip' })
-      const url = window.URL.createObjectURL(blob)
+    // 1. Tracking di backend (cepat, hanya DB operation)
+    const { downloadUrl, filename } = await bookService.getDownloadUrl(bookSlug);
 
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${book.title}.${book.fileFormat || 'epub'}`
-      document.body.appendChild(link)
-      link.click()
+    // 2. Download langsung dari Cloudinary — tidak lewat backend sama sekali
+    setDownloadProgress({ percent: 0, loaded: 0, total: null });
 
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+    const response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error('Gagal mengunduh file');
 
-      await fetchBookDetail()
-      alert('✅ Unduhan dimulai!')
-    } catch (error) {
-      console.error('Download error:', error)
-      alert('❌ Gagal mengunduh buku')
-    } finally {
-      setDownloadLoading(false)
+    const contentLength = response.headers.get('Content-Length');
+    const total = contentLength ? parseInt(contentLength) : null;
+    const reader = response.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      setDownloadProgress({
+        loaded,
+        total,
+        percent: total ? Math.round((loaded / total) * 100) : null,
+      });
     }
+
+    // 3. Trigger download
+    const blob = new Blob(chunks, { type: 'application/epub+zip' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    await fetchBookDetail();
+    setDownloadProgress(null);
+  } catch (error) {
+    console.error('Download error:', error);
+    setDownloadProgress(null);
+    alert('❌ Gagal mengunduh buku.');
+  } finally {
+    setDownloadLoading(false);
+  }
+};
+
+  const fetchBookDetail = async () => {
+    try {
+      const bookData = await bookService.getBookBySlug(bookSlug)
+      setBook(bookData)
+    } catch {}
   }
 
   const handleShare = async () => {
@@ -241,11 +321,17 @@ const BookDetailPage = () => {
 
   const getSourceDomain = (url) => {
     try {
-      const urlObj = new URL(url)
-      return urlObj.hostname.replace('www.', '')
+      return new URL(url).hostname.replace('www.', '')
     } catch {
       return url
     }
+  }
+
+  // ── Helper: format bytes ke string yang readable ───────────────────────────────
+  const formatBytes = (bytes) => {
+    if (!bytes) return ''
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   }
 
   if (loading) return <LoadingSpinner fullScreen />
@@ -264,7 +350,6 @@ const BookDetailPage = () => {
     { value: 0.5, label: '0.5', count: ratingStats?.rating05Count }
   ].filter(r => r.count > 0)
 
-  // Generate SEO data
   const breadcrumbs = [
     { name: 'Beranda', url: '/' },
     { name: 'Koleksi Buku', url: '/buku' },
@@ -274,14 +359,11 @@ const BookDetailPage = () => {
   const bookSchema = generateBookStructuredData(book)
   const breadcrumbSchema = generateBreadcrumbStructuredData(breadcrumbs)
   const reviewSchema = recentReviews.length > 0 ? generateReviewStructuredData(recentReviews, book) : null
-
   const metaDescription = generateMetaDescription(
     book.description || `${book.title} oleh ${book.authorNames}. ${book.genres ? `Genre: ${book.genres}.` : ''} Baca gratis di MasasilaM.`,
     160
   )
-
   const keywords = generateKeywords(book.genres, book.authorNames, book.title)
-
   const structuredData = reviewSchema
     ? [bookSchema, breadcrumbSchema, reviewSchema]
     : [bookSchema, breadcrumbSchema]
@@ -307,12 +389,15 @@ const BookDetailPage = () => {
           <nav className="flex items-center gap-2 text-sm mb-4 overflow-x-auto" aria-label="Breadcrumb">
             <Link to="/" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors whitespace-nowrap">Beranda</Link>
             <span className="text-gray-400">/</span>
-            <Link to="/buku" className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors whitespace-nowrap">Koleksi Buku</Link>
+            <Link to={backUrl.current} className="text-gray-600 dark:text-gray-400 hover:text-primary transition-colors whitespace-nowrap">Koleksi Buku</Link>
             <span className="text-gray-400">/</span>
             <span className="text-gray-900 dark:text-white font-medium truncate">{book.title}</span>
           </nav>
 
-          <button onClick={() => navigate('/buku')} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary mb-6 group">
+          <button
+            onClick={() => navigate(backUrl.current)}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary mb-6 group"
+          >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition" />
             <span className="font-medium">Kembali ke Koleksi Buku</span>
           </button>
@@ -323,16 +408,55 @@ const BookDetailPage = () => {
               <div className="sticky top-24">
                 <img src={book.coverImageUrl || 'https://via.placeholder.com/400x600?text=No+Cover'} alt={`Cover buku ${book.title}`} className="w-full rounded-lg shadow-lg" loading="lazy" />
                 <div className="mt-6 space-y-3">
-                        <Button fullWidth variant="primary" size="lg" onClick={() => navigate(`/buku/${bookSlug}/baca`)} loading={readingLoading} disabled={readingLoading}>
-                          <BookOpen className="w-5 h-5 mr-2" />Baca
-                        </Button>
-
-                   <Button fullWidth variant="outline" onClick={handleStartReading} loading={readingLoading} disabled={readingLoading}>
-                     <Pencil className="w-5 h-5 mr-2" />Koreksi Teks
-                   </Button>
-                  <Button fullWidth variant="secondary" onClick={handleDownload} loading={downloadLoading} disabled={downloadLoading || !book.fileUrl}>
-                    <Download className="w-5 h-5 mr-2" />{downloadLoading ? 'Mengunduh...' : 'Unduh EPUB'}
+                  <Button fullWidth variant="primary" size="lg" onClick={handleRead} loading={readingLoading} disabled={readingLoading}>
+                    <BookOpen className="w-5 h-5 mr-2" />Baca
                   </Button>
+
+                  <Button fullWidth variant="outline" onClick={handleStartReading} loading={readingLoading} disabled={readingLoading}>
+                    <Pencil className="w-5 h-5 mr-2" />Koreksi Teks
+                  </Button>
+
+                  {/* ── FIX: Tombol download dengan progress bar ─────────────────────── */}
+                  <div className="space-y-1">
+                    <Button
+                      fullWidth
+                      variant="secondary"
+                      onClick={handleDownload}
+                      loading={downloadLoading && !downloadProgress}
+                      disabled={downloadLoading || !book.fileUrl}
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      {downloadLoading
+                        ? downloadProgress?.percent != null
+                          ? `Mengunduh ${downloadProgress.percent}%`
+                          : `Mengunduh ${formatBytes(downloadProgress?.loaded)}...`
+                        : 'Unduh EPUB'}
+                    </Button>
+
+                    {/* Progress bar — hanya tampil saat download aktif */}
+                    {downloadLoading && downloadProgress && (
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                        {downloadProgress.percent != null ? (
+                          // Progress pasti — server kirim Content-Length
+                          <div
+                            className="h-full bg-primary transition-all duration-300"
+                            style={{ width: `${downloadProgress.percent}%` }}
+                          />
+                        ) : (
+                          // Progress indeterminate — chunked transfer tanpa Content-Length
+                          <div className="h-full bg-primary animate-pulse w-full" />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Info bytes terunduh jika tidak ada total */}
+                    {downloadLoading && downloadProgress && downloadProgress.percent == null && downloadProgress.loaded > 0 && (
+                      <p className="text-xs text-gray-500 text-center">
+                        {formatBytes(downloadProgress.loaded)} terunduh...
+                      </p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-4 gap-2">
                     <Button fullWidth variant="outline" onClick={() => navigate(`/buku/${bookSlug}/daftar-isi`)} className="flex-col py-3">
                       <Book className="w-5 h-5 mb-1" /><span className="text-xs">Daftar Isi</span>
@@ -385,32 +509,26 @@ const BookDetailPage = () => {
 
               {book.authorNames && (
                 <div className="flex items-center gap-3 mb-6">
-                  {/* Author Photos */}
                   <div className="flex -space-x-2">
-                    {book.authorPhotoUrls && book.authorPhotoUrls.split(',').map((photoUrl, index) => {
-                      const url = photoUrl.trim()
+                    {book.authorSlugs && book.authorSlugs.split(',').map((slug, index) => {
+                      const authorSlug = slug.trim()
                       const authorName = book.authorNames.split(',')[index]?.trim() || 'Author'
-                      return url ? (
-                        <img
-                          key={index}
-                          src={url}
-                          alt={authorName}
-                          className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
-                          loading="lazy"
+                      const photoUrl = authorPhotos[authorSlug]
+                      return photoUrl ? (
+                        <img key={index} src={photoUrl} alt={authorName} className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover" loading="lazy"
                           onError={(e) => {
                             e.target.style.display = 'none'
+                            const fallback = e.target.parentElement.querySelector('.author-fallback')
+                            if (fallback) fallback.style.display = 'flex'
                           }}
                         />
                       ) : null
                     })}
-                    {(!book.authorPhotoUrls || book.authorPhotoUrls.split(',').every(url => !url.trim())) && (
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                    )}
+                    <div className="author-fallback w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+                      style={{ display: (!book.authorSlugs || Object.keys(authorPhotos).length === 0) ? 'flex' : 'none' }}>
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
                   </div>
-
-                  {/* Author Names */}
                   <div className="flex flex-wrap items-center gap-1">
                     {book.authorNames.split(',').map((author, index, arr) => {
                       const authorName = author.trim()
@@ -443,11 +561,8 @@ const BookDetailPage = () => {
                       const genreName = genre.trim()
                       const genreSlug = genreName.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')
                       return (
-                        <Link
-                          key={index}
-                          to={`/kategori/${genreSlug}`}
-                          className="group relative px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm font-medium text-blue-700 dark:text-blue-300 hover:shadow-md hover:scale-105 transition-all duration-200"
-                        >
+                        <Link key={index} to={`/kategori/${genreSlug}`}
+                          className="group relative px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm font-medium text-blue-700 dark:text-blue-300 hover:shadow-md hover:scale-105 transition-all duration-200">
                           <span className="relative z-10">{genreName}</span>
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-10 rounded-lg transition-opacity" />
                         </Link>
@@ -466,7 +581,6 @@ const BookDetailPage = () => {
                         const parts = contributor.trim().match(/(.+?)\s*\((.+?)\)/)
                         const name = parts ? parts[1].trim() : contributor.trim()
                         const role = parts ? parts[2].trim() : ''
-
                         return (
                           <div key={index} className="group flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-purple-100 dark:border-purple-900">
                             <User className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
@@ -560,7 +674,9 @@ const BookDetailPage = () => {
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
                     <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p className="text-gray-600 dark:text-gray-400 mb-4">Belum ada ulasan untuk buku ini</p>
-                    <Button variant="primary" onClick={() => navigate(isAuthenticated ? `/buku/${bookSlug}/ulasan` : '/masuk')}><MessageCircle className="w-4 h-4 mr-2" />{isAuthenticated ? 'Jadilah yang Pertama Memberi Ulasan' : 'Login untuk Memberi Ulasan'}</Button>
+                    <Button variant="primary" onClick={() => navigate(isAuthenticated ? `/buku/${bookSlug}/ulasan` : '/masuk')}>
+                      <MessageCircle className="w-4 h-4 mr-2" />{isAuthenticated ? 'Jadilah yang Pertama Memberi Ulasan' : 'Login untuk Memberi Ulasan'}
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">

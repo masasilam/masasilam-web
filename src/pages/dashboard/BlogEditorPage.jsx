@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Save, Eye, EyeOff, ArrowLeft, ImagePlus, Tag, Folder,
-  Calendar, Info, Loader2, X, Plus, Globe, FileText, Clock
+  Calendar, Info, Loader2, X, Plus, Globe, FileText, Clock,
+  Code, BookOpen, Minus, Type, Check, Copy, Newspaper,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import api from '../../services/api'
@@ -17,161 +18,541 @@ const STATUS_OPTIONS = [
   { value: 'SCHEDULED', label: 'Jadwalkan', desc: 'Terbit pada waktu tertentu', icon: Calendar, cls: 'text-blue-500'  },
 ]
 
-const QUILL_CSS = `
-  .ql-toolbar.ql-snow { border:1px solid #e5e7eb!important; border-bottom:none!important; border-radius:.5rem .5rem 0 0!important; background:#f9fafb!important; padding:8px 10px!important; flex-wrap:wrap!important; }
-  .dark .ql-toolbar.ql-snow { background:#1e293b!important; border-color:#334155!important; }
-  .dark .ql-toolbar.ql-snow .ql-stroke { stroke:#94a3b8!important; }
-  .dark .ql-toolbar.ql-snow .ql-fill   { fill:#94a3b8!important; }
-  .dark .ql-toolbar.ql-snow .ql-picker-label { color:#94a3b8!important; }
-  .dark .ql-toolbar.ql-snow .ql-picker-label .ql-stroke { stroke:#94a3b8!important; }
-  .dark .ql-toolbar.ql-snow .ql-picker-options { background:#1e293b!important; border-color:#334155!important; color:#e2e8f0!important; }
-  .ql-toolbar.ql-snow button:hover .ql-stroke,
-  .ql-toolbar.ql-snow .ql-active  .ql-stroke { stroke:var(--color-primary,#10b981)!important; }
-  .ql-toolbar.ql-snow button:hover .ql-fill,
-  .ql-toolbar.ql-snow .ql-active  .ql-fill   { fill:var(--color-primary,#10b981)!important; }
-  .dark .ql-toolbar.ql-snow button:hover .ql-stroke,
-  .dark .ql-toolbar.ql-snow .ql-active  .ql-stroke { stroke:var(--color-primary,#10b981)!important; }
-  .dark .ql-toolbar.ql-snow button:hover .ql-fill,
-  .dark .ql-toolbar.ql-snow .ql-active  .ql-fill   { fill:var(--color-primary,#10b981)!important; }
-  .ql-container.ql-snow { border:1px solid #e5e7eb!important; border-radius:0 0 .5rem .5rem!important; font-family:inherit!important; }
-  .dark .ql-container.ql-snow { border-color:#334155!important; background:#0f172a!important; color:#e2e8f0!important; }
-  .ql-editor { min-height:500px!important; line-height:1.9!important; padding:1.5rem 1.75rem!important; }
-  .ql-editor.ql-blank::before { font-style:normal!important; color:#9ca3af!important; }
-  .dark .ql-editor.ql-blank::before { color:#64748b!important; }
-  .ql-editor h1 { font-size:2em; font-weight:800; margin:1.25rem 0 .5rem; }
-  .ql-editor h2 { font-size:1.6em; font-weight:700; margin:1.1rem 0 .4rem; }
-  .ql-editor h3 { font-size:1.3em; font-weight:600; margin:.9rem 0 .3rem; }
-  .ql-editor p  { margin-bottom:.75em; }
-  .ql-editor a  { color:var(--color-primary,#10b981); text-decoration:underline; }
-  .ql-editor img { max-width:100%; border-radius:.5rem; margin:.75rem auto; display:block; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.15); }
-  .ql-editor img:hover { opacity:.9; outline:2px solid var(--color-primary,#10b981); }
-  .ql-editor blockquote { border-left:4px solid var(--color-primary,#10b981)!important; padding:.75rem 1.25rem!important; margin:1rem 0!important; background:rgba(16,185,129,.06)!important; border-radius:0 .375rem .375rem 0!important; font-style:italic!important; }
-  .ql-editor pre.ql-syntax { background:#1e293b!important; color:#e2e8f0!important; padding:1rem 1.25rem!important; border-radius:.5rem!important; overflow-x:auto!important; font-size:.875em!important; }
-  .ql-editor ol, .ql-editor ul { padding-left:1.5em; margin-bottom:.75em; }
-  .ql-tooltip { z-index:9999!important; background:white; box-shadow:0 4px 12px rgba(0,0,0,.15); border-radius:6px; border:1px solid #e5e7eb; }
-  .dark .ql-tooltip { background:#1e293b; border-color:#334155; color:#e2e8f0; }
-  .dark .ql-tooltip input { background:#0f172a; color:#e2e8f0; border-color:#334155; }
-  .ql-picker-options { z-index:9999!important; }
+// ─── EPUB Scoped CSS (sama persis dengan NewspaperEditorPage) ─────────────────
+
+const EPUB_SCOPED_CSS = `
+  [data-epub] p {
+    margin-top: 0; margin-bottom: 0;
+    text-indent: 1.5em !important; text-align: justify;
+    -webkit-hyphens: auto !important; -moz-hyphens: auto !important;
+    hyphens: auto !important; word-wrap: break-word !important;
+    overflow-wrap: break-word !important; line-height: inherit !important;
+  }
+  [data-epub] blockquote, [data-epub] li, [data-epub] td, [data-epub] th {
+    -webkit-hyphens: auto !important; hyphens: auto !important;
+    word-wrap: break-word !important; overflow-wrap: break-word !important;
+  }
+  [data-epub] p:first-child { text-indent: 0 !important; margin-top: 0 !important; }
+  [data-epub] h1 + p, [data-epub] h2 + p, [data-epub] h3 + p,
+  [data-epub] h4 + p, [data-epub] h5 + p, [data-epub] h6 + p,
+  [data-epub] .first-paragraph { text-indent: 0 !important; margin-top: 2em !important; }
+  [data-epub] h1, [data-epub] h2, [data-epub] h3,
+  [data-epub] h4, [data-epub] h5, [data-epub] h6 {
+    font-family: inherit !important; text-align: center !important;
+    margin: 2.5em 0 0.25em 0 !important; hyphens: none !important;
+  }
+  [data-epub] h1 { font-size: 1.5em !important; font-weight: 700 !important; }
+  [data-epub] h2 { font-size: 1.3em !important; }
+  [data-epub] h3 { font-size: 1.2em !important; }
+  [data-epub] p.separator, [data-epub] p.ornament, [data-epub] p.divider {
+    text-align: center !important; text-indent: 0 !important; margin: 2em 0 !important;
+  }
+  [data-epub] blockquote {
+    margin: 0.25em 0 !important; padding: 0 0.25em !important;
+    border-left: 3px solid #ccc !important; font-style: italic !important;
+  }
+  [data-epub] blockquote p     { text-indent: 0 !important; }
+  [data-epub] blockquote p + p { text-indent: 1.5em !important; }
+  [data-epub] .letter {
+    margin: 3em auto !important; padding: 2em !important;
+    border: 1px solid #ccc !important; border-radius: 8px !important;
+    max-width: 36em !important; line-height: 1.6 !important;
+  }
+  [data-epub] .letter p          { margin: 0; text-indent: 0 !important; }
+  [data-epub] .letter .body      { text-indent: 1.5em !important; }
+  [data-epub] .letter .date,
+  [data-epub] .letter .closing   { text-align: right !important; font-style: italic !important; }
+  [data-epub] .letter .signature { text-align: right !important; font-weight: 600 !important; }
+  [data-epub] .letter .salutation { font-weight: 500 !important; }
+  [data-epub] .poem {
+    margin: 2em 0 !important; text-align: left !important;
+    text-indent: 0 !important; line-height: 1.4 !important; hyphens: none !important;
+  }
+  [data-epub] .poem p, [data-epub] .poem div, [data-epub] .poem span {
+    text-align: left !important; text-indent: 0 !important; margin: 0 !important; hyphens: none !important;
+  }
+  [data-epub] .poem p:last-child { text-align: right !important; font-style: italic !important; margin-top: 2em !important; }
+  [data-epub] .indent            { margin-left: 2em !important; }
+  [data-epub] .epigraph          { font-style: italic !important; text-align: center !important; margin: 3em auto !important; hyphens: none !important; }
+  [data-epub] .epigraph p        { text-indent: 0 !important; text-align: center !important; }
+  [data-epub] .epigraph cite     { display: block !important; text-align: right !important; font-style: normal !important; }
+  [data-epub] .subtitle          { font-size: 1.1em !important; text-align: center !important; margin: 1.5em 0 !important; text-indent: 0 !important; }
+  [data-epub] .info-box          { padding: 0.5em 1em !important; margin: 1.5em 0 !important; background-color: #f8f8f8 !important; border: 1px solid #ddd !important; border-radius: 6px !important; }
+  [data-epub] .info-box p        { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] .note              { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; position: relative !important; font-size: 0.9em !important; border-top: 1px solid #999 !important; }
+  [data-epub] .note p            { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] .scene-break       { text-align: center !important; margin: 2em 0 !important; letter-spacing: 0.3em !important; }
+  [data-epub] .scene-break::before { content: "⁂" !important; }
+  [data-epub] ul.dash-list       { list-style: none !important; padding-left: 1.5em !important; }
+  [data-epub] ul.dash-list li::before { content: "– " !important; }
+  [data-epub] .smallcaps         { font-variant: small-caps !important; }
+  [data-epub] .uppercase         { text-transform: uppercase !important; }
+  [data-epub] img                { max-width: 100% !important; height: auto !important; display: block !important; margin: 0 auto !important; }
+  [data-epub] .image-with-caption { margin: 2em auto !important; text-align: center !important; }
+  [data-epub] .image-caption     { text-align: center !important; font-size: 0.9em !important; margin-top: 0.5em !important; }
+  [data-epub] .image-small       { max-width: 120px !important; margin: 1em auto !important; }
+  [data-epub] .image-medium      { max-width: 200px !important; margin: 1em auto !important; }
+  [data-epub] .image-left        { float: left !important; margin: 0 0.5em 0.25em 0 !important; max-width: 45% !important; }
+  [data-epub] .image-right       { float: right !important; margin: 0 0 0.25em 0.5em !important; max-width: 45% !important; }
 `
 
-// ─── Quill Loader (singleton) ─────────────────────────────────────────────────
+// ─── Visual Viewer Settings ───────────────────────────────────────────────────
 
-let quillLoadPromise = null
-const loadQuill = () => {
-  if (quillLoadPromise) return quillLoadPromise
-  quillLoadPromise = new Promise((resolve) => {
-    if (window.Quill) { resolve(window.Quill); return }
-    if (!document.getElementById('quill-css')) {
-      const link = document.createElement('link')
-      link.id = 'quill-css'; link.rel = 'stylesheet'
-      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css'
-      document.head.appendChild(link)
-    }
-    const script = document.createElement('script')
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js'
-    script.onload = () => resolve(window.Quill)
-    script.onerror = () => { quillLoadPromise = null; resolve(null) }
-    document.head.appendChild(script)
-  })
-  return quillLoadPromise
+const FONT_SIZES = [
+  { label: 'XS',  value: '0.82rem' },
+  { label: 'S',   value: '0.92rem' },
+  { label: 'M',   value: '1rem'    },
+  { label: 'L',   value: '1.1rem'  },
+  { label: 'XL',  value: '1.2rem'  },
+  { label: 'XXL', value: '1.35rem' },
+]
+
+const FONT_FAMILIES = [
+  { key: 'garamond', label: 'Garamond', stack: '"Minion Pro","Adobe Garamond Pro","Garamond","Times New Roman","Liberation Serif",serif' },
+  { key: 'georgia',  label: 'Georgia',  stack: 'Georgia,"Times New Roman",serif' },
+  { key: 'times',    label: 'Times',    stack: '"Times New Roman",Times,serif' },
+  { key: 'palatino', label: 'Palatino', stack: '"Palatino Linotype","Book Antiqua",Palatino,serif' },
+  { key: 'system',   label: 'Sans',     stack: 'ui-sans-serif,system-ui,-apple-system,sans-serif' },
+]
+
+const READ_MODES = [
+  { key: 'light', label: 'Terang', bg: '#ffffff', color: '#111111', cardBg: '#f9fafb', border: '#e5e7eb' },
+  { key: 'sepia', label: 'Sepia',  bg: '#f5f0e8', color: '#3b2d1f', cardBg: '#ede8de', border: '#d6c9b0' },
+  { key: 'dark',  label: 'Gelap',  bg: '#1a1a2e', color: '#ffffff', cardBg: '#16213e', border: '#2d2d4e' },
+]
+
+// ─── EPUB Reference Data ──────────────────────────────────────────────────────
+
+const EPUB_REFERENCE = [
+  {
+    category: '📝 Paragraf & Teks',
+    items: [
+      {
+        label: 'Paragraf biasa',
+        desc:  'Paragraf 1 tanpa indent. Paragraf 2+ indent 1.5em otomatis.',
+        html:  '<p>Paragraf pertama — tanpa indentasi otomatis.</p>\n<p>Paragraf kedua — indentasi 1.5em otomatis.</p>\n<p>Paragraf ketiga — sama.</p>',
+      },
+      {
+        label: 'Paragraf rata kanan',
+        desc:  'inline style text-align: right tidak dioverride',
+        html:  '<p style="text-align: right; margin-top: 2em;">Hormat kami,<br/>\nRedaksi</p>',
+      },
+      {
+        label: 'Paragraf rata tengah',
+        desc:  'inline style text-align: center',
+        html:  '<p style="text-align: center;">Teks rata tengah</p>',
+      },
+      {
+        label: '.first-paragraph',
+        desc:  'Paksa tanpa indent di mana saja',
+        html:  '<p class="first-paragraph">Paragraf tanpa indentasi meski bukan paragraf pertama.</p>',
+      },
+      {
+        label: 'Separator (p.separator)',
+        desc:  'Pemisah bagian',
+        html:  '<p class="separator">* * *</p>',
+      },
+      {
+        label: 'Scene break (⁂)',
+        desc:  'Simbol ⁂ otomatis',
+        html:  '<div class="scene-break"></div>',
+      },
+      {
+        label: 'Small caps',
+        desc:  'Huruf kapital kecil',
+        html:  '<p>Diterbitkan oleh <span class="smallcaps">Penerbit Nusantara</span>.</p>',
+      },
+    ],
+  },
+  {
+    category: '💬 Kutipan & Epigraf',
+    items: [
+      {
+        label: 'Blockquote',
+        desc:  'Kutipan panjang dengan garis kiri',
+        html:  '<blockquote>\n  <p>Teks yang dikutip dari sumber lain.</p>\n  <p>Paragraf kedua dalam kutipan.</p>\n</blockquote>',
+      },
+      {
+        label: 'Epigraf',
+        desc:  'Kutipan pendek di awal artikel',
+        html:  '<div class="epigraph">\n  <p>Satu kata mengandung seribu makna.</p>\n  <cite>— Pujangga Besar, 1900</cite>\n</div>',
+      },
+    ],
+  },
+  {
+    category: '✉️ Format Surat (.letter)',
+    items: [
+      {
+        label: 'Surat lengkap',
+        desc:  'Kotak surat dengan tanggal, salam, isi, penutup',
+        html:  '<div class="letter">\n  <p class="date">Jakarta, 1 Januari 2025</p>\n  <p class="salutation">Kepada Yth. Pembaca,</p>\n  <p class="body">Isi surat pertama tanpa indentasi.</p>\n  <p class="body">Paragraf isi berikutnya dengan indentasi.</p>\n  <p class="closing">Dengan segala hormat,</p>\n  <p class="signature">Redaksi</p>\n</div>',
+      },
+    ],
+  },
+  {
+    category: '🎭 Puisi (.poem)',
+    items: [
+      {
+        label: 'Puisi lengkap',
+        desc:  'Judul, penulis, baris-baris',
+        html:  '<div class="poem">\n  <h3>Judul Sajak</h3>\n  <p class="author">Nama Penyair</p>\n  <div>\n    <span>Baris pertama sajak ini</span>\n    <span>Baris kedua sajak ini</span>\n  </div>\n  <p>— Sumber, Tahun</p>\n</div>',
+      },
+    ],
+  },
+  {
+    category: '📦 Kotak & Catatan',
+    items: [
+      {
+        label: 'Info-box',
+        desc:  'Kotak abu-abu untuk catatan editorial',
+        html:  '<div class="info-box">\n  <p><strong>Catatan:</strong> Teks catatan penting di sini.</p>\n  <p>Baris kedua catatan.</p>\n</div>',
+      },
+      {
+        label: 'Note / Catatan kaki',
+        desc:  'Catatan kaki dengan garis pemisah otomatis',
+        html:  '<div class="note">\n  <p><strong>¹</strong> Keterangan catatan pertama.</p>\n  <p><strong>²</strong> Keterangan catatan kedua.</p>\n</div>',
+      },
+    ],
+  },
+  {
+    category: '🖼 Gambar',
+    items: [
+      {
+        label: 'Gambar dengan caption',
+        desc:  'Gambar + keterangan di bawah',
+        html:  '<div class="image-with-caption">\n  <img src="URL_GAMBAR" alt="Deskripsi" />\n  <p class="image-caption">Keterangan gambar.</p>\n</div>',
+      },
+      {
+        label: 'Gambar kecil (120px)',
+        desc:  'Ornamen atau logo kecil',
+        html:  '<img src="URL_GAMBAR" alt="" class="image-small" />',
+      },
+      {
+        label: 'Gambar melayang kiri',
+        desc:  'Teks mengalir di kanannya',
+        html:  '<img src="URL_GAMBAR" alt="" class="image-left" />\n<p>Teks di sebelah kanan gambar.</p>',
+      },
+    ],
+  },
+  {
+    category: '📋 Daftar',
+    items: [
+      {
+        label: 'Daftar angka (1, 2, 3)',
+        desc:  'Ordered list biasa',
+        html:  '<ol>\n  <li>Butir pertama</li>\n  <li>Butir kedua</li>\n</ol>',
+      },
+      {
+        label: 'Daftar strip (—)',
+        desc:  'Unordered list dengan dash',
+        html:  '<ul class="dash-list">\n  <li>Butir pertama</li>\n  <li>Butir kedua</li>\n</ul>',
+      },
+    ],
+  },
+  {
+    category: '📐 Tabel',
+    items: [
+      {
+        label: 'Tabel sederhana',
+        desc:  'Tabel dengan border dan header',
+        html:  '<table>\n  <tr><th>Kolom A</th><th>Kolom B</th></tr>\n  <tr><td>Data 1</td><td>Data 2</td></tr>\n</table>',
+      },
+    ],
+  },
+]
+
+// ─── CopyButton ───────────────────────────────────────────────────────────────
+
+const CopyButton = ({ text }) => {
+  const [copied, setCopied] = useState(false)
+  const handle = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <button onClick={handle}
+      className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${
+        copied
+          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+      }`}>
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? 'Disalin!' : 'Salin'}
+    </button>
+  )
 }
 
-// ─── Rich Text Editor ─────────────────────────────────────────────────────────
+// ─── Reference Panel ──────────────────────────────────────────────────────────
 
-const RichEditor = ({ value, onChange, onImageInsert }) => {
-  const containerRef = useRef(null)
-  const quillRef     = useRef(null)
-  const imgInputRef  = useRef(null)
-  const suppressRef  = useRef(false)
-  const lastValue    = useRef('')
+const ReferencePanel = ({ onInsert }) => {
+  const [openCat, setOpenCat] = useState(null)
+  return (
+    <div className="p-4 space-y-2 max-h-[600px] overflow-y-auto">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 px-1">
+        Klik <strong>Sisip</strong> untuk langsung menambahkan ke editor HTML.
+      </p>
+      {EPUB_REFERENCE.map((cat) => (
+        <div key={cat.category} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setOpenCat(openCat === cat.category ? null : cat.category)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <span>{cat.category}</span>
+            <span className="text-xs font-normal text-gray-400">{cat.items.length} item</span>
+          </button>
+          {openCat === cat.category && (
+            <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              {cat.items.map((item) => (
+                <div key={item.label} className="px-4 py-3 bg-white dark:bg-gray-800">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{item.label}</span>
+                      <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <CopyButton text={item.html} />
+                      <button onClick={() => onInsert(item.html)}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition">
+                        <Code className="w-3 h-3" />Sisip
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="mt-2 px-3 py-2 bg-gray-950 text-green-400 rounded text-xs font-mono overflow-x-auto leading-relaxed whitespace-pre-wrap">
+                    {item.html}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Visual View ──────────────────────────────────────────────────────────────
+
+const VisualView = ({ html }) => {
+  const ref    = useRef(null)
+  const [fontIdx, setFontIdx] = useState(2)
+  const [fontKey, setFontKey] = useState('garamond')
+  const [modeKey, setModeKey] = useState('light')
+
+  const mode       = READ_MODES.find(m => m.key === modeKey) || READ_MODES[0]
+  const fontSize   = FONT_SIZES[fontIdx].value
+  const fontFamily = (FONT_FAMILIES.find(f => f.key === fontKey) || FONT_FAMILIES[0]).stack
 
   useEffect(() => {
-    let alive = true
-    loadQuill().then((Quill) => {
-      if (!alive || !Quill || !containerRef.current || quillRef.current) return
-      quillRef.current = new Quill(containerRef.current, {
-        theme: 'snow',
-        placeholder: 'Mulai menulis artikel Anda di sini...',
-        modules: {
-          toolbar: {
-            container: [
-              [{ header: [1,2,3,4,5,6,false] }],
-              [{ font: [] }],
-              [{ size: ['small', false, 'large', 'huge'] }],
-              ['bold','italic','underline','strike'],
-              [{ color: [] },{ background: [] }],
-              [{ script: 'sub' },{ script: 'super' }],
-              [{ align: [] }],
-              [{ list: 'ordered' },{ list: 'bullet' }],
-              [{ indent: '-1' },{ indent: '+1' }],
-              ['blockquote','code-block'],
-              ['link','image','video'],
-              ['clean'],
-            ],
-            handlers: { image: () => imgInputRef.current?.click() },
-          },
-          history: { delay: 1000, maxStack: 100, userOnly: true },
-        },
-      })
+    if (ref.current) ref.current.innerHTML = html || ''
+  }, [html])
 
-      if (value) {
-        suppressRef.current = true
-        quillRef.current.root.innerHTML = value
-        suppressRef.current = false
-        lastValue.current = value
-      }
+  if (!html) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3" style={{ background: mode.bg }}>
+        <Eye className="w-10 h-10 opacity-20" style={{ color: mode.color }} />
+        <p className="text-sm opacity-40" style={{ color: mode.color }}>Tulis HTML lalu lihat di sini</p>
+      </div>
+    )
+  }
 
-      quillRef.current.on('text-change', () => {
-        if (suppressRef.current) return
-        const html = quillRef.current.root.innerHTML
-        onChange(html === '<p><br></p>' ? '' : html)
-      })
+  return (
+    <div style={{ background: mode.bg }}>
+      <style>{EPUB_SCOPED_CSS}</style>
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 px-4 py-2 flex-wrap"
+        style={{ borderBottom: `1px solid ${mode.border}`, background: mode.cardBg }}>
+        <div className="flex items-center gap-1">
+          <Type className="w-3 h-3 opacity-40" style={{ color: mode.color }} />
+          <button onClick={() => setFontIdx(i => Math.max(0, i - 1))} disabled={fontIdx === 0}
+            className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/10 disabled:opacity-25"
+            style={{ color: mode.color }}><Minus className="w-3 h-3" /></button>
+          <span className="text-xs font-mono w-7 text-center" style={{ color: mode.color, opacity: 0.7 }}>
+            {FONT_SIZES[fontIdx].label}
+          </span>
+          <button onClick={() => setFontIdx(i => Math.min(FONT_SIZES.length - 1, i + 1))} disabled={fontIdx === FONT_SIZES.length - 1}
+            className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/10 disabled:opacity-25"
+            style={{ color: mode.color }}><Plus className="w-3 h-3" /></button>
+        </div>
+        <div className="w-px h-4" style={{ background: mode.border }} />
+        <div className="flex items-center gap-1 flex-wrap">
+          {FONT_FAMILIES.map(f => (
+            <button key={f.key} onClick={() => setFontKey(f.key)}
+              className="px-2 py-0.5 rounded text-xs border transition"
+              style={{
+                fontFamily:  f.stack,
+                borderColor: fontKey === f.key ? '#10b981' : mode.border,
+                background:  fontKey === f.key ? '#10b981' : 'transparent',
+                color:       fontKey === f.key ? '#ffffff' : mode.color,
+              }}>{f.label}</button>
+          ))}
+        </div>
+        <div className="w-px h-4" style={{ background: mode.border }} />
+        <div className="flex items-center gap-1.5">
+          {READ_MODES.map(m => (
+            <button key={m.key} onClick={() => setModeKey(m.key)} title={m.label}
+              className="w-5 h-5 rounded-full border-2 transition-all"
+              style={{
+                background:  m.bg,
+                borderColor: modeKey === m.key ? '#10b981' : m.border,
+                transform:   modeKey === m.key ? 'scale(1.25)' : 'scale(1)',
+              }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div ref={ref} data-epub lang="id"
+        style={{
+          fontFamily, fontSize, lineHeight: 1.7,
+          color: mode.color, backgroundColor: mode.bg,
+          margin: '0 auto', padding: '1.5em 1.25em', maxWidth: '42em',
+          transition: 'background-color 0.2s, color 0.2s, font-size 0.15s',
+        }}
+      />
+    </div>
+  )
+}
+
+// ─── Content Editor ───────────────────────────────────────────────────────────
+
+const ContentEditor = ({ value, onChange, onImageUpload }) => {
+  const [tab, setTab]             = useState('html')
+  const textareaRef               = useRef(null)
+  const fileInputRef              = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
+  const insertAtCursor = useCallback((before, after = '') => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const start  = ta.selectionStart
+    const end    = ta.selectionEnd
+    const sel    = value.substring(start, end)
+    const newVal = value.substring(0, start) + before + sel + after + value.substring(end)
+    onChange(newVal)
+    requestAnimationFrame(() => {
+      ta.focus()
+      ta.setSelectionRange(start + before.length, start + before.length + sel.length)
     })
-    return () => { alive = false }
-  }, []) // eslint-disable-line
+  }, [value, onChange])
 
-  // Sync value hanya saat Quill kosong tapi value ada (setelah load edit)
-  useEffect(() => {
-    if (!quillRef.current || value === lastValue.current) return
-    const isEmpty = !quillRef.current.root.innerHTML || quillRef.current.root.innerHTML === '<p><br></p>'
-    if (isEmpty && value) {
-      suppressRef.current = true
-      quillRef.current.root.innerHTML = value
-      suppressRef.current = false
-      lastValue.current = value
-    }
-  }, [value])
+  const handleInsertSnippet = useCallback((snippet) => {
+    const newVal = value ? value + '\n' + snippet : snippet
+    onChange(newVal)
+    setTab('html')
+    toast.success('Snippet disisipkan!')
+  }, [value, onChange])
+
+  const handleWrapParagraphs = useCallback(() => {
+    const wrapped = value
+      .split(/\n\n+/)
+      .map(block => block.trim())
+      .filter(Boolean)
+      .map(block => block.startsWith('<') ? block : `<p>${block}</p>`)
+      .join('\n')
+    onChange(wrapped)
+    toast.success('Teks di-wrap ke <p>')
+  }, [value, onChange])
 
   const handleImageFile = useCallback(async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!file.type.startsWith('image/')) { toast.error('File harus berupa gambar'); return }
-    if (file.size > 10 * 1024 * 1024) { toast.error('Ukuran gambar maksimal 10MB'); return }
-
+    if (!file.type.startsWith('image/')) { toast.error('File harus gambar'); return }
+    if (file.size > 10 * 1024 * 1024)   { toast.error('Maks 10MB'); return }
+    setUploading(true)
     const tid = toast.loading('Mengupload gambar...')
     try {
-      const url = await onImageInsert(file)
-      if (url && quillRef.current) {
-        const range = quillRef.current.getSelection(true)
-        const idx   = range ? range.index : quillRef.current.getLength()
-        quillRef.current.insertEmbed(idx, 'image', url)
-        quillRef.current.setSelection(idx + 1, 0)
+      const url = await onImageUpload(file)
+      if (url) {
+        insertAtCursor(`<img src="${url}" alt="" />`)
         toast.success('Gambar berhasil disisipkan!', { id: tid })
       } else {
-        toast.error('Gagal mendapatkan URL gambar', { id: tid })
+        toast.error('Gagal upload', { id: tid })
       }
     } catch (err) {
-      toast.error('Gagal mengupload: ' + (err?.message || ''), { id: tid })
-    }
-  }, [onImageInsert])
+      toast.error('Gagal: ' + (err?.message || ''), { id: tid })
+    } finally { setUploading(false) }
+  }, [onImageUpload, insertAtCursor])
+
+  const TAG_SHORTCUTS = [
+    { label: '<p>',          action: () => insertAtCursor('<p>', '</p>') },
+    { label: '<h2>',         action: () => insertAtCursor('<h2>', '</h2>') },
+    { label: '<h3>',         action: () => insertAtCursor('<h3>', '</h3>') },
+    { label: '<strong>',     action: () => insertAtCursor('<strong>', '</strong>') },
+    { label: '<em>',         action: () => insertAtCursor('<em>', '</em>') },
+    { label: '<br/>',        action: () => insertAtCursor('<br/>') },
+    { label: '<a>',          action: () => insertAtCursor('<a href="">', '</a>') },
+    { label: '<blockquote>', action: () => insertAtCursor('<blockquote>\n', '\n</blockquote>') },
+    { label: '.info-box',    action: () => insertAtCursor('<div class="info-box">\n', '\n</div>') },
+    { label: '.note',        action: () => insertAtCursor('<div class="note">\n', '\n</div>') },
+    { label: '.separator',   action: () => insertAtCursor('<p class="separator">* * *</p>') },
+    { label: '.poem',        action: () => insertAtCursor('<div class="poem">\n', '\n</div>') },
+    { label: '🖼 img',       action: () => fileInputRef.current?.click(), uploading },
+    { label: '⇒ <p>',        action: handleWrapParagraphs, title: 'Wrap teks polos menjadi <p>' },
+  ]
 
   return (
-    <>
-      <style>{QUILL_CSS}</style>
-      <div ref={containerRef} />
-      <input ref={imgInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageFile} />
-    </>
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      {/* Tabs */}
+      <div className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+        {[
+          { key: 'html',   icon: <Code className="w-4 h-4" />,     label: 'HTML'      },
+          { key: 'visual', icon: <Eye className="w-4 h-4" />,      label: 'Visual'    },
+          { key: 'ref',    icon: <BookOpen className="w-4 h-4" />, label: 'Referensi' },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition ${
+              tab === t.key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}>
+            {t.icon}{t.label}
+          </button>
+        ))}
+        <div className="ml-auto px-4 flex items-center gap-2">
+          {tab === 'html' && (
+            <span className="text-xs text-gray-400 font-mono">{(value?.length || 0).toLocaleString()} chr</span>
+          )}
+          <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
+            {tab === 'html' ? 'Editor HTML' : tab === 'visual' ? 'Preview Publik' : 'Panduan Class'}
+          </span>
+        </div>
+      </div>
+
+      {/* HTML Tab */}
+      {tab === 'html' && (
+        <div>
+          {/* Shortcut bar */}
+          <div className="flex flex-wrap gap-1 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+            {TAG_SHORTCUTS.map(({ label, action, title: hint, uploading: upl }) => (
+              <button key={label} type="button" onClick={action} title={hint || label} disabled={!!upl}
+                className="px-2 py-1 rounded text-xs font-mono bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition disabled:opacity-50">
+                {upl ? <Loader2 className="w-3 h-3 animate-spin inline" /> : label}
+              </button>
+            ))}
+          </div>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            spellCheck={false}
+            placeholder={'<p>Paragraf pertama — tanpa indent (p:first-child).</p>\n<p>Paragraf kedua — indent 1.5em otomatis.</p>\n<p style="text-align: right; margin-top: 2em;">Rata kanan — inline style tidak dioverride.</p>'}
+            className="w-full min-h-[520px] px-4 py-3 bg-gray-950 text-green-300 font-mono text-sm leading-relaxed focus:outline-none resize-y placeholder-gray-700"
+            style={{ fontFamily: '"Fira Code","Cascadia Code","Consolas","Courier New",monospace' }}
+          />
+          <p className="text-xs text-gray-400 px-4 py-2 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
+            💡 Tab <strong>Visual</strong> untuk cek tampilan · Tab <strong>Referensi</strong> untuk semua class · 🖼 upload gambar via tombol img di atas
+          </p>
+        </div>
+      )}
+
+      {tab === 'visual' && <VisualView html={value} />}
+      {tab === 'ref'    && <ReferencePanel onInsert={handleInsertSnippet} />}
+
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageFile} />
+    </div>
   )
 }
 
@@ -186,7 +567,6 @@ const BlogEditorPage = () => {
 
   const [loading,     setLoading]     = useState(isEditing)
   const [saving,      setSaving]      = useState(false)
-  const [preview,     setPreview]     = useState(false)
   const [title,       setTitle]       = useState('')
   const [content,     setContent]     = useState('')
   const [excerpt,     setExcerpt]     = useState('')
@@ -200,6 +580,13 @@ const BlogEditorPage = () => {
   const [featPreview, setFeatPreview] = useState(null)
 
   const featRef = useRef()
+
+  // Set lang="id" agar browser memuat kamus hyphenation Indonesia
+  useEffect(() => {
+    const prevLang = document.documentElement.lang
+    document.documentElement.lang = 'id'
+    return () => { document.documentElement.lang = prevLang }
+  }, [])
 
   const wordCount = content
     ? content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length
@@ -263,21 +650,17 @@ const BlogEditorPage = () => {
     setFeatPreview(URL.createObjectURL(file))
   }
 
-  const handleImageInsert = useCallback(async (file) => {
-    try {
-      const form = new FormData()
-      form.append('image', file)
-      if (id) form.append('postId', id)
-      const res = await api.post('/blog/upload-image', form, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-      const url = res.data?.data?.url || res.data?.url
-      if (!url) throw new Error('URL tidak ada di response')
-      return url
-    } catch (err) {
-      console.error('Gagal upload gambar ke Cloudinary:', err?.response?.data || err?.message)
-      throw err
-    }
+  // Dipakai oleh ContentEditor untuk upload gambar inline
+  const handleImageUpload = useCallback(async (file) => {
+    const form = new FormData()
+    form.append('image', file)
+    if (id) form.append('postId', id)
+    const res = await api.post('/blog/upload-image', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    const url = res.data?.data?.url || res.data?.url
+    if (!url) throw new Error('URL tidak ada di response')
+    return url
   }, [id])
 
   const addTag = () => {
@@ -286,10 +669,6 @@ const BlogEditorPage = () => {
     setTagInput('')
   }
 
-  // ─── ✅ FIX: Navigasi setelah save berdasarkan status ──────────────────────
-  // DRAFT / SCHEDULED → /dasbor/blog (bukan /blog/{slug} yang butuh status PUBLISHED)
-  // PUBLISHED         → /blog/{slug} (artikel bisa diakses publik)
-  // Edit mode         → tetap di halaman edit
   const handleSave = async () => {
     if (!title.trim()) { toast.error('Judul tidak boleh kosong'); return }
     if (!content || !content.replace(/<[^>]*>/g, '').trim()) { toast.error('Konten tidak boleh kosong'); return }
@@ -319,21 +698,15 @@ const BlogEditorPage = () => {
       const opts = { headers: { 'Content-Type': 'multipart/form-data' } }
 
       if (isEditing) {
-        // Edit mode — simpan lalu tetap di halaman ini
         await api.put(`/blog/${id}`, form, opts)
         toast.success('Artikel berhasil diperbarui!', { id: tid })
-
       } else {
-        // Create mode — navigasi tergantung status
         const res     = await api.post('/blog', form, opts)
         const newSlug = res.data?.data?.slug
-
         if (status === 'PUBLISHED' && newSlug) {
-          // Artikel langsung publik → bawa user ke halaman artikel
           toast.success('Artikel berhasil diterbitkan!', { id: tid })
           navigate(`/blog/${newSlug}`)
         } else {
-          // Draft atau Scheduled → kembali ke daftar artikel dashboard
           toast.success(
             status === 'SCHEDULED' ? 'Artikel berhasil dijadwalkan!' : 'Draft berhasil disimpan!',
             { id: tid }
@@ -375,21 +748,11 @@ const BlogEditorPage = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPreview(v => !v)}
-            className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-              preview ? 'bg-primary/10 border-primary text-primary'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}>
-            {preview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            {preview ? 'Editor' : 'Preview'}
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 shadow-sm">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? 'Menyimpan...' : status === 'PUBLISHED' ? 'Terbitkan' : 'Simpan'}
-          </button>
-        </div>
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 shadow-sm">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? 'Menyimpan...' : status === 'PUBLISHED' ? 'Terbitkan' : 'Simpan'}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -400,7 +763,7 @@ const BlogEditorPage = () => {
           {/* Title */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="Judul artikel yang menarik..."
+              placeholder="Judul artikel..."
               className="w-full text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-none outline-none placeholder-gray-300 dark:placeholder-gray-600 leading-tight" />
             {title && (
               <p className="text-xs text-gray-400 mt-2 font-mono flex items-center gap-1">
@@ -448,7 +811,7 @@ const BlogEditorPage = () => {
           {/* Excerpt */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
             <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-              Ringkasan <span className="text-gray-400 font-normal">— tampil di kartu & SEO (opsional)</span>
+              Ringkasan <span className="text-gray-400 font-normal">— tampil di kartu artikel</span>
             </label>
             <textarea value={excerpt} onChange={e => setExcerpt(e.target.value)}
               placeholder="Jika kosong, otomatis diambil dari awal konten..."
@@ -461,49 +824,17 @@ const BlogEditorPage = () => {
             </div>
           </div>
 
-          {/* Editor / Preview */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Konten Artikel</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="hidden sm:flex items-center gap-1 text-xs px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
-                  Rich Text Editor
-                </span>
-                <button onClick={() => setPreview(v => !v)}
-                  className={`sm:hidden flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                    preview ? 'bg-primary/10 text-primary' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}>
-                  {preview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  {preview ? 'Editor' : 'Preview'}
-                </button>
-              </div>
-            </div>
-
-            {preview ? (
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider mb-5">
-                  <Eye className="w-3.5 h-3.5" />Preview
-                </div>
-                {content
-                  ? <div className="prose prose-gray dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
-                  : <div className="text-center py-16 text-gray-300 dark:text-gray-600 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-40" />
-                      <p>Belum ada konten</p>
-                    </div>
-                }
-              </div>
-            ) : (
-              <div className="p-3">
-                <RichEditor value={content} onChange={setContent} onImageInsert={handleImageInsert} />
-                <p className="text-xs text-gray-400 mt-2 px-1">
-                  💡 Klik 🖼 di toolbar untuk sisipkan gambar · 🎥 video · 🔗 link
-                </p>
-              </div>
-            )}
+          {/* Content Editor — sama dengan newspaper */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              Konten Artikel <span className="text-red-500">*</span>
+            </label>
+            <ContentEditor
+              value={content}
+              onChange={setContent}
+              onImageUpload={handleImageUpload}
+            />
           </div>
         </div>
 
@@ -602,17 +933,19 @@ const BlogEditorPage = () => {
           </div>
 
           {/* Tips */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 border border-primary/20 rounded-xl p-5">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
             <div className="flex gap-2">
-              <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-              <div className="text-xs text-gray-600 dark:text-gray-300">
-                <p className="font-semibold text-gray-800 dark:text-white mb-2">Tips Editor</p>
-                <div className="space-y-1 text-gray-500 dark:text-gray-400">
-                  <p>🖼 <strong>Gambar</strong> — klik ikon gambar di toolbar</p>
-                  <p>🎥 <strong>Video</strong> — paste URL YouTube/Vimeo</p>
-                  <p>🔗 <strong>Link</strong> — pilih teks lalu klik ikon link</p>
-                  <p>⌨️ <strong>Ctrl+Z</strong> undo · <strong>Ctrl+Y</strong> redo</p>
-                </div>
+              <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                <p className="font-semibold text-blue-800 dark:text-blue-200 mb-1.5">Alur Kerja Editor:</p>
+                <p>1️⃣ <strong>HTML</strong> — tulis atau paste konten</p>
+                <p>2️⃣ <strong>Visual</strong> — cek tampilan akhir artikel</p>
+                <p>3️⃣ <strong>Referensi</strong> — semua class epub tersedia</p>
+                <p className="mt-1.5 border-t border-blue-200 dark:border-blue-700 pt-1.5">
+                  📌 <code>p:first-child</code> = tanpa indent<br/>
+                  📌 Inline style tidak dioverride<br/>
+                  🖼 Klik <strong>img</strong> di toolbar untuk upload
+                </p>
               </div>
             </div>
           </div>

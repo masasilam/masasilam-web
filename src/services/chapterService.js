@@ -126,6 +126,23 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
+  // Setelah getReadingPattern, sebelum searchInBook:
+
+  /**
+   * Kirim data sesi baca EPUB ke backend saat user meninggalkan halaman.
+   * Dipanggil dari EpubReaderPage cleanup (unmount / navigasi internal React).
+   * Untuk tab ditutup, EpubReaderPage menggunakan fetch+keepalive langsung.
+   *
+   * POST /api/books/{slug}/chapters/reading/epub-session
+   */
+  recordEpubSession: async (slug, sessionData) => {
+    const response = await api.post(
+      `/books/${slug}/chapters/reading/epub-session`,
+      sessionData
+    )
+    return response.data?.data || response.data
+  },
+
   // ============================================
   // SEARCH IN BOOK
   // ============================================

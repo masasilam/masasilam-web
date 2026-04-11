@@ -58,7 +58,7 @@ const AboutPage = () => {
   ]
 
   const values = [
-    { icon: Target, title: "User-Centric", description: "Keputusan produk berdasarkan kebutuhan user" },
+    { icon: Target, title: "User-Centric", description: "Keputusan berdasarkan kebutuhan user" },
     { icon: Award, title: "Quality Over Quantity", description: "Fokus pada kualitas fitur dan konten" },
     { icon: Lock, title: "Privacy & Security", description: "Data user adalah prioritas tertinggi" },
     { icon: Users, title: "Inclusivity", description: "Platform untuk semua orang tanpa diskriminasi" },

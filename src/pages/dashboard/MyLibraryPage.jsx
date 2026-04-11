@@ -1,261 +1,579 @@
 // src/pages/dashboard/MyLibraryPage.jsx
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { dashboardService } from '../../services/dashboardService'
 import LoadingSpinner from '../../components/Common/LoadingSpinner'
-import { Book, Filter, SortAsc, Star } from 'lucide-react'
+import { Filter, SortAsc, BookOpen } from 'lucide-react'
 
-const MyLibraryPage = () => {
-  const [books, setBooks] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [filter, setFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('last_read')
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+// ─── Load Google Fonts sekali saja ───────────────────────────────────────────
+const FONT_HREF =
+  'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap'
+
+// ─── Ekstrak warna dominan dari gambar via canvas ─────────────────────────────
+function extractDominantColor(imgEl) {
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width  = 10
+    canvas.height = 15
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(imgEl, 0, 0, 10, 15)
+    const data = ctx.getImageData(0, 0, 10, 15).data
+
+    let r = 0, g = 0, b = 0, count = 0
+    for (let i = 0; i < data.length; i += 4) {
+      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3
+      if (brightness > 20 && brightness < 235) {
+        r += data[i]; g += data[i + 1]; b += data[i + 2]; count++
+      }
+    }
+    if (count === 0) return null
+
+    r = Math.round(r / count)
+    g = Math.round(g / count)
+    b = Math.round(b / count)
+
+    const max = Math.max(r, g, b)
+    const factor = max > 0 ? Math.min(255 / max, 1.6) : 1
+    r = Math.min(255, Math.round(r * factor))
+    g = Math.min(255, Math.round(g * factor))
+    b = Math.min(255, Math.round(b * factor))
+
+    const hex = (v) => v.toString(16).padStart(2, '0')
+    const bg    = `#${hex(r)}${hex(g)}${hex(b)}`
+    const light = `#${hex(Math.min(255, r + 60))}${hex(Math.min(255, g + 60))}${hex(Math.min(255, b + 60))}`
+    const dark  = `#${hex(Math.round(r * 0.45))}${hex(Math.round(g * 0.45))}${hex(Math.round(b * 0.45))}`
+    const lum   = 0.299 * r + 0.587 * g + 0.114 * b
+    const text  = lum > 145 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.92)'
+
+    return { bg, light, dark, text }
+  } catch {
+    return null
+  }
+}
+
+// ─── Fallback warna ───────────────────────────────────────────────────────────
+const FALLBACK_COLORS = [
+  { bg:'#4a2c8a', light:'#7a5cba', dark:'#200c4a', text:'rgba(255,255,255,0.92)' },
+  { bg:'#3a6b2a', light:'#6a9b5a', dark:'#143b0a', text:'rgba(255,255,255,0.92)' },
+  { bg:'#8a4a1a', light:'#ba7a4a', dark:'#3a1a00', text:'rgba(255,255,255,0.92)' },
+  { bg:'#6b2a50', light:'#9b5a80', dark:'#2b0a22', text:'rgba(255,255,255,0.92)' },
+  { bg:'#2a5a8a', light:'#5a8aba', dark:'#0a2050', text:'rgba(255,255,255,0.92)' },
+  { bg:'#7a5010', light:'#aa8040', dark:'#302000', text:'rgba(255,255,255,0.92)' },
+  { bg:'#1a6b5a', light:'#4a9b8a', dark:'#003b2a', text:'rgba(255,255,255,0.92)' },
+  { bg:'#5a2a10', light:'#8a5a40', dark:'#200a00', text:'rgba(255,255,255,0.92)' },
+]
+
+const SPINE_HEIGHTS = [148, 132, 156, 122, 152, 136, 142, 126, 160, 134, 150, 124]
+const SPINE_WIDTHS  = [28,  32,  26,  34,  30,  28,  32,  26,  30,  34,  28,  32]
+
+// ─── Hook: load image offscreen → ekstrak warna dominan ──────────────────────
+function useBookColor(coverUrl, fallbackIndex) {
+  const [colors, setColors] = useState(null)
+  const imgRef = useRef(null)
 
   useEffect(() => {
-    document.title = 'Perpustakaan Saya - Dashboard MasasilaM'
-    const metaDescription = document.querySelector('meta[name="description"]')
-    if (metaDescription) {
-      metaDescription.setAttribute('content', 'Kelola dan lacak semua buku yang pernah Anda baca')
+    if (!coverUrl) {
+      setColors(FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length])
+      return
     }
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      const extracted = extractDominantColor(img)
+      setColors(extracted || FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length])
+    }
+    img.onerror = () => {
+      setColors(FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length])
+    }
+    img.src = coverUrl.includes('?') ? coverUrl : `${coverUrl}?x=spine`
+    imgRef.current = img
+
+    return () => {
+      if (imgRef.current) { imgRef.current.onload = null; imgRef.current.onerror = null }
+    }
+  }, [coverUrl, fallbackIndex])
+
+  return colors
+}
+
+// ─── Tooltip dirender via Portal agar tidak terpotong overflow parent ─────────
+const BookTooltip = ({ book, anchorRef, pct, badgeColor, statusLabel }) => {
+  const [pos, setPos] = useState({ top: 0, left: 0, visible: false })
+
+  useEffect(() => {
+    if (!anchorRef.current) return
+    const rect = anchorRef.current.getBoundingClientRect()
+    const TOOLTIP_WIDTH = 200
+    // Posisi: tepat di atas anchor, tengah secara horizontal
+    let left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2 + window.scrollX
+    let top  = rect.top + window.scrollY - 12 // akan dikurangi height tooltip lewat transform
+
+    // Jangan sampai keluar kiri/kanan viewport
+    left = Math.max(8, Math.min(left, window.innerWidth - TOOLTIP_WIDTH - 8))
+
+    setPos({ top, left, visible: true })
+  }, [anchorRef])
+
+  if (!pos.visible) return null
+
+  // Deteksi dark mode
+  const isDark = document.documentElement.classList.contains('dark')
+  const bgColor    = isDark ? '#111827' : '#ffffff'
+  const borderClr  = isDark ? '#374151' : '#e5e7eb'
+  const titleClr   = isDark ? '#f9fafb' : '#111827'
+  const subtitleClr= isDark ? '#9ca3af' : '#6b7280'
+  const barBg      = isDark ? '#374151' : '#e5e7eb'
+
+  return createPortal(
+    <div
+      style={{
+        position: 'absolute',
+        top: pos.top,
+        left: pos.left,
+        width: 200,
+        transform: 'translateY(-100%)',
+        zIndex: 99999,
+        pointerEvents: 'none',
+        background: bgColor,
+        border: `1px solid ${borderClr}`,
+        borderRadius: 8,
+        padding: '10px 12px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
+      }}
+    >
+      {/* Panah bawah */}
+      <div style={{
+        position: 'absolute',
+        top: '100%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        border: '7px solid transparent',
+        borderTopColor: borderClr,
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: 'calc(100% - 1px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        border: '6px solid transparent',
+        borderTopColor: bgColor,
+      }} />
+
+      {/* Cover buku — portrait 2:3 */}
+      {book?.coverImageUrl && (
+        <div style={{
+          width: '100%',
+          aspectRatio: '2/3',         // ← rasio portrait cover buku
+          marginBottom: 8,
+          borderRadius: 4,
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+        }}>
+          <img
+            src={book.coverImageUrl}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      )}
+
+      <p style={{
+        fontFamily: "'Playfair Display',serif",
+        fontSize: 12,
+        fontWeight: 700,
+        color: titleClr,
+        lineHeight: 1.4,
+        margin: '0 0 3px',
+        wordBreak: 'break-word',
+      }}>
+        {book?.bookTitle}
+      </p>
+      <p style={{ fontSize: 11, fontStyle: 'italic', color: subtitleClr, margin: '0 0 5px' }}>
+        {book?.authorName}
+      </p>
+      {book?.genre && (
+        <p style={{ fontSize: 10, color: '#e11d48', margin: '0 0 5px', letterSpacing: 0.5 }}>
+          {book.genre}
+        </p>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: badgeColor, flexShrink: 0 }} />
+        <span style={{ fontSize: 10, color: subtitleClr }}>{statusLabel}</span>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: subtitleClr, marginBottom: 3 }}>
+          <span>Bab {book?.currentChapter || 0}/{book?.totalChapters || 0}</span>
+          <span>{pct}%</span>
+        </div>
+        <div style={{ height: 3, background: barBg, borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#c8901a,#f0d040)', borderRadius: 2 }} />
+        </div>
+      </div>
+
+      {(book?.bookmarkCount > 0 || book?.highlightCount > 0 || book?.noteCount > 0) && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          {book.bookmarkCount  > 0 && <span style={{ fontSize: 10, color: subtitleClr }}>📑 {book.bookmarkCount}</span>}
+          {book.highlightCount > 0 && <span style={{ fontSize: 10, color: subtitleClr }}>✨ {book.highlightCount}</span>}
+          {book.noteCount      > 0 && <span style={{ fontSize: 10, color: subtitleClr }}>📝 {book.noteCount}</span>}
+        </div>
+      )}
+    </div>,
+    document.body
+  )
+}
+
+// ─── Komponen satu buku di rak ────────────────────────────────────────────────
+const BookSpine = ({ book, index }) => {
+  const colors   = useBookColor(book?.coverImageUrl, index)
+  const [hovered, setHovered] = useState(false)
+  const linkRef  = useRef(null)
+
+  const height = SPINE_HEIGHTS[index % SPINE_HEIGHTS.length]
+  const width  = SPINE_WIDTHS[index % SPINE_WIDTHS.length]
+  const pct    = Math.round(book?.progressPercentage || 0)
+
+  const bg        = colors?.bg    ?? '#3a2810'
+  const light     = colors?.light ?? '#5a4820'
+  const dark      = colors?.dark  ?? '#1a0c04'
+  const textColor = colors?.text  ?? 'rgba(255,255,255,0.92)'
+
+  const badgeColor =
+    book?.readingStatus === 'completed' ? '#4caf50' :
+    book?.readingStatus === 'reading'   ? '#4a9eff' : 'rgba(255,255,255,0.25)'
+
+  const statusLabel =
+    book?.readingStatus === 'completed' ? 'Selesai' :
+    book?.readingStatus === 'reading'   ? 'Sedang Dibaca' : 'Belum Dibaca'
+
+  return (
+    <>
+      <Link
+        ref={linkRef}
+        to={`/buku/${book?.bookSlug || '#'}`}
+        style={{ position: 'relative', flexShrink: 0, width, display: 'block', textDecoration: 'none' }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        aria-label={book?.bookTitle}
+      >
+        {/* ── Spine ── */}
+        <div style={{
+          height,
+          width,
+          borderRadius: '1px 3px 3px 1px',
+          background: colors
+            ? `linear-gradient(150deg, ${light} 0%, ${bg} 50%, ${dark} 100%)`
+            : '#2a1c0a',
+          boxShadow: '-2px 0 4px rgba(0,0,0,0.55), inset -2px 0 6px rgba(0,0,0,0.3), inset 1px 0 2px rgba(255,255,255,0.12)',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          transition: 'transform 0.2s ease, filter 0.2s ease, background 0.5s ease',
+          transform: hovered ? 'translateY(-14px) scale(1.05)' : 'none',
+          filter: hovered ? 'brightness(1.25)' : 'none',
+        }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: 5, height: '100%', background: 'linear-gradient(90deg,rgba(0,0,0,0.4),rgba(255,255,255,0.1),transparent)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: 0, right: 0, width: 3, height: '100%', background: 'linear-gradient(90deg,transparent,rgba(0,0,0,0.5))', pointerEvents: 'none' }} />
+
+          <p style={{
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+            transform: 'rotate(180deg)',
+            fontFamily: "'Crimson Text',Georgia,serif",
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            color: textColor,
+            textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+            padding: '6px 2px',
+            lineHeight: 1.1,
+            maxHeight: 115,
+            overflow: 'hidden',
+            margin: 0,
+          }}>
+            {book?.bookTitle}
+          </p>
+
+          <div style={{ position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)', width: 12, height: 3, borderRadius: 2, background: badgeColor }} />
+        </div>
+      </Link>
+
+      {/* Tooltip dirender ke document.body via portal — bebas dari overflow clipping */}
+      {hovered && (
+        <BookTooltip
+          book={book}
+          anchorRef={linkRef}
+          pct={pct}
+          badgeColor={badgeColor}
+          statusLabel={statusLabel}
+        />
+      )}
+    </>
+  )
+}
+
+// ─── Satu rak kayu (warna kayu tetap, tidak berubah per mode) ────────────────
+const Shelf = ({ books, startIndex }) => (
+  <div>
+    <div style={{
+      padding:'18px 16px 0',
+      background:`
+        repeating-linear-gradient(90deg,transparent 0,transparent 18px,rgba(0,0,0,0.035) 18px,rgba(0,0,0,0.035) 20px),
+        linear-gradient(180deg,#2e1f0a 0%,#3d2a10 30%,#4a3418 60%,#3a2810 100%)
+      `,
+      borderLeft:'14px solid',
+      borderRight:'14px solid',
+      borderImage:'linear-gradient(180deg,#5c3d18,#3a2508,#6b4c1e) 1',
+    }}>
+      <div style={{ display:'flex', alignItems:'flex-end', gap:3, minHeight:170, paddingBottom:6 }}>
+        {books.map((book, i) => (
+          <BookSpine key={book?.bookId || i} book={book} index={startIndex + i} />
+        ))}
+      </div>
+      {/* Papan rak kayu */}
+      <div style={{
+        height:22, margin:'0 -16px',
+        background:'linear-gradient(180deg,#9a6e30 0%,#7a5020 25%,#a07038 50%,#8B5E2A 75%,#6b4418 100%)',
+        borderTop:'2px solid #d4a030',
+        boxShadow:'0 5px 14px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,210,80,0.25)',
+        position:'relative',
+      }}>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(180deg,rgba(255,190,70,0.35),transparent)' }} />
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:9, background:'linear-gradient(180deg,transparent,rgba(0,0,0,0.45))' }} />
+      </div>
+    </div>
+    <div style={{ height:12, background:'linear-gradient(180deg,rgba(0,0,0,0.55),transparent)' }} />
+  </div>
+)
+
+// ─── Halaman utama ────────────────────────────────────────────────────────────
+const MyLibraryPage = () => {
+  const [books, setBooks]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
+  const [filter, setFilter]         = useState('all')
+  const [sortBy, setSortBy]         = useState('last_read')
+  const [page, setPage]             = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalData, setTotalData]   = useState(0)
+  const BOOKS_PER_PAGE  = 16
+  const BOOKS_PER_SHELF = 8
+
+  useEffect(() => {
+    if (document.querySelector(`link[href="${FONT_HREF}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'; link.href = FONT_HREF
+    document.head.appendChild(link)
   }, [])
 
   useEffect(() => {
-    fetchLibrary()
-  }, [filter, sortBy, page])
+    document.title = 'Perpustakaan Saya - Dashboard MasasilaM'
+    const meta = document.querySelector('meta[name="description"]')
+    if (meta) meta.setAttribute('content', 'Kelola dan lacak semua buku yang pernah Anda baca')
+  }, [])
 
   const fetchLibrary = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await dashboardService.getLibrary(filter, page, 12, sortBy)
-
-      if (response && response.data) {
-        setBooks(response.data.items || [])
-        setTotalPages(Math.ceil((response.data.totalData || 0) / 12))
+      setLoading(true); setError(null)
+      const response = await dashboardService.getLibrary(filter, page, BOOKS_PER_PAGE, sortBy)
+      if (response?.data) {
+        setBooks(response.data.items || response.data.list || [])
+        const total = response.data.totalData || response.data.total || 0
+        setTotalData(total)
+        setTotalPages(Math.max(1, Math.ceil(total / BOOKS_PER_PAGE)))
       } else {
-        setBooks([])
-        setTotalPages(1)
+        setBooks([]); setTotalData(0); setTotalPages(1)
         setError('Format respons tidak valid')
       }
-    } catch (error) {
-      console.error('Error:', error)
+    } catch (err) {
+      console.error('Error:', err)
       setError('Gagal memuat data perpustakaan')
-      setBooks([])
-      setTotalPages(1)
+      setBooks([]); setTotalData(0); setTotalPages(1)
     } finally {
       setLoading(false)
     }
   }, [filter, page, sortBy])
 
+  useEffect(() => { fetchLibrary() }, [fetchLibrary])
+
   const filterOptions = useMemo(() => [
-    { value: 'all', label: 'Semua Buku' },
-    { value: 'reading', label: 'Sedang Dibaca' },
-    { value: 'completed', label: 'Selesai' },
-    { value: 'bookmarked', label: 'Ada Bookmark' }
+    { value:'all',        label:'Semua Buku' },
+    { value:'reading',    label:'Sedang Dibaca' },
+    { value:'completed',  label:'Selesai' },
+    { value:'bookmarked', label:'Ada Bookmark' },
   ], [])
 
   const sortOptions = useMemo(() => [
-    { value: 'last_read', label: 'Terakhir Dibaca' },
-    { value: 'progress', label: 'Progress' },
-    { value: 'title', label: 'Judul' },
-    { value: 'rating', label: 'Rating' }
+    { value:'last_read', label:'Terakhir Dibaca' },
+    { value:'progress',  label:'Progress' },
+    { value:'title',     label:'Judul' },
+    { value:'rating',    label:'Rating' },
   ], [])
 
-  const handleFilterChange = useCallback((newFilter) => {
-    setFilter(newFilter)
-    setPage(1)
+  const handleFilterChange = useCallback((v) => { setFilter(v); setPage(1) }, [])
+  const handleSortChange   = useCallback((v) => { setSortBy(v); setPage(1) }, [])
+  const handlePageChange   = useCallback((p) => {
+    setPage(p); window.scrollTo({ top:0, behavior:'smooth' })
   }, [])
 
-  const handleSortChange = useCallback((newSort) => {
-    setSortBy(newSort)
-    setPage(1)
-  }, [])
+  const shelves = useMemo(() => {
+    const rows = []
+    for (let i = 0; i < books.length; i += BOOKS_PER_SHELF)
+      rows.push(books.slice(i, i + BOOKS_PER_SHELF))
+    return rows
+  }, [books])
 
-  const handlePageChange = useCallback((newPage) => {
-    setPage(newPage)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [])
+  const countReading   = books.filter(b => b?.readingStatus === 'reading').length
+  const countCompleted = books.filter(b => b?.readingStatus === 'completed').length
 
   return (
-    <>
-      <div className="space-y-4 sm:space-y-6">
-        <header className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Perpustakaan Saya</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-serif">
+
+      {/* ── Header — sama strukturnya seperti DashboardOverview ── */}
+      <div className="mb-6 sm:mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1
+            className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100"
+            style={{ fontFamily:"'Playfair Display',serif" }}
+          >
+            Perpustakaan Saya
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 italic text-sm">
             Semua buku yang pernah Anda baca
           </p>
-        </header>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" role="alert">
-            <p className="text-red-700 dark:text-red-400 mb-3">{error}</p>
-            <button
-              onClick={fetchLibrary}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            >
-              Coba Lagi
-            </button>
-          </div>
-        )}
-
-        {/* Filters & Sort */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">
-                <Filter className="w-4 h-4 inline mr-2" aria-hidden="true" />
-                Filter
-              </label>
-              <select
-                value={filter}
-                onChange={(e) => handleFilterChange(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                {filterOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">
-                <SortAsc className="w-4 h-4 inline mr-2" aria-hidden="true" />
-                Urutkan
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => handleSortChange(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                {sortOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
         </div>
 
-        {/* Books Grid */}
+        {/* Sort control */}
+        <div className="flex items-center gap-2">
+          <SortAsc size={14} className="text-gray-500 dark:text-gray-400" />
+          <label className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+            Urutkan:
+          </label>
+          <select
+            value={sortBy}
+            onChange={e => handleSortChange(e.target.value)}
+            className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* ── Filter bar + stats ── */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <Filter size={14} className="text-gray-400 flex-shrink-0" />
+        {filterOptions.map(o => (
+          <button
+            key={o.value}
+            onClick={() => handleFilterChange(o.value)}
+            className={`px-4 py-1.5 rounded-full text-sm transition-colors border focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+              filter === o.value
+                ? 'bg-primary text-white border-primary'
+                : 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-primary hover:text-primary'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+
+        {/* Statistik mini — selaras dengan StatCard di DashboardOverview */}
+        <div className="ml-auto flex items-center gap-6">
+          {[
+            { num: totalData,      lbl: 'Total' },
+            { num: countReading,   lbl: 'Dibaca' },
+            { num: countCompleted, lbl: 'Selesai' },
+          ].map((s, i) => (
+            <div key={i} className="text-center">
+              <span
+                className="block text-xl font-bold text-gray-900 dark:text-gray-100"
+                style={{ fontFamily:"'Playfair Display',serif" }}
+              >
+                {s.num}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {s.lbl}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Error ── */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <p className="text-red-700 dark:text-red-400 mb-2">{error}</p>
+          <button
+            onClick={fetchLibrary}
+            className="text-sm px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      )}
+
+      {/* ── Konten utama ── */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        {/* Divider label koleksi */}
+        <p
+          className="text-xs tracking-widest uppercase text-gray-400 dark:text-gray-500 px-6 py-4 border-b border-gray-100 dark:border-gray-700"
+          style={{ fontFamily:"'Playfair Display',serif", letterSpacing:'0.2em' }}
+        >
+          — Koleksi Anda —
+        </p>
+
         {loading ? (
-          <LoadingSpinner />
-        ) : books?.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 sm:p-12 text-center">
-            <Book className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
-            <p className="text-gray-500 text-sm sm:text-base">Belum ada buku di perpustakaan</p>
+          <div className="flex justify-center py-16">
+            <LoadingSpinner />
+          </div>
+        ) : books.length === 0 ? (
+          <div className="text-center py-16 text-gray-400 dark:text-gray-500">
+            <BookOpen size={48} className="mx-auto mb-3 opacity-40" />
+            <p className="italic text-base">Belum ada buku di perpustakaan</p>
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-              {books.map((book) => (
-                <Link
-                  key={book?.bookId || Math.random()}
-                  to={`/buku/${book?.bookSlug || '#'}`}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                >
-                  <div className="aspect-[3/4] relative bg-gray-100 dark:bg-gray-900">
-                    <img
-                      src={book?.coverImageUrl || 'https://via.placeholder.com/300x400'}
-                      alt={book?.bookTitle || 'Judul tidak tersedia'}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                    />
-                    {/* Badge di pojok kiri bawah dengan shadow */}
-                    <div className="absolute bottom-2 left-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium shadow-lg ${
-                        book?.readingStatus === 'completed' ? 'bg-green-500 text-white' :
-                        book?.readingStatus === 'reading' ? 'bg-blue-500 text-white' :
-                        'bg-gray-500 text-white'
-                      }`}>
-                        {book?.readingStatus === 'completed' ? 'Selesai' :
-                         book?.readingStatus === 'reading' ? 'Dibaca' : 'Belum'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 sm:p-4">
-                    <h3 className="font-bold text-sm sm:text-lg mb-1 line-clamp-2">
-                      {book?.bookTitle || 'Judul tidak tersedia'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 truncate">
-                      {book?.authorName || 'Penulis tidak tersedia'}
-                    </p>
-
-                    {/* Progress Bar */}
-                    <div className="mb-3">
-                      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        <span>Bab {book?.currentChapter || 0} dari {book?.totalChapters || 0}</span>
-                        <span>{(book?.progressPercentage || 0).toFixed(0)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2" role="progressbar" aria-valuenow={book?.progressPercentage || 0} aria-valuemin="0" aria-valuemax="100">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${book?.progressPercentage || 0}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{(book?.totalReadingTimeMinutes || 0)}m dibaca</span>
-                      {book?.myRating && (
-                        <span className="flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" aria-hidden="true" />
-                          {book.myRating}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Engagement Counts */}
-                    {(book?.bookmarkCount > 0 || book?.highlightCount > 0 || book?.noteCount > 0) && (
-                      <div className="flex gap-3 mt-2 text-xs">
-                        {book?.bookmarkCount > 0 && (
-                          <span className="text-gray-500">📑 {book.bookmarkCount}</span>
-                        )}
-                        {book?.highlightCount > 0 && (
-                          <span className="text-gray-500">✨ {book.highlightCount}</span>
-                        )}
-                        {book?.noteCount > 0 && (
-                          <span className="text-gray-500">📝 {book.noteCount}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <nav className="mt-6 sm:mt-8 flex justify-center gap-2" aria-label="Pagination">
-                <button
-                  onClick={() => handlePageChange(Math.max(1, page - 1))}
-                  disabled={page === 1 || loading}
-                  className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm sm:text-base"
-                  aria-label="Halaman sebelumnya"
-                >
-                  Sebelumnya
-                </button>
-                <span className="px-3 sm:px-4 py-2 text-sm sm:text-base" aria-current="page">
-                  Halaman {page} dari {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
-                  disabled={page === totalPages || loading}
-                  className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm sm:text-base"
-                  aria-label="Halaman selanjutnya"
-                >
-                  Selanjutnya
-                </button>
-              </nav>
-            )}
-          </>
+          <div className="p-4 sm:p-6 space-y-2">
+            {shelves.map((row, ri) => (
+              <Shelf key={ri} books={row} startIndex={ri * BOOKS_PER_SHELF} />
+            ))}
+          </div>
         )}
       </div>
-    </>
+
+      {/* ── Pagination — sama seperti ReadingHistoryPage ── */}
+      {totalPages > 1 && !loading && (
+        <nav
+          aria-label="Pagination"
+          className="flex items-center justify-center gap-2 mt-6"
+        >
+          <button
+            onClick={() => handlePageChange(Math.max(1, page - 1))}
+            disabled={page === 1 || loading}
+            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            ← Sebelumnya
+          </button>
+          <span
+            className="text-sm text-gray-500 dark:text-gray-400 px-2"
+            aria-current="page"
+          >
+            Halaman {page} dari {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+            disabled={page === totalPages || loading}
+            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            Selanjutnya →
+          </button>
+        </nav>
+      )}
+    </div>
   )
 }
 
