@@ -9,6 +9,7 @@ import {
 import { groupService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 // ── Create Group Modal ────────────────────────────────────────────────────────
 const CreateGroupModal = ({ onClose, onCreated }) => {
@@ -117,6 +118,7 @@ const GroupCard = ({ group, onJoined }) => {
     try {
       await groupService.join(group.id, {})
       toast.success(group.groupType === 'private' ? 'Permintaan bergabung terkirim' : 'Berhasil bergabung!')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       onJoined && onJoined(group.id)
     } catch (e) {
       toast.error(e?.response?.data?.detail || 'Gagal bergabung')

@@ -10,6 +10,7 @@ import {
 import { readingListService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 // ── Modal: Create / Edit List ─────────────────────────────────────────────────
 const ListFormModal = ({ list, onClose, onSaved }) => {
@@ -266,30 +267,36 @@ const ReadingListsPage = () => {
 
   useEffect(() => { load() }, [load])
 
+  // handleDelete
   const handleDelete = async (listId) => {
     if (!confirm('Hapus daftar baca ini?')) return
     try {
       await readingListService.delete(listId)
       setLists(prev => prev.filter(l => l.id !== listId))
       toast.success('Daftar dihapus')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
     } catch { toast.error('Gagal menghapus') }
   }
 
-  const handleFork = async (listId) => {
-    try {
-      const res = await readingListService.fork(listId)
-      toast.success('Daftar berhasil di-fork!')
-      if (tab === 'mine') load()
-    } catch { toast.error('Gagal fork daftar') }
-  }
-
+  // handleSaved
   const handleSaved = (newList) => {
     if (formModal !== 'create') {
       setLists(prev => prev.map(l => l.id === newList?.id ? newList : l))
     } else {
       setLists(prev => [newList, ...prev])
     }
+    feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
     load()
+  }
+
+  // handleFork
+  const handleFork = async (listId) => {
+    try {
+      const res = await readingListService.fork(listId)
+      toast.success('Daftar berhasil di-fork!')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
+      if (tab === 'mine') load()
+    } catch { toast.error('Gagal fork daftar') }
   }
 
   const totalPages = Math.ceil(total / LIMIT)

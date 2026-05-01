@@ -9,6 +9,7 @@ import {
 import { challengeService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 // ── Record Progress Modal ─────────────────────────────────────────────────────
 const RecordProgressModal = ({ challengeId, entityTypes, onClose, onRecorded }) => {
@@ -116,6 +117,7 @@ const ChallengeDetailPage = () => {
   useEffect(() => { load() }, [load])
 
   // Semua handler pakai numericId (challenge.id), bukan challengeId dari params
+  // handleJoin
   const handleJoin = async () => {
     if (!isAuthenticated) { navigate('/masuk'); return }
     if (!numericId) return
@@ -123,12 +125,14 @@ const ChallengeDetailPage = () => {
     try {
       await challengeService.join(numericId)
       toast.success('Bergabung ke tantangan!')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       load()
     } catch (e) {
       toast.error(e?.response?.data?.detail || 'Gagal bergabung')
     } finally { setJoining(false) }
   }
 
+  // handleAbandon
   const handleAbandon = async () => {
     if (!confirm('Keluar dari tantangan ini?')) return
     if (!numericId) return
@@ -136,6 +140,7 @@ const ChallengeDetailPage = () => {
     try {
       await challengeService.abandon(numericId)
       toast.success('Keluar dari tantangan')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       load()
     } catch {
       toast.error('Gagal')

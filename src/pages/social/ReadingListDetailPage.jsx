@@ -8,6 +8,7 @@ import {
 import { readingListService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 const ENTITY_ICON = { BOOK: BookOpen, ZINE: Layers, FILM: Film, NEWSPAPER: Newspaper }
 const ENTITY_LINK = { BOOK: s => `/buku/${s}`, ZINE: s => `/zine/${s}`, FILM: s => `/film/${s}` }
@@ -150,6 +151,7 @@ const ReadingListDetailPage = () => {
       await readingListService.removeItem(numericListId, entityType, entityId)
       setItems(prev => prev.filter(i => !(i.entityType === entityType && i.entityId === entityId)))
       toast.success('Item dihapus')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
     } catch {
       toast.error('Gagal menghapus item')
     }
@@ -157,17 +159,16 @@ const ReadingListDetailPage = () => {
 
   // ← TAMBAHAN: hapus seluruh daftar baca
   const deleteList = async () => {
-    if (!confirm('Hapus daftar baca ini? Semua item di dalamnya akan ikut terhapus.')) return
+    if (!confirm('Hapus daftar baca ini?...')) return
     setDeleting(true)
     try {
       await readingListService.delete(numericListId)
       toast.success('Daftar baca dihapus')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       navigate(-1)
     } catch {
       toast.error('Gagal menghapus daftar')
-    } finally {
-      setDeleting(false)
-    }
+    } finally { setDeleting(false) }
   }
 
   if (loading) return (
@@ -350,7 +351,10 @@ const ReadingListDetailPage = () => {
         <AddItemModal
           listId={numericListId}
           onClose={() => setShowAddModal(false)}
-          onAdded={item => setItems(prev => [...prev, item])}
+          onAdded={item => {
+            setItems(prev => [...prev, item])
+            feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
+          }}
         />
       )}
     </div>

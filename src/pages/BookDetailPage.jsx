@@ -39,6 +39,7 @@ import {
   generateKeywords
 } from '../utils/seoHelpers'
 import BookDetailSocialSection from '../components/Social/BookDetailSocialSection'
+import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
 // ── RatingModal ───────────────────────────────────────────────────────────────
 const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
@@ -394,10 +395,20 @@ const BookDetailPage = () => {
 
   // ── Event handlers (semua useCallback agar stabil antar render) ──────────
   const handleRead = useCallback(async () => {
-    try { setReadingLoading(true); navigate(`/buku/${bookSlug}/baca`) }
-    catch (e) { alert(`Gagal: ${e.message}`) }
+    try {
+      setReadingLoading(true)
+      navigate(`/buku/${bookSlug}/baca`)
+
+      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+        activityType: 'started_reading',
+        entityType:   'BOOK',
+        entitySlug:   bookSlug,
+        entityTitle:  book?.title,
+        entityCover:  book?.coverImageUrl,
+      })
+    } catch (e) { alert(`Gagal: ${e.message}`) }
     finally { setReadingLoading(false) }
-  }, [bookSlug, navigate])
+  }, [bookSlug, book, navigate])
 
   const handleStartReading = useCallback(async () => {
     try {
@@ -481,8 +492,16 @@ const BookDetailPage = () => {
       alert('✅ Rating ditambahkan!')
       setIsRatingModalOpen(false)
       fetchBookDetail(); fetchUserRating(); fetchRatingStats()
+
+      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+        activityType: 'reviewed',
+        entityType:   'BOOK',
+        entitySlug:   bookSlug,
+        entityTitle:  book?.title,
+        entityCover:  book?.coverImageUrl,
+      })
     } catch (e) { alert(`❌ Gagal: ${e.response?.data?.detail || e.message}`) }
-  }, [bookSlug, fetchBookDetail, fetchUserRating, fetchRatingStats])
+  }, [bookSlug, book, fetchBookDetail, fetchUserRating, fetchRatingStats])
 
   // FIX INP: akordion pakai startTransition — tidak perlu blok frame interaksi
   const handleToggleBookDetails = useCallback(() => {

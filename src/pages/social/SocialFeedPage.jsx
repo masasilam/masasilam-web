@@ -4,27 +4,29 @@ import { Link } from 'react-router-dom'
 import {
   Heart, MessageCircle, BookOpen, Film, Layers, Users, Trophy,
   Bookmark, PenLine, Share2, ChevronDown, Globe, UserCheck, Loader2,
-  UserPlus, ListChecks, Send, X, MoreHorizontal
+  UserPlus, ListChecks, Send, X, MoreHorizontal, RefreshCw
 } from 'lucide-react'
 import { feedService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
+import { useFeedEvents } from '../../hooks/useFeedEvents'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 import toast from 'react-hot-toast'
 
 // ── Activity type config ──────────────────────────────────────────────────────
 const ACTIVITY_CONFIG = {
-  finished_book:        { label: 'selesai membaca',    icon: BookOpen,    color: 'text-amber-500'   },
-  started_reading:      { label: 'mulai membaca',      icon: BookOpen,    color: 'text-blue-500'    },
-  reading:              { label: 'sedang membaca',     icon: BookOpen,    color: 'text-blue-400'    },
-  reviewed:             { label: 'menulis ulasan',     icon: PenLine,     color: 'text-purple-500'  },
-  shared_annotation:    { label: 'membagikan kutipan', icon: PenLine,     color: 'text-rose-500'    },
-  added_to_list:        { label: 'menambah ke daftar', icon: ListChecks,  color: 'text-teal-500'    },
-  created_reading_list: { label: 'membuat daftar baca',icon: ListChecks,  color: 'text-teal-500'    },
-  joined_challenge:     { label: 'bergabung tantangan',icon: Trophy,      color: 'text-yellow-500'  },
-  completed_challenge:  { label: 'menyelesaikan tantangan', icon: Trophy, color: 'text-yellow-500' },
-  joined_group:         { label: 'bergabung grup',     icon: Users,       color: 'text-indigo-500'  },
-  created_group:        { label: 'membuat grup',       icon: Users,       color: 'text-indigo-500'  },
-  followed_user:        { label: 'mengikuti',          icon: UserPlus,    color: 'text-pink-500'    },
-  default:              { label: 'beraktivitas',       icon: BookOpen,    color: 'text-gray-500'    },
+  finished_book:        { label: 'selesai membaca',         icon: BookOpen,   color: 'text-amber-500'  },
+  started_reading:      { label: 'mulai membaca',           icon: BookOpen,   color: 'text-blue-500'   },
+  reading:              { label: 'sedang membaca',          icon: BookOpen,   color: 'text-blue-400'   },
+  reviewed:             { label: 'menulis ulasan',          icon: PenLine,    color: 'text-purple-500' },
+  shared_annotation:    { label: 'membagikan kutipan',      icon: PenLine,    color: 'text-rose-500'   },
+  added_to_list:        { label: 'menambah ke daftar',      icon: ListChecks, color: 'text-teal-500'   },
+  created_reading_list: { label: 'membuat daftar baca',     icon: ListChecks, color: 'text-teal-500'   },
+  joined_challenge:     { label: 'bergabung tantangan',     icon: Trophy,     color: 'text-yellow-500' },
+  completed_challenge:  { label: 'menyelesaikan tantangan', icon: Trophy,     color: 'text-yellow-500' },
+  joined_group:         { label: 'bergabung grup',          icon: Users,      color: 'text-indigo-500' },
+  created_group:        { label: 'membuat grup',            icon: Users,      color: 'text-indigo-500' },
+  followed_user:        { label: 'mengikuti',               icon: UserPlus,   color: 'text-pink-500'   },
+  default:              { label: 'beraktivitas',            icon: BookOpen,   color: 'text-gray-500'   },
 }
 
 const ENTITY_LINK = {
@@ -38,14 +40,14 @@ const ENTITY_LINK = {
 }
 
 // ── Comment Section ───────────────────────────────────────────────────────────
-const CommentSection = ({ activityId, commentCount, onClose }) => {
+const CommentSection = ({ activityId, onCommentCountChange }) => {
   const { user } = useAuth()
-  const [comments, setComments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [text, setText] = useState('')
+  const [comments, setComments]   = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [text, setText]           = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [editText, setEditText] = useState('')
+  const [editText, setEditText]   = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -63,8 +65,12 @@ const CommentSection = ({ activityId, commentCount, onClose }) => {
     setSubmitting(true)
     try {
       const res = await feedService.addComment(activityId, { content: text })
-      setComments(prev => [...prev, res.data?.data])
+      const newComment = res.data?.data
+      setComments(prev => [...prev, newComment])
       setText('')
+      // Broadcast ke feed agar counter naik
+      feedEvents.emit(FEED_EVENTS.COMMENT_ADDED, { activityId })
+      onCommentCountChange?.(1) // +1
     } catch { toast.error('Gagal mengirim komentar') }
     finally { setSubmitting(false) }
   }
@@ -73,22 +79,27 @@ const CommentSection = ({ activityId, commentCount, onClose }) => {
     try {
       await feedService.deleteComment(commentId)
       setComments(prev => prev.filter(c => c.id !== commentId))
+      feedEvents.emit(FEED_EVENTS.COMMENT_DELETED, { activityId, commentId })
+      onCommentCountChange?.(-1) // -1
     } catch { toast.error('Gagal menghapus komentar') }
   }
 
   const startEdit = (c) => { setEditingId(c.id); setEditText(c.content) }
-  const saveEdit = async (commentId) => {
+  const saveEdit  = async (commentId) => {
     try {
       await feedService.updateComment(commentId, { content: editText })
       setComments(prev => prev.map(c => c.id === commentId ? { ...c, content: editText } : c))
       setEditingId(null)
+      // Edit komentar tidak mengubah count, tidak perlu emit
     } catch { toast.error('Gagal memperbarui komentar') }
   }
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
       {loading ? (
-        <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /></div>
+        <div className="flex justify-center py-4">
+          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+        </div>
       ) : (
         <div className="space-y-3 mb-3">
           {comments.map(c => (
@@ -101,8 +112,11 @@ const CommentSection = ({ activityId, commentCount, onClose }) => {
                   <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 mr-1.5">{c.username}</span>
                   {editingId === c.id ? (
                     <div className="mt-1 flex gap-2">
-                      <input value={editText} onChange={e => setEditText(e.target.value)}
-                        className="flex-1 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-amber-500/30" />
+                      <input
+                        value={editText}
+                        onChange={e => setEditText(e.target.value)}
+                        className="flex-1 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-amber-500/30"
+                      />
                       <button onClick={() => saveEdit(c.id)} className="text-xs text-amber-600 font-semibold">Simpan</button>
                       <button onClick={() => setEditingId(null)} className="text-xs text-gray-400">Batal</button>
                     </div>
@@ -122,9 +136,12 @@ const CommentSection = ({ activityId, commentCount, onClose }) => {
               </div>
             </div>
           ))}
-          {comments.length === 0 && <p className="text-xs text-gray-400 text-center py-2">Belum ada komentar</p>}
+          {comments.length === 0 && (
+            <p className="text-xs text-gray-400 text-center py-2">Belum ada komentar</p>
+          )}
         </div>
       )}
+
       {/* Input */}
       <div className="flex gap-2">
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -153,35 +170,43 @@ const CommentSection = ({ activityId, commentCount, onClose }) => {
 
 // ── Activity Card ─────────────────────────────────────────────────────────────
 const ActivityCard = ({ item }) => {
-  const [liked, setLiked] = useState(item.isLiked || false)
-  const [likeCount, setLikeCount] = useState(item.likeCount || 0)
+  const [liked, setLiked]               = useState(item.isLiked || false)
+  const [likeCount, setLikeCount]       = useState(item.likeCount || 0)
   const [showComments, setShowComments] = useState(false)
   const [commentCount, setCommentCount] = useState(item.commentCount || 0)
-  const [likePending, setLikePending] = useState(false)
+  const [likePending, setLikePending]   = useState(false)
 
-  const cfg = ACTIVITY_CONFIG[item.activityType] || ACTIVITY_CONFIG.default
-  const Icon = cfg.icon
+  const cfg        = ACTIVITY_CONFIG[item.activityType] || ACTIVITY_CONFIG.default
+  const Icon       = cfg.icon
   const entityLink = ENTITY_LINK[item.entityType]?.(item.entitySlug || item.entityId)
 
   const toggleLike = async () => {
     if (likePending) return
     setLikePending(true)
+    const wasLiked = liked
+    // Optimistik update
+    setLiked(!wasLiked)
+    setLikeCount(p => wasLiked ? Math.max(0, p - 1) : p + 1)
     try {
-      if (liked) {
+      if (wasLiked) {
         await feedService.unlikeActivity(item.id)
-        setLiked(false)
-        setLikeCount(p => Math.max(0, p - 1))
+        feedEvents.emit(FEED_EVENTS.ACTIVITY_UNLIKED, { activityId: item.id })
       } else {
         await feedService.likeActivity(item.id)
-        setLiked(true)
-        setLikeCount(p => p + 1)
+        feedEvents.emit(FEED_EVENTS.ACTIVITY_LIKED, { activityId: item.id })
       }
     } catch (e) {
-      if (e?.response?.status === 400) {
-        setLiked(true)
-        setLikeCount(p => p)
+      // Rollback jika gagal
+      setLiked(wasLiked)
+      setLikeCount(p => wasLiked ? p + 1 : Math.max(0, p - 1))
+      if (e?.response?.status !== 400) {
+        toast.error('Gagal memperbarui like')
       }
     } finally { setLikePending(false) }
+  }
+
+  const handleCommentCountChange = (delta) => {
+    setCommentCount(p => Math.max(0, p + delta))
   }
 
   return (
@@ -235,7 +260,7 @@ const ActivityCard = ({ item }) => {
         </div>
       )}
 
-      {/* Metadata (e.g. annotation text) */}
+      {/* Metadata (annotation text, dll) */}
       {item.metadata && (() => {
         try {
           const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata
@@ -267,7 +292,10 @@ const ActivityCard = ({ item }) => {
       </div>
 
       {showComments && (
-        <CommentSection activityId={item.id} commentCount={commentCount} />
+        <CommentSection
+          activityId={item.id}
+          onCommentCountChange={handleCommentCountChange}
+        />
       )}
     </article>
   )
@@ -294,28 +322,33 @@ const FeedSkeleton = () => (
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const SocialFeedPage = () => {
-  const { isAuthenticated } = useAuth()
-  const [tab, setTab] = useState(isAuthenticated ? 'following' : 'public')
-  const [items, setItems] = useState([])
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [loading, setLoading] = useState(false)
+  const { isAuthenticated, user } = useAuth()
+  const [tab, setTab]             = useState(isAuthenticated ? 'following' : 'public')
+  const [items, setItems]         = useState([])
+  const [page, setPage]           = useState(1)
+  const [hasMore, setHasMore]     = useState(true)
+  const [loading, setLoading]     = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
-  const initialized = useRef(false)
 
   const load = useCallback(async (p = 1, reset = false) => {
     if (p === 1) setLoading(true); else setLoadingMore(true)
     try {
-      const fn = tab === 'following' ? feedService.getFollowingFeed : feedService.getPublicFeed
+      const fn  = tab === 'following' ? feedService.getFollowingFeed : feedService.getPublicFeed
       const res = await fn(p, 20)
-      const data = res.data?.data
-      const newItems = data?.items || []
+      const data      = res.data?.data
+      const newItems  = data?.items || []
       setItems(prev => reset ? newItems : [...prev, ...newItems])
       setHasMore(data?.hasMore || false)
       setPage(p)
     } catch { toast.error('Gagal memuat feed') }
     finally { setLoading(false); setLoadingMore(false) }
   }, [tab])
+
+  // Refresh helper yang stabil (dipakai oleh useFeedEvents)
+  const refresh = useCallback(() => load(1, true), [load])
+
+  // Dengarkan semua feed events dari halaman manapun
+  useFeedEvents({ setItems, refresh, currentUser: user })
 
   useEffect(() => {
     setItems([])
@@ -332,7 +365,9 @@ const SocialFeedPage = () => {
           <button
             onClick={() => setTab('following')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
-              tab === 'following' ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+              tab === 'following'
+                ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white'
+                : 'text-gray-500 dark:text-gray-400'
             }`}
           >
             <UserCheck className="w-4 h-4" /> Mengikuti
@@ -341,10 +376,21 @@ const SocialFeedPage = () => {
         <button
           onClick={() => setTab('public')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
-            tab === 'public' ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+            tab === 'public'
+              ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
           }`}
         >
           <Globe className="w-4 h-4" /> Publik
+        </button>
+
+        {/* Manual refresh */}
+        <button
+          onClick={refresh}
+          title="Refresh feed"
+          className="p-2 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
         </button>
       </div>
 

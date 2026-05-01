@@ -26,6 +26,18 @@ const SECONDARY_NAV = [
   { to: '/kategori', label: 'Kategori', icon: Tag   },
 ]
 
+// Tambahkan mapping warna per-route (letakkan di atas komponen Header)
+const NAV_ACCENT = {
+  '/buku':   { text: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-500/10',   hover: 'hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-500/10'   },
+  '/zine':   { text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10', hover: 'hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10' },
+  '/film':   { text: 'text-blue-600 dark:text-blue-400',     bg: 'bg-blue-50 dark:bg-blue-500/10',     hover: 'hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/60 dark:hover:bg-blue-500/10'     },
+  '/koran':  { text: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10', hover: 'hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50/60 dark:hover:bg-violet-500/10' },
+  '/blog':   { text: 'text-rose-600 dark:text-rose-400',     bg: 'bg-rose-50 dark:bg-rose-500/10',     hover: 'hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-500/10'     },
+  '/sosial': { text: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-50 dark:bg-pink-500/10', hover: 'hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50/60 dark:hover:bg-pink-500/10' },
+  '/penulis':{ text: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-500/10',   hover: 'hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-500/10'   },
+  '/kategori':{ text: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-500/10',   hover: 'hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-500/10'   },
+}
+
 const Header = () => {
   const { theme, toggleTheme }            = useTheme()
   const { user, logout, isAuthenticated } = useAuth()
@@ -60,19 +72,10 @@ const Header = () => {
 
   // Per-link color logic (Zine = emerald, Sosial = sky, others = amber)
   const navLinkClass = (to) => {
-    const active  = isActive(to)
-    const isZine   = to === '/zine'
-    const isSosial = to === '/sosial'
-
-    if (active) {
-      if (isZine)   return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10'
-      if (isSosial) return 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10'
-      return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10'
-    }
-
-    if (isZine)   return 'text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/10'
-    if (isSosial) return 'text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50/60 dark:hover:bg-sky-500/10'
-    return 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+    const accent = NAV_ACCENT[to] || NAV_ACCENT['/buku']
+    return isActive(to)
+      ? `${accent.text} ${accent.bg}`
+      : `text-gray-500 dark:text-gray-400 ${accent.hover}`
   }
 
   return (
@@ -259,21 +262,9 @@ const Header = () => {
                   <Link
                     key={to}
                     to={to}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                      isActive(to)
-                        ? isZine
-                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10'
-                          : isSosial
-                            ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10'
-                            : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${navLinkClass(to)}`}
                   >
-                    <Icon
-                      className={`w-4 h-4 flex-shrink-0 ${
-                        isZine ? 'text-emerald-500' : isSosial ? 'text-sky-500' : ''
-                      }`}
-                    />
+                    <Icon className="w-4 h-4 flex-shrink-0" />
                     {label}
                   </Link>
                 )

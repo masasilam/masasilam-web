@@ -9,6 +9,7 @@ import {
 import { challengeService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 // ── Create Challenge Modal ────────────────────────────────────────────────────
 const CreateChallengeModal = ({ onClose, onCreated }) => {
@@ -190,23 +191,27 @@ const ChallengeCard = ({ ch, onJoined, onViewLeaderboard }) => {
   const daysLeft = end ? Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24))) : null
   const isExpired = end && end < now
 
+  // ChallengeCard.handleJoin
   const handleJoin = async () => {
     if (!isAuthenticated) { navigate('/masuk'); return }
     setJoining(true)
     try {
       await challengeService.join(ch.id)
       toast.success('Bergabung ke tantangan!')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       onJoined && onJoined(ch.id)
     } catch (e) { toast.error(e?.response?.data?.detail || 'Gagal bergabung') }
     finally { setJoining(false) }
   }
 
+  // ChallengeCard.handleAbandon
   const handleAbandon = async () => {
     if (!confirm('Keluar dari tantangan ini?')) return
     setAbandoning(true)
     try {
       await challengeService.abandon(ch.id)
       toast.success('Keluar dari tantangan')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       onJoined && onJoined(ch.id)
     } catch { toast.error('Gagal') }
     finally { setAbandoning(false) }

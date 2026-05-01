@@ -9,6 +9,7 @@ import {
 import { annotationService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 // ── Publish Annotation Modal ──────────────────────────────────────────────────
 const PublishAnnotationModal = ({ onClose, onPublished }) => {
@@ -219,23 +220,26 @@ const AnnotationCard = ({ ann, onDelete }) => {
     } catch {} finally { setPending(false) }
   }
 
-  const handleReshare = async () => {
-    if (!isAuthenticated) { navigate('/masuk'); return }
-    setResharing(true)
-    try {
-      await annotationService.reshare(ann.id)
-      toast.success('Kutipan berhasil dibagikan ulang!')
-    } catch (e) { toast.error(e?.response?.data?.detail || 'Gagal membagikan') }
-    finally { setResharing(false) }
-  }
-
   const handleDelete = async () => {
     if (!confirm('Hapus kutipan ini?')) return
     try {
       await annotationService.delete(ann.id)
       onDelete(ann.id)
       toast.success('Kutipan dihapus')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
     } catch { toast.error('Gagal menghapus') }
+  }
+
+  // handleReshare di AnnotationCard
+  const handleReshare = async () => {
+    if (!isAuthenticated) { navigate('/masuk'); return }
+    setResharing(true)
+    try {
+      await annotationService.reshare(ann.id)
+      toast.success('Kutipan berhasil dibagikan ulang!')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
+    } catch (e) { toast.error(e?.response?.data?.detail || 'Gagal membagikan') }
+    finally { setResharing(false) }
   }
 
   return (
@@ -442,7 +446,11 @@ const SocialAnnotationsPage = () => {
       {publishModal && (
         <PublishAnnotationModal
           onClose={() => setPublishModal(false)}
-          onPublished={ann => { setAnnotations(prev => [ann, ...prev]); setPublishModal(false) }}
+          onPublished={ann => {
+            setAnnotations(prev => [ann, ...prev])
+            feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
+            setPublishModal(false)
+          }}
         />
       )}
     </div>

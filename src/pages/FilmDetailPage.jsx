@@ -19,6 +19,7 @@ import Alert from '../components/Common/Alert'
 import SEO from '../components/Common/SEO'
 import TrailerModal from '../components/Film/TrailerModal'
 import FilmDetailSocialSection from '../components/Social/FilmDetailSocialSection'
+import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
 // ── Wikimedia thumb helper ────────────────────────────────────────────────────
 const getWikimediaThumb = (url, w = 600) => {
@@ -473,6 +474,14 @@ const FilmDetailPage = () => {
       setIsRatingModalOpen(false)
       fetchUserRating()
       fetchRatingStats()
+
+      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+        activityType: 'reviewed',
+        entityType:   'FILM',
+        entitySlug:   filmSlug,
+        entityTitle:  film?.judul,
+        entityCover:  rawPosterUrl,
+      })
     } catch (e) { alert(`❌ Gagal: ${e.response?.data?.detail || e.message}`) }
   }
 
@@ -697,7 +706,17 @@ const FilmDetailPage = () => {
                 <div className="space-y-2">
                   {film.videoUrl && (
                     <button
-                      onClick={() => navigate(`/film/${filmSlug}/tonton`)}
+                      onClick={() => {
+                        navigate(`/film/${filmSlug}/tonton`)
+
+                        feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+                          activityType: 'started_reading',
+                          entityType:   'FILM',
+                          entitySlug:   filmSlug,
+                          entityTitle:  film?.judul,
+                          entityCover:  rawPosterUrl,
+                        })
+                      }}
                       className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
                                  text-base font-semibold transition-all active:scale-[0.98]
                                  bg-blue-500 hover:bg-blue-400 text-white

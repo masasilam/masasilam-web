@@ -13,8 +13,11 @@ import {
   ArrowLeft, BookOpen, Bookmark, BookmarkCheck,
   ChevronLeft, ChevronRight, Highlighter, Minus, Moon,
   Plus, Search, Settings, Sun, X, List, StickyNote, Trash2, Coffee, Type,
+  Share2 as Share,
 } from 'lucide-react'
 import api from '../services/api'
+import ShareAnnotationModal from '../components/Social/ShareAnnotationModal'
+import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
 const HIGHLIGHT_COLORS = [
   { name: 'Kuning', value: '#FDE68A', text: '#92400E' },
@@ -259,10 +262,6 @@ const localKeys = (slug) => ({
   guestNoticeSeen: 'epub_guest_notice_seen',
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: CSS variables untuk zine stylesheet
-// ─────────────────────────────────────────────────────────────────────────────
-
 const getZineVars = (mode) => {
   const cfg = COLOR_MODES[mode] || COLOR_MODES.light
   const isDarkMode  = mode === 'dark'
@@ -477,9 +476,10 @@ const NoteModal = ({ selectedText, onSave, onClose }) => {
   )
 }
 
-const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
+// ── SelectionPopup — tambah tombol Bagikan ────────────────────────────────────
+const SelectionPopup = ({ position, onHighlight, onNote, onShare, onClose }) => {
   if (!position) return null
-  const popupWidth = 220, popupHeight = 44, margin = 8
+  const popupWidth = 260, popupHeight = 44, margin = 8
   const left = Math.min(Math.max(margin, position.x - popupWidth / 2), window.innerWidth - popupWidth - margin)
   const top  = Math.max(margin, position.y - popupHeight - 12)
   return (
@@ -494,6 +494,11 @@ const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
       <button onClick={onNote} className="flex items-center gap-1 px-2 py-1 rounded-lg text-white text-xs hover:bg-white/10 transition">
         <StickyNote size={14} /><span>Catatan</span>
       </button>
+      {/* ── Tombol Bagikan Kutipan (sosial) ── */}
+      <div className="w-px h-5 bg-white/20 mx-1" />
+      <button onClick={onShare} className="flex items-center gap-1 px-2 py-1 rounded-lg text-white text-xs hover:bg-white/10 transition">
+        <Share size={14} /><span>Bagikan</span>
+      </button>
       <button onClick={onClose} className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition">
         <X size={14} />
       </button>
@@ -502,7 +507,7 @@ const SelectionPopup = ({ position, onHighlight, onNote, onClose }) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SearchPanel — pencarian teks penuh dalam isi EPUB
+// SearchPanel
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
@@ -562,11 +567,6 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
     }
   }, [])
 
-  // ── FIX: Manual text search menggantikan section.find() ──────────────────
-  // section.find() epubjs hanya bekerja pada section yang sedang di-render
-  // di iframe. Section lain yang di-load manual mengisi section.document
-  // tapi find() tetap mengembalikan [] karena bergantung pada iframe DOM.
-  // Solusi: TreeWalker langsung di section.document setelah load().
   const handleSearch = useCallback(async () => {
     const q = query.trim()
     if (!q || !bookRef?.current) return
@@ -604,8 +604,6 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
           const doc = section.document
           const found = []
 
-          // Manual text search via TreeWalker — bekerja di semua section,
-          // tidak bergantung pada iframe rendering seperti section.find()
           if (doc?.body) {
             const lowerQ  = q.toLowerCase()
             const walker  = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null)
@@ -617,46 +615,38 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
               let idx = lowerText.indexOf(lowerQ)
 
               while (idx !== -1) {
-				// JADI ini (gunakan 'doc' bukan 'sectionDoc'):
-				let cfi = null
-				try {
-				  // Coba cfiFromRange dulu — lebih akurat
-				  try {
-					const range = doc.createRange()
-					range.setStart(node, idx)
-					range.setEnd(node, Math.min(idx + q.length, (node.nodeValue || '').length))
-					const rawCfi = section.cfiFromRange(range)
-					if (rawCfi) {
-					  // Strip range suffix dan character offset untuk hindari IndexSizeError
-					  // epubcfi(/6/14!/4/2/26,/1:2,/1:5) → epubcfi(/6/14!/4/2/26)
-					  let clean = rawCfi.replace(/,.*\)$/, ')')
-					  clean = clean.replace(/:(\d+)(\)|\[)/g, '$2')
-					  clean = clean.replace(/:(\d+)\)$/, ')')
-					  cfi = clean
-					}
-				  } catch {
-					// Fallback: CFI dari parent element
-					const el = node.parentElement || node.parentNode
-					if (el && el.tagName !== 'BODY' && el.tagName !== 'HTML') {
-					  const elCfi = section.cfiFromElement(el)
-					  if (elCfi) {
-						// Strip character offset dari element CFI juga
-						let clean = elCfi.replace(/:(\d+)(\)|\[)/g, '$2').replace(/:(\d+)\)$/, ')')
-						cfi = clean
-					  }
-					}
-				  }
-				} catch (cfiErr) {
-				  console.warn(`[Search] CFI generation gagal untuk "${q}":`, cfiErr.message)
-				}
+                let cfi = null
+                try {
+                  try {
+                    const range = doc.createRange()
+                    range.setStart(node, idx)
+                    range.setEnd(node, Math.min(idx + q.length, (node.nodeValue || '').length))
+                    const rawCfi = section.cfiFromRange(range)
+                    if (rawCfi) {
+                      let clean = rawCfi.replace(/,.*\)$/, ')')
+                      clean = clean.replace(/:(\d+)(\)|\[)/g, '$2')
+                      clean = clean.replace(/:(\d+)\)$/, ')')
+                      cfi = clean
+                    }
+                  } catch {
+                    const el = node.parentElement || node.parentNode
+                    if (el && el.tagName !== 'BODY' && el.tagName !== 'HTML') {
+                      const elCfi = section.cfiFromElement(el)
+                      if (elCfi) {
+                        let clean = elCfi.replace(/:(\d+)(\)|\[)/g, '$2').replace(/:(\d+)\)$/, ')')
+                        cfi = clean
+                      }
+                    }
+                  }
+                } catch (cfiErr) {
+                  console.warn(`[Search] CFI generation gagal untuk "${q}":`, cfiErr.message)
+                }
 
-                // Buat excerpt: ~60 karakter konteks di kiri dan kanan
                 const start   = Math.max(0, idx - 60)
                 const end     = Math.min(text.length, idx + q.length + 60)
                 const excerpt = text.slice(start, end).replace(/\s+/g, ' ').trim()
 
                 if (cfi) {
-                  // De-duplikasi: satu CFI per element — ambil excerpt terbaik
                   const existing = found.find(f => f.cfi === cfi)
                   if (!existing) {
                     found.push({ cfi, excerpt })
@@ -712,8 +702,6 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
 
   return (
     <div className="flex flex-col h-full" style={{ background: cfg.bg, color: cfg.color }}>
-
-      {/* ── Header ── */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
         style={{ borderBottom: `1px solid ${borderClr}` }}
@@ -727,7 +715,6 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
         </button>
       </div>
 
-      {/* ── Input + Tombol Cari ── */}
       <div className="p-3 flex-shrink-0" style={{ borderBottom: `1px solid ${borderClr}` }}>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -769,7 +756,6 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
           </button>
         </div>
 
-        {/* ── Status / Progress bar ── */}
         <div className="mt-2 min-h-[18px]">
           {isSearching && (
             <div className="space-y-1">
@@ -805,9 +791,7 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
         </div>
       </div>
 
-      {/* ── Daftar Hasil ── */}
       <div className="flex-1 overflow-y-auto">
-
         {!searched && !isSearching && (
           <div className="flex flex-col items-center justify-center py-14 gap-2" style={{ color: mutedClr }}>
             <Search size={36} className="opacity-20" />
@@ -1169,6 +1153,9 @@ const EpubReaderPage = () => {
   const [showNoteModal,   setShowNoteModal]   = useState(false)
   const [isBookmarked,    setIsBookmarked]    = useState(false)
   const [showGuestNotice, setShowGuestNotice] = useState(false)
+
+  // ── State sosial: modal bagikan kutipan ────────────────────────────────────
+  const [shareModal, setShareModal] = useState(null)
 
   const triggerGuestNotice = useCallback(() => {
     if (isAuthenticated) return
@@ -1856,241 +1843,211 @@ const EpubReaderPage = () => {
   useEffect(() => { handleNextRef.current = handleNext }, [handleNext])
   useEffect(() => { handlePrevRef.current = handlePrev }, [handlePrev])
 
-	const handleSearchNavigate = useCallback((cfi, searchQuery) => {
-	  if (!cfi || !renditionRef.current) return
+  const handleSearchNavigate = useCallback((cfi, searchQuery) => {
+    if (!cfi || !renditionRef.current) return
 
-	  console.group('[SearchNavigate] 🔍 Start')
-	  console.log('  CFI:', cfi, '| Query:', searchQuery)
+    console.group('[SearchNavigate] 🔍 Start')
+    console.log('  CFI:', cfi, '| Query:', searchQuery)
 
-	  const q = searchQuery?.trim() || ''
+    const q = searchQuery?.trim() || ''
 
-	  // ── Strip semua character offset dari CFI ──────────────────────────────
-	  // IndexSizeError terjadi karena epubjs.locationOf() panggil range.setEnd
-	  // dengan offset yang tidak valid di DOM iframe. Fix: hapus semua :N offset.
-	  // epubcfi(/6/14!/4/2/26:6) → epubcfi(/6/14!/4/2/26)
-	  // epubcfi(/6/14!/4/2/26,/1:2,/1:5) → epubcfi(/6/14!/4/2/26)
-	  const sanitizeCfi = (rawCfi) => {
-		if (!rawCfi) return rawCfi
-		// Hapus range suffix (koma ke depan)
-		let clean = rawCfi.replace(/,.*\)$/, ')')
-		// Hapus character offset :N sebelum ) atau [
-		clean = clean.replace(/:(\d+)(\)|\[)/g, '$2')
-		// Hapus :N di ujung sebelum tutup kurung
-		clean = clean.replace(/:(\d+)\)$/, ')')
-		console.log('  sanitizeCfi:', rawCfi, '→', clean)
-		return clean
-	  }
+    const sanitizeCfi = (rawCfi) => {
+      if (!rawCfi) return rawCfi
+      let clean = rawCfi.replace(/,.*\)$/, ')')
+      clean = clean.replace(/:(\d+)(\)|\[)/g, '$2')
+      clean = clean.replace(/:(\d+)\)$/, ')')
+      console.log('  sanitizeCfi:', rawCfi, '→', clean)
+      return clean
+    }
 
-	  const navCfi = sanitizeCfi(cfi)
+    const navCfi = sanitizeCfi(cfi)
 
-	  // ── Helpers ────────────────────────────────────────────────────────────
-	  const getActiveDoc = () => {
-		try {
-		  const contents = renditionRef.current?.getContents?.()
-		  return contents?.[0]?.document
-			|| viewerRef.current?.querySelector('iframe')?.contentDocument
-			|| null
-		} catch { return null }
-	  }
+    const getActiveDoc = () => {
+      try {
+        const contents = renditionRef.current?.getContents?.()
+        return contents?.[0]?.document
+          || viewerRef.current?.querySelector('iframe')?.contentDocument
+          || null
+      } catch { return null }
+    }
 
-	  const getCurrentSpineNum = () => {
-		try {
-		  const loc = renditionRef.current?.currentLocation()
-		  return loc?.start?.cfi?.match(/^epubcfi\(\/6\/(\d+)/)?.[1] || null
-		} catch { return null }
-	  }
+    const getCurrentSpineNum = () => {
+      try {
+        const loc = renditionRef.current?.currentLocation()
+        return loc?.start?.cfi?.match(/^epubcfi\(\/6\/(\d+)/)?.[1] || null
+      } catch { return null }
+    }
 
-	  // ── Inject highlight ke DOM iframe ────────────────────────────────────
-	  const injectHighlight = (doc, searchQ) => {
-		if (!doc?.body || !searchQ) return 0
-		// Bersihkan highlight lama
-		try {
-		  doc.querySelectorAll('.epub-search-highlight').forEach(el => {
-			const p = el.parentNode
-			if (p) { p.replaceChild(doc.createTextNode(el.textContent || ''), el); p.normalize() }
-		  })
-		} catch {}
-		// Inject style jika belum ada
-		if (!doc.getElementById('_sh_style')) {
-		  const s = doc.createElement('style')
-		  s.id = '_sh_style'
-		  s.textContent = `.epub-search-highlight{background:#FDE68A!important;color:#92400E!important;border-radius:2px;padding:0 1px;outline:2px solid #F59E0B;}`
-		  ;(doc.head || doc.documentElement).appendChild(s)
-		}
-		const lowerQ = searchQ.toLowerCase()
-		const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null)
-		const textNodes = []
-		let n = walker.nextNode()
-		while (n) { if (n.nodeValue?.toLowerCase().includes(lowerQ)) textNodes.push(n); n = walker.nextNode() }
+    const injectHighlight = (doc, searchQ) => {
+      if (!doc?.body || !searchQ) return 0
+      try {
+        doc.querySelectorAll('.epub-search-highlight').forEach(el => {
+          const p = el.parentNode
+          if (p) { p.replaceChild(doc.createTextNode(el.textContent || ''), el); p.normalize() }
+        })
+      } catch {}
+      if (!doc.getElementById('_sh_style')) {
+        const s = doc.createElement('style')
+        s.id = '_sh_style'
+        s.textContent = `.epub-search-highlight{background:#FDE68A!important;color:#92400E!important;border-radius:2px;padding:0 1px;outline:2px solid #F59E0B;}`
+        ;(doc.head || doc.documentElement).appendChild(s)
+      }
+      const lowerQ = searchQ.toLowerCase()
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null)
+      const textNodes = []
+      let n = walker.nextNode()
+      while (n) { if (n.nodeValue?.toLowerCase().includes(lowerQ)) textNodes.push(n); n = walker.nextNode() }
 
-		let count = 0
-		textNodes.forEach(textNode => {
-		  try {
-			const parent = textNode.parentNode
-			if (!parent || ['SCRIPT','STYLE'].includes(parent.tagName)) return
-			const text = textNode.nodeValue; const lowerText = text.toLowerCase()
-			let pos = lowerText.indexOf(lowerQ); if (pos === -1) return
-			const frag = doc.createDocumentFragment(); let last = 0
-			while (pos !== -1) {
-			  if (pos > last) frag.appendChild(doc.createTextNode(text.slice(last, pos)))
-			  const mark = doc.createElement('mark')
-			  mark.className = 'epub-search-highlight'
-			  mark.textContent = text.slice(pos, pos + searchQ.length)
-			  frag.appendChild(mark); last = pos + searchQ.length
-			  pos = lowerText.indexOf(lowerQ, last); count++
-			}
-			if (last < text.length) frag.appendChild(doc.createTextNode(text.slice(last)))
-			parent.replaceChild(frag, textNode)
-		  } catch {}
-		})
-		console.log('  injectHighlight: injected', count, 'kata')
-		return count
-	  }
+      let count = 0
+      textNodes.forEach(textNode => {
+        try {
+          const parent = textNode.parentNode
+          if (!parent || ['SCRIPT','STYLE'].includes(parent.tagName)) return
+          const text = textNode.nodeValue; const lowerText = text.toLowerCase()
+          let pos = lowerText.indexOf(lowerQ); if (pos === -1) return
+          const frag = doc.createDocumentFragment(); let last = 0
+          while (pos !== -1) {
+            if (pos > last) frag.appendChild(doc.createTextNode(text.slice(last, pos)))
+            const mark = doc.createElement('mark')
+            mark.className = 'epub-search-highlight'
+            mark.textContent = text.slice(pos, pos + searchQ.length)
+            frag.appendChild(mark); last = pos + searchQ.length
+            pos = lowerText.indexOf(lowerQ, last); count++
+          }
+          if (last < text.length) frag.appendChild(doc.createTextNode(text.slice(last)))
+          parent.replaceChild(frag, textNode)
+        } catch {}
+      })
+      console.log('  injectHighlight: injected', count, 'kata')
+      return count
+    }
 
-	  const scheduleCleanup = (doc) => {
-		setTimeout(() => {
-		  try {
-			doc?.querySelectorAll('.epub-search-highlight').forEach(el => {
-			  const p = el.parentNode
-			  if (p) { p.replaceChild(doc.createTextNode(el.textContent || ''), el); p.normalize() }
-			})
-		  } catch {}
-		}, 5000)
-	  }
+    const scheduleCleanup = (doc) => {
+      setTimeout(() => {
+        try {
+          doc?.querySelectorAll('.epub-search-highlight').forEach(el => {
+            const p = el.parentNode
+            if (p) { p.replaceChild(doc.createTextNode(el.textContent || ''), el); p.normalize() }
+          })
+        } catch {}
+      }, 5000)
+    }
 
-	  // ── Cari teks di halaman-halaman dalam section (paginated mode) ────────
-	  // scrollIntoView tidak bekerja di paginated mode karena konten di-clip
-	  // via CSS column. Satu-satunya cara: advance next() sampai teks terlihat
-	  // di viewport iframe.
-	  const findAndHighlightInSection = async (targetSpineNum) => {
-		const MAX_PAGES = 60 // batas keamanan
-		let page = 0
+    const findAndHighlightInSection = async (targetSpineNum) => {
+      const MAX_PAGES = 60
+      let page = 0
 
-		while (page < MAX_PAGES) {
-		  page++
-		  // Tunggu DOM stabil
-		  await new Promise(r => setTimeout(r, 80))
+      while (page < MAX_PAGES) {
+        page++
+        await new Promise(r => setTimeout(r, 80))
 
-		  const doc = getActiveDoc()
-		  if (!doc?.body) { console.warn('  [findInSection] doc null di halaman', page); break }
+        const doc = getActiveDoc()
+        if (!doc?.body) { console.warn('  [findInSection] doc null di halaman', page); break }
 
-		  // Cek masih di section yang benar
-		  const spineNow = getCurrentSpineNum()
-		  if (spineNow && targetSpineNum && spineNow !== targetSpineNum) {
-			console.log('  [findInSection] Melewati section di halaman', page, '— berhenti')
-			// Mundur satu halaman karena sudah ke section berikutnya
-			renditionRef.current?.prev()
-			await new Promise(r => setTimeout(r, 150))
-			break
-		  }
+        const spineNow = getCurrentSpineNum()
+        if (spineNow && targetSpineNum && spineNow !== targetSpineNum) {
+          console.log('  [findInSection] Melewati section di halaman', page, '— berhenti')
+          renditionRef.current?.prev()
+          await new Promise(r => setTimeout(r, 150))
+          break
+        }
 
-		  const bodyText = doc.body.innerText || doc.body.textContent || ''
-		  if (bodyText.toLowerCase().includes(q.toLowerCase())) {
-			console.log('  [findInSection] ✅ Teks ditemukan di halaman', page)
-			injectHighlight(doc, q)
-			scheduleCleanup(doc)
-			console.groupEnd()
-			return true
-		  }
+        const bodyText = doc.body.innerText || doc.body.textContent || ''
+        if (bodyText.toLowerCase().includes(q.toLowerCase())) {
+          console.log('  [findInSection] ✅ Teks ditemukan di halaman', page)
+          injectHighlight(doc, q)
+          scheduleCleanup(doc)
+          console.groupEnd()
+          return true
+        }
 
-		  console.log('  [findInSection] Halaman', page, '— teks tidak ada, next()')
-		  // Advance ke halaman berikutnya dalam section
-		  await new Promise(resolve => {
-			let done = false
-			const fin = () => { if (!done) { done = true; resolve() } }
-			try { renditionRef.current?.once('rendered', fin) } catch {}
-			renditionRef.current?.next()
-			setTimeout(fin, 250)
-		  })
-		}
+        console.log('  [findInSection] Halaman', page, '— teks tidak ada, next()')
+        await new Promise(resolve => {
+          let done = false
+          const fin = () => { if (!done) { done = true; resolve() } }
+          try { renditionRef.current?.once('rendered', fin) } catch {}
+          renditionRef.current?.next()
+          setTimeout(fin, 250)
+        })
+      }
 
-		console.warn('  [findInSection] ⚠️ Teks tidak ditemukan setelah', page, 'halaman')
-		console.groupEnd()
-		return false
-	  }
+      console.warn('  [findInSection] ⚠️ Teks tidak ditemukan setelah', page, 'halaman')
+      console.groupEnd()
+      return false
+    }
 
-	  // ── Deteksi target section ─────────────────────────────────────────────
-	  const targetSpineNum = navCfi.match(/^epubcfi\(\/6\/(\d+)/)?.[1]
-	  const currentSpineNum = getCurrentSpineNum()
-	  console.log('  targetSpineNum:', targetSpineNum, '| currentSpineNum:', currentSpineNum)
+    const targetSpineNum = navCfi.match(/^epubcfi\(\/6\/(\d+)/)?.[1]
+    const currentSpineNum = getCurrentSpineNum()
+    console.log('  targetSpineNum:', targetSpineNum, '| currentSpineNum:', currentSpineNum)
 
-	  // ── Cross-section: pindah section dulu, lalu cari halaman ─────────────
-	  if (targetSpineNum && currentSpineNum && targetSpineNum !== currentSpineNum) {
-		console.log('  → Cross-section navigation')
+    if (targetSpineNum && currentSpineNum && targetSpineNum !== currentSpineNum) {
+      console.log('  → Cross-section navigation')
 
-		// Hitung spine index (0-based) dari spine number (CFI pakai /6/N, N=2*(idx+1))
-		const spineIndex = Math.floor(parseInt(targetSpineNum) / 2) - 1
-		console.log('  spine index (0-based):', spineIndex)
+      const spineIndex = Math.floor(parseInt(targetSpineNum) / 2) - 1
+      console.log('  spine index (0-based):', spineIndex)
 
-		// Pasang listener rendered SEBELUM display
-		let rendered = false
-		const onRendered = async (_section, _view) => {
-		  if (rendered) return
-		  rendered = true
-		  renditionRef.current?.off('rendered', onRendered)
-		  clearTimeout(safety)
-		  console.log('  rendered event ✅ section:', _section?.href)
-		  await new Promise(r => setTimeout(r, 150))
-		  await findAndHighlightInSection(targetSpineNum)
-		}
-		renditionRef.current.on('rendered', onRendered)
+      let rendered = false
+      const onRendered = async (_section, _view) => {
+        if (rendered) return
+        rendered = true
+        renditionRef.current?.off('rendered', onRendered)
+        clearTimeout(safety)
+        console.log('  rendered event ✅ section:', _section?.href)
+        await new Promise(r => setTimeout(r, 150))
+        await findAndHighlightInSection(targetSpineNum)
+      }
+      renditionRef.current.on('rendered', onRendered)
 
-		const safety = setTimeout(async () => {
-		  if (rendered) return
-		  rendered = true
-		  renditionRef.current?.off('rendered', onRendered)
-		  console.warn('  safety timeout — rendered tidak terpanggil')
-		  await findAndHighlightInSection(targetSpineNum)
-		}, 3000)
+      const safety = setTimeout(async () => {
+        if (rendered) return
+        rendered = true
+        renditionRef.current?.off('rendered', onRendered)
+        console.warn('  safety timeout — rendered tidak terpanggil')
+        await findAndHighlightInSection(targetSpineNum)
+      }, 3000)
 
-		// Display pakai spine index (integer) — TIDAK pakai CFI dengan offset
-		// karena itu yang menyebabkan IndexSizeError
-		renditionRef.current.display(spineIndex)
-		  .then(() => console.log('  display(spineIndex) resolved'))
-		  .catch(err => {
-			console.error('  display(spineIndex) gagal:', err.message)
-			clearTimeout(safety)
-			rendered = true
-			renditionRef.current?.off('rendered', onRendered)
-			console.groupEnd()
-		  })
+      renditionRef.current.display(spineIndex)
+        .then(() => console.log('  display(spineIndex) resolved'))
+        .catch(err => {
+          console.error('  display(spineIndex) gagal:', err.message)
+          clearTimeout(safety)
+          rendered = true
+          renditionRef.current?.off('rendered', onRendered)
+          console.groupEnd()
+        })
 
-	  } else {
-		// ── Same-section: display CFI (sanitized) lalu cari halaman ──────────
-		console.log('  → Same-section navigation')
+    } else {
+      console.log('  → Same-section navigation')
 
-		renditionRef.current.display(navCfi)
-		  .then(async () => {
-			console.log('  display(navCfi) resolved')
-			await new Promise(r => setTimeout(r, 120))
-			const doc = getActiveDoc()
-			if (!doc) { console.warn('  doc null'); console.groupEnd(); return }
-			const count = injectHighlight(doc, q)
-			if (count === 0) {
-			  // Teks tidak di halaman ini — cari di halaman lain dalam section
-			  console.log('  Teks tidak di halaman pertama, cari di halaman lain...')
-			  await findAndHighlightInSection(targetSpineNum)
-			} else {
-			  scheduleCleanup(doc)
-			  console.groupEnd()
-			}
-		  })
-		  .catch(async (err) => {
-			// IndexSizeError dari display(cfi) — tetap lanjut karena display
-			// biasanya berhasil meski throw error (epubjs bug)
-			console.warn('  display() error (biasanya IndexSizeError, aman diabaikan):', err.message)
-			await new Promise(r => setTimeout(r, 200))
-			const doc = getActiveDoc()
-			const count = doc ? injectHighlight(doc, q) : 0
-			if (count === 0) {
-			  await findAndHighlightInSection(targetSpineNum || currentSpineNum)
-			} else {
-			  if (doc) scheduleCleanup(doc)
-			  console.groupEnd()
-			}
-		  })
-	  }
-	}, [])
+      renditionRef.current.display(navCfi)
+        .then(async () => {
+          console.log('  display(navCfi) resolved')
+          await new Promise(r => setTimeout(r, 120))
+          const doc = getActiveDoc()
+          if (!doc) { console.warn('  doc null'); console.groupEnd(); return }
+          const count = injectHighlight(doc, q)
+          if (count === 0) {
+            console.log('  Teks tidak di halaman pertama, cari di halaman lain...')
+            await findAndHighlightInSection(targetSpineNum)
+          } else {
+            scheduleCleanup(doc)
+            console.groupEnd()
+          }
+        })
+        .catch(async (err) => {
+          console.warn('  display() error (biasanya IndexSizeError, aman diabaikan):', err.message)
+          await new Promise(r => setTimeout(r, 200))
+          const doc = getActiveDoc()
+          const count = doc ? injectHighlight(doc, q) : 0
+          if (count === 0) {
+            await findAndHighlightInSection(targetSpineNum || currentSpineNum)
+          } else {
+            if (doc) scheduleCleanup(doc)
+            console.groupEnd()
+          }
+        })
+    }
+  }, [])
 
   // ── handleTocClick ────────────────────────────────────────────────────────
   const handleTocClick = useCallback(async (href) => {
@@ -2263,6 +2220,17 @@ const EpubReaderPage = () => {
     }
   }
 
+  // ── handleShareSelection — buka modal publikasi kutipan ────────────────────
+  const handleShareSelection = useCallback(() => {
+    if (!selection) return
+    setShareModal({
+      text:         selection.text,
+      cfi:          selection.cfi,
+      chapterLabel: currentChapterLabelRef.current,
+    })
+    setSelection(null)
+  }, [selection])
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
@@ -2274,6 +2242,7 @@ const EpubReaderPage = () => {
         setShowSettings(false)
         setShowSearch(false)
         setSelection(null)
+        setShareModal(null)
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault()
@@ -2535,6 +2504,7 @@ const EpubReaderPage = () => {
           position={selection.position}
           onHighlight={handleHighlight}
           onNote={handleOpenNote}
+          onShare={handleShareSelection}
           onClose={() => setSelection(null)}
         />
       )}
@@ -2545,6 +2515,32 @@ const EpubReaderPage = () => {
           selectedText={selection.text}
           onSave={handleSaveNote}
           onClose={() => { setShowNoteModal(false); setSelection(null) }}
+        />
+      )}
+
+      {/* ── Share Annotation Modal (sosial) ── */}
+      {shareModal && isAuthenticated && (
+        <ShareAnnotationModal
+          selectedText={shareModal.text}
+          entityType={isZineMode ? 'ZINE' : 'BOOK'}
+          entityId={book?.id}
+          entityTitle={book?.title}
+          entitySlug={slug}
+          chapterLabel={shareModal.chapterLabel}
+          onClose={() => setShareModal(null)}
+          onPublished={(activityData) => {
+            setShareModal(null)
+
+            feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+              ...activityData,
+              activityType: 'shared_annotation',
+              entityType:   isZineMode ? 'ZINE' : 'BOOK',
+              entitySlug:   slug,
+              entityTitle:  book?.title,
+              entityCover:  book?.coverImageUrl,
+              metadata:     { selectedText: shareModal.text },
+            })
+          }}
         />
       )}
 

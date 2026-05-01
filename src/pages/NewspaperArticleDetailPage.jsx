@@ -16,6 +16,7 @@ import {
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import NewspaperSocialSection from '../components/Social/NewspaperSocialSection'
+import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -320,6 +321,16 @@ const NewspaperArticleDetailPage = () => {
         const data = res.data?.data
         setArticle(data)
         document.title = `${data?.title || 'Artikel'} — Arsip Koran`
+
+        const token = localStorage.getItem('token')
+        if (token && data) {
+          feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+            activityType: 'reading',
+            entityType:   'NEWSPAPER',
+            entitySlug:   data.slug || articleSlug,
+            entityTitle:  data.title,
+          })
+        }
       })
       .catch(err => {
         if (err.response?.status === 404) setNotFound(true)

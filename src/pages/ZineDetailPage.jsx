@@ -17,6 +17,7 @@ import Button from '../components/Common/Button'
 import Alert from '../components/Common/Alert'
 import SEO from '../components/Common/SEO'
 import ZineDetailSocialSection from '../components/Social/ZineDetailSocialSection'
+import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
 // ── Rating Modal ──────────────────────────────────────────────────────────────
 const RatingModal = ({ isOpen, onClose, onSubmit, zineTitle }) => {
@@ -302,7 +303,17 @@ const ZineDetailPage = () => {
     } finally { setDownloadLoading(false) }
   }
 
-  const handleRead = () => navigate(`/zine/${zineSlug}/baca`)
+  const handleRead = () => {
+    navigate(`/zine/${zineSlug}/baca`)
+
+    feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+      activityType: 'started_reading',
+      entityType:   'ZINE',
+      entitySlug:   zineSlug,
+      entityTitle:  zine?.title,
+      entityCover:  zine?.coverImageUrl,
+    })
+  }
   const handleShare = async () => {
     const shareData = { title: zine.title, text: `Baca "${zine.title}"`, url: window.location.href }
     try {
@@ -326,6 +337,14 @@ const ZineDetailPage = () => {
       await zineService.addRating(zineSlug, { rating: ratingData.rating })
       alert('✅ Rating ditambahkan!'); setIsRatingModalOpen(false)
       fetchZineDetail(); fetchUserRating(); fetchRatingStats()
+
+      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
+        activityType: 'reviewed',
+        entityType:   'ZINE',
+        entitySlug:   zineSlug,
+        entityTitle:  zine?.title,
+        entityCover:  zine?.coverImageUrl,
+      })
     } catch (e) { alert(`❌ Gagal: ${e.response?.data?.detail || e.message}`) }
   }
 

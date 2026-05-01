@@ -9,6 +9,7 @@ import {
 import { groupService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import feedEvents, { FEED_EVENTS } from '../../services/feedEvents'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -330,21 +331,25 @@ const GroupDetailPage = () => {
 
   useEffect(() => { loadTab() }, [loadTab])
 
+  // handleJoin
   const handleJoin = async () => {
     if (!isAuthenticated) { navigate('/masuk'); return }
     try {
       await groupService.join(group.id, {})
       toast.success(group.groupType === 'private' ? 'Permintaan terkirim' : 'Bergabung!')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       const res = await groupService.getBySlug(slug)
       setGroup(res.data?.data)
     } catch (e) { toast.error(e?.response?.data?.detail || 'Gagal') }
   }
 
+  // handleLeave
   const handleLeave = async () => {
     if (!confirm('Keluar dari grup?')) return
     try {
       await groupService.leave(group.id)
       toast.success('Keluar dari grup')
+      feedEvents.emit(FEED_EVENTS.REFRESH) // ← TAMBAH
       navigate('/sosial/grup')
     } catch (e) { toast.error(e?.response?.data?.detail || 'Gagal') }
   }
