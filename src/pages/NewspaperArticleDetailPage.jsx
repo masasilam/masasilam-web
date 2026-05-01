@@ -1,5 +1,5 @@
-// src/pages/NewspaperArticleDetailPage.jsx
 // ============================================
+// src/pages/NewspaperArticleDetailPage.jsx
 // LIGHT: bg-stone-50, surface=white, border=stone-200, accent=violet
 // DARK:  bg-slate-950, surface=slate-900, border=slate-700, accent=violet
 // Reader mode uses inline styles for full color control
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import NewspaperSocialSection from '../components/Social/NewspaperSocialSection'
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -557,7 +558,7 @@ const NewspaperArticleDetailPage = () => {
                         <p className="text-xs mb-0.5" style={{ color: mode.color, opacity: 0.45 }}>
                           {getCatIcon(a.category)} {getCatLabel(a.category)}
                         </p>
-                        <h3 className="text-sm font-semibold line-clamp-2 transition-colors group-hover:text-violet-600"
+                        <h3 className="text-sm font-semibold line-clamp-2 leading-snug transition-colors group-hover:text-violet-600"
                           style={{ color: mode.color, fontFamily: 'Georgia, "Times New Roman", serif' }}>
                           {a.title}
                         </h3>
@@ -627,6 +628,10 @@ const NewspaperArticleDetailPage = () => {
                 Edisi {article.dateFormatted || article.publishDate}
               </Link>
             </div>
+
+            {/* ── Social Integration ── */}
+            <NewspaperSocialSection article={article} mode={mode} />
+
           </aside>
         </div>
       </div>

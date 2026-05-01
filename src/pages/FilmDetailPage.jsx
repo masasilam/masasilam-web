@@ -18,6 +18,7 @@ import Button from '../components/Common/Button'
 import Alert from '../components/Common/Alert'
 import SEO from '../components/Common/SEO'
 import TrailerModal from '../components/Film/TrailerModal'
+import FilmDetailSocialSection from '../components/Social/FilmDetailSocialSection'
 
 // ── Wikimedia thumb helper ────────────────────────────────────────────────────
 const getWikimediaThumb = (url, w = 600) => {
@@ -35,23 +36,18 @@ const getWikimediaThumb = (url, w = 600) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Normalisasi field dari API ke field internal yang konsisten
-// API: negaraAsal, deskripsi, budget.displayValue, originalLanguage, dll
 // ─────────────────────────────────────────────────────────────────────────────
 const normalizeFilm = (raw) => ({
   ...raw,
-  // Poster: posterUrl sudah benar di API
-  // Tahun: "1959-01-01" → 1959
   year: raw.tahunRilis
     ? (typeof raw.tahunRilis === 'string' && raw.tahunRilis.length === 4
         ? raw.tahunRilis
         : new Date(raw.tahunRilis).getFullYear())
     : null,
-  // Field alias
   negara:   raw.negaraAsal || raw.negara || null,
   bahasa:   raw.originalLanguage || raw.bahasa || null,
   sinopsis: raw.deskripsi || raw.sinopsis || raw.description || null,
   anggaran: raw.budget?.displayValue || raw.anggaran || null,
-  // Cast arrays (API mengembalikan array kosong tapi strukturnya benar)
   directorList:   Array.isArray(raw.sutradara)       ? raw.sutradara       : [],
   castList:       Array.isArray(raw.pemeran)         ? raw.pemeran         : [],
   writerList:     Array.isArray(raw.penulisSkenario) ? raw.penulisSkenario : [],
@@ -147,7 +143,6 @@ const RatingModal = ({ isOpen, onClose, onSubmit, filmTitle }) => {
             <Button type="button" variant="secondary" fullWidth onClick={onClose} disabled={submitting}>
               Batal
             </Button>
-            {/* Tombol submit — inline blue agar tidak bergantung variant primary project */}
             <button type="submit" disabled={submitting || !rating}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
                          text-sm font-semibold transition-all disabled:opacity-50
@@ -338,7 +333,6 @@ const PosterImage = ({ rawUrl, alt, className }) => {
   const [error, setError]   = useState(!rawUrl)
 
   const handleError = () => {
-    // Jika gagal pakai thumb, coba URL asli
     if (src !== rawUrl && rawUrl) {
       setSrc(rawUrl)
     } else {
@@ -490,14 +484,12 @@ const FilmDetailPage = () => {
     </div>
   )
 
-  // ── Setelah normalize, semua field sudah konsisten ──────────────────────────
   const {
     year, negara, bahasa, sinopsis, anggaran,
     directorList, castList, writerList, producerList,
     genreList, reviewScores,
   } = film
 
-  // Raw poster URL untuk PosterImage component
   const rawPosterUrl =
     film.posterUrl || film.poster_url || film.poster ||
     film.thumbnailUrl || film.thumbnail || film.coverUrl || film.imageUrl ||
@@ -511,7 +503,6 @@ const FilmDetailPage = () => {
   const avgRating      = ratingStats?.averageRating
   const avgReviewScore = reviewScores?.[0]?.value || null
 
-  // ── MetaItem reusable ────────────────────────────────────────────────────────
   const MetaItem = ({ icon: Icon, label, value, accent }) => (
     <div className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors
                      ${accent || 'bg-slate-50 dark:bg-slate-800/60'}`}>
@@ -525,7 +516,6 @@ const FilmDetailPage = () => {
     </div>
   )
 
-  // ── Tombol aksi ikon (3 kolom, tanpa tombol tonton) ─────────────────────────
   const actionButtons = [
     { icon: Heart,  label: 'Favorit',  action: handleFavorite, active: false },
     {
@@ -551,12 +541,6 @@ const FilmDetailPage = () => {
         keywords={`${film.judul}, film ${year}, ${genreList.join(', ')}, film klasik, domain publik`}
       />
 
-      {/*
-        ══════════════════════════════════════════════════════════════
-        LIGHT: bg-slate-50 surface=white border=slate-200 CTA=blue-500
-        DARK:  bg-slate-950 surface=slate-900 border=slate-700 CTA=blue-500
-        ══════════════════════════════════════════════════════════════
-      */}
       <div className="min-h-screen pb-16 lg:pb-0 transition-colors duration-300
                       bg-slate-50 dark:bg-slate-950">
         <div className="container mx-auto px-4 max-w-6xl">
@@ -598,8 +582,6 @@ const FilmDetailPage = () => {
 
                 {/* ─── MOBILE: horizontal hero ─────────────────────── */}
                 <div className="flex gap-4 py-4 lg:hidden">
-
-                  {/* Poster mobile */}
                   <div className="flex-shrink-0 w-28 sm:w-36">
                     <div className="relative rounded-xl overflow-hidden shadow-lg aspect-[2/3]">
                       <PosterImage
@@ -607,7 +589,6 @@ const FilmDetailPage = () => {
                         alt={film.judul}
                         className="absolute inset-0 w-full h-full"
                       />
-                      {/* Year badge */}
                       {year && (
                         <div className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md
                                         bg-gray-900/80 backdrop-blur-sm
@@ -615,7 +596,6 @@ const FilmDetailPage = () => {
                           {year}
                         </div>
                       )}
-                      {/* Video/Trailer badges */}
                       <div className="absolute top-1.5 right-1.5 z-10 flex flex-col gap-1">
                         {film.videoUrl && (
                           <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-md
@@ -635,7 +615,6 @@ const FilmDetailPage = () => {
                     </div>
                   </div>
 
-                  {/* Info kanan mobile */}
                   <div className="flex-1 min-w-0 py-1 flex flex-col gap-1.5">
                     <h1 className="text-base sm:text-lg font-bold leading-snug line-clamp-3
                                    text-slate-900 dark:text-slate-50">
@@ -698,7 +677,6 @@ const FilmDetailPage = () => {
                       {year}
                     </div>
                   )}
-                  {/* Hover play overlay (desktop) */}
                   {film.videoUrl && (
                     <button
                       onClick={() => navigate(`/film/${filmSlug}/tonton`)}
@@ -715,10 +693,8 @@ const FilmDetailPage = () => {
                   )}
                 </div>
 
-                {/* ─── ACTION BUTTONS (semua device, satu set saja) ─── */}
+                {/* ─── ACTION BUTTONS ─── */}
                 <div className="space-y-2">
-
-                  {/* PRIMARY: Tonton Film (hanya jika ada videoUrl) */}
                   {film.videoUrl && (
                     <button
                       onClick={() => navigate(`/film/${filmSlug}/tonton`)}
@@ -732,7 +708,6 @@ const FilmDetailPage = () => {
                     </button>
                   )}
 
-                  {/* SECONDARY: Tonton Trailer (hanya jika ada trailerUrl) */}
                   {film.trailerUrl && (
                     <button
                       onClick={() => setIsTrailerOpen(true)}
@@ -747,7 +722,6 @@ const FilmDetailPage = () => {
                     </button>
                   )}
 
-                  {/* Tidak ada video sama sekali */}
                   {!film.videoUrl && !film.trailerUrl && (
                     <div className="p-3 rounded-xl border border-dashed text-center
                                     border-slate-200 dark:border-slate-700">
@@ -755,7 +729,6 @@ const FilmDetailPage = () => {
                     </div>
                   )}
 
-                  {/* Icon grid: Favorit, Rating, Bagikan */}
                   <div className="grid grid-cols-3 gap-2">
                     {actionButtons.map(({ icon: Icon, label, action, active }) => (
                       <button key={label} onClick={action}
@@ -777,7 +750,6 @@ const FilmDetailPage = () => {
                     ))}
                   </div>
 
-                  {/* User rating pill */}
                   {userRating && (
                     <div className="flex items-center justify-between p-3 rounded-xl border
                                     bg-blue-50 border-blue-200
@@ -818,7 +790,7 @@ const FilmDetailPage = () => {
                   </div>
                 )}
 
-                {/* Meta panel — desktop sidebar */}
+                {/* Meta panel — desktop */}
                 <div className="hidden lg:block p-4 rounded-2xl border space-y-3 transition-colors
                                 bg-blue-50/60 border-blue-200
                                 dark:bg-slate-800/60 dark:border-slate-700">
@@ -949,7 +921,6 @@ const FilmDetailPage = () => {
                   </div>
                 )}
 
-                {/* Stat row */}
                 <div className="flex flex-wrap gap-5 text-sm py-3 mb-4 border-y
                                 text-slate-500 border-slate-100
                                 dark:text-slate-400 dark:border-slate-800">
@@ -979,7 +950,6 @@ const FilmDetailPage = () => {
                   )}
                 </div>
 
-                {/* Genre tags desktop */}
                 {genreList.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {genreList.map((g, i) => (
@@ -1006,7 +976,7 @@ const FilmDetailPage = () => {
                 />
               </div>
 
-              {/* ── Cast / Pemeran ───────────────────────────────────── */}
+              {/* Cast */}
               {castList.length > 0 && (
                 <section className="mb-6">
                   <h2 className="text-xl font-bold mb-3 flex items-center gap-2
@@ -1045,7 +1015,7 @@ const FilmDetailPage = () => {
                 </section>
               )}
 
-              {/* ── Sinopsis ─────────────────────────────────────────── */}
+              {/* Sinopsis */}
               <section className="mb-8">
                 <h2 className="text-xl font-bold mb-3 text-slate-900 dark:text-slate-50">
                   Sinopsis
@@ -1056,7 +1026,7 @@ const FilmDetailPage = () => {
                 </div>
               </section>
 
-              {/* ── Film Details Accordion ────────────────────────────── */}
+              {/* Film Details Accordion */}
               {(writerList.length > 0 || producerList.length > 0 ||
                 film.perusahaanProduksi?.length > 0 || film.distributor?.length > 0 ||
                 anggaran || film.boxOffice?.length > 0 ||
@@ -1139,7 +1109,6 @@ const FilmDetailPage = () => {
                         )}
                       </div>
 
-                      {/* Content ratings */}
                       {film.contentRatings?.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                           <div className="text-[10px] uppercase tracking-wide mb-2
@@ -1157,7 +1126,6 @@ const FilmDetailPage = () => {
                         </div>
                       )}
 
-                      {/* Wikidata link */}
                       {film.wikidataQid && (
                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                           <div className="text-[10px] uppercase tracking-wide mb-1
@@ -1181,7 +1149,7 @@ const FilmDetailPage = () => {
                 </section>
               )}
 
-              {/* ── Reviews ──────────────────────────────────────────── */}
+              {/* Reviews */}
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">
@@ -1293,11 +1261,14 @@ const FilmDetailPage = () => {
                 )}
               </section>
 
+              {/* ── Social Integration ── */}
+              <FilmDetailSocialSection film={film} />
+
             </article>
           </div>
         </div>
 
-        {/* ── Modals ──────────────────────────────────────────────── */}
+        {/* Modals */}
         <TrailerModal
           isOpen={isTrailerOpen}
           onClose={() => setIsTrailerOpen(false)}
