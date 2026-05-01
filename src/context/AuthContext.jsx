@@ -1,8 +1,4 @@
-// ============================================
-// src/context/AuthContext.jsx - FINAL FIX
-// ============================================
-
-import { createContext, useState, useEffect } from 'react'
+import { createContext, useState, useEffect, useCallback } from 'react'
 
 export const AuthContext = createContext()
 
@@ -12,68 +8,71 @@ export const AuthProvider = ({ children }) => {
   const [refreshToken, setRefreshToken] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Initialize from localStorage
+  // Initialize dari localStorage
   useEffect(() => {
-    console.log('🔵 AuthContext: Initializing...')
-
     try {
       const storedToken = localStorage.getItem('token')
       const storedRefreshToken = localStorage.getItem('refreshToken')
       const storedUser = localStorage.getItem('user')
 
-      console.log('🔵 AuthContext: Stored data found:', {
-        hasToken: !!storedToken,
-        hasRefreshToken: !!storedRefreshToken,
-        hasUser: !!storedUser
-      })
-
       if (storedToken && storedUser) {
         setToken(storedToken)
         setRefreshToken(storedRefreshToken)
         setUser(JSON.parse(storedUser))
-        console.log('✅ AuthContext: User restored from localStorage')
-      } else {
-        console.log('⚠️ AuthContext: No stored session found')
       }
     } catch (error) {
-      console.error('❌ AuthContext: Error loading stored data:', error)
+      console.error('AuthContext: Error loading stored data:', error)
+      // Data localStorage corrupt — bersihkan
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Login function
-  const login = (userData, authToken, authRefreshToken) => {
-    console.log('🔵 AuthContext.login() called with:', {
-      userData,
-      hasToken: !!authToken,
-      hasRefreshToken: !!authRefreshToken
-    })
+  // Dengarkan event dari api.js:
+  // 1. auth:tokenRefreshed — token baru sudah disimpan di localStorage oleh interceptor,
+  //    sync ke React state agar komponen yang pakai useAuth() ikut terupdate
+  // 2. auth:logout — refresh gagal, paksa reset state
+  useEffect(() => {
+    const handleTokenRefreshed = (event) => {
+      const { token: newToken, refreshToken: newRefreshToken } = event.detail
+      setToken(newToken)
+      setRefreshToken(newRefreshToken)
+    }
 
+    const handleForceLogout = () => {
+      setUser(null)
+      setToken(null)
+      setRefreshToken(null)
+    }
+
+    window.addEventListener('auth:tokenRefreshed', handleTokenRefreshed)
+    window.addEventListener('auth:logout', handleForceLogout)
+
+    return () => {
+      window.removeEventListener('auth:tokenRefreshed', handleTokenRefreshed)
+      window.removeEventListener('auth:logout', handleForceLogout)
+    }
+  }, [])
+
+  const login = useCallback((userData, authToken, authRefreshToken) => {
     try {
-      // Save to state
       setUser(userData)
       setToken(authToken)
       setRefreshToken(authRefreshToken)
 
-      // Save to localStorage
       localStorage.setItem('user', JSON.stringify(userData))
       localStorage.setItem('token', authToken)
       localStorage.setItem('refreshToken', authRefreshToken)
-
-      console.log('✅ AuthContext: Login successful, data saved')
-      console.log('✅ Current user:', userData)
-      console.log('✅ Token length:', authToken?.length)
     } catch (error) {
-      console.error('❌ AuthContext: Error during login:', error)
+      console.error('AuthContext: Error during login:', error)
       throw error
     }
-  }
+  }, [])
 
-  // Logout function
-  const logout = () => {
-    console.log('🔵 AuthContext.logout() called')
-
+  const logout = useCallback(() => {
     try {
       setUser(null)
       setToken(null)
@@ -82,46 +81,34 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('user')
       localStorage.removeItem('token')
       localStorage.removeItem('refreshToken')
-
-      console.log('✅ AuthContext: Logout successful')
     } catch (error) {
-      console.error('❌ AuthContext: Error during logout:', error)
+      console.error('AuthContext: Error during logout:', error)
     }
-  }
+  }, [])
 
-  // ✅ FIXED: Update user dengan proper field handling
-  const updateUser = (updatedUserData) => {
-    console.log('🔵 AuthContext.updateUser() called')
-    console.log('🔵 Current user:', user)
-    console.log('🔵 Update data:', updatedUserData)
-
+  const updateUser = useCallback((updatedUserData) => {
     try {
-      // 🔥 CRITICAL FIX: Merge dengan benar, prioritaskan data baru
-      const newUserData = {
-        ...user,
-        ...updatedUserData,
-        // 🔥 Jika ada fullName di update, hapus name lama
-        ...(updatedUserData.fullName && { name: undefined }),
-      }
+      const newUserData = { ...user, ...updatedUserData }
 
-      // 🔥 Clean undefined values
+      // Hapus key dengan nilai undefined
       Object.keys(newUserData).forEach(key => {
-        if (newUserData[key] === undefined) {
-          delete newUserData[key]
-        }
+        if (newUserData[key] === undefined) delete newUserData[key]
       })
-
-      console.log('🔥 New user data (cleaned):', newUserData)
 
       setUser(newUserData)
       localStorage.setItem('user', JSON.stringify(newUserData))
-
-      console.log('✅ AuthContext: User updated')
-      console.log('✅ localStorage updated:', JSON.parse(localStorage.getItem('user')))
     } catch (error) {
-      console.error('❌ AuthContext: Error updating user:', error)
+      console.error('AuthContext: Error updating user:', error)
     }
-  }
+  }, [user])
+
+  // Dipanggil oleh komponen lain jika perlu sync token secara manual
+  const updateTokens = useCallback((newToken, newRefreshToken) => {
+    setToken(newToken)
+    if (newRefreshToken) setRefreshToken(newRefreshToken)
+    localStorage.setItem('token', newToken)
+    if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken)
+  }, [])
 
   const value = {
     user,
@@ -131,15 +118,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
-    isAuthenticated: !!user && !!token
+    updateTokens,
+    isAuthenticated: !!user && !!token,
   }
-
-  console.log('🔵 AuthContext: Current state:', {
-    hasUser: !!user,
-    hasToken: !!token,
-    isAuthenticated: value.isAuthenticated,
-    loading
-  })
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

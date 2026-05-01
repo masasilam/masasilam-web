@@ -2,13 +2,13 @@
 // src/pages/dashboard/StatisticsPage.jsx
 //
 // PERBAIKAN:
-//   - normalize() → { success, message, code, data }
-//     data = StatisticsResponse. Ambil res.data (bukan res?.data || {})
-//   - dashboardService.getStatistics() → endpoint /dashboard/stats
-//     DashboardController mendefinisikan /dashboard/statistics
-//     Salah satunya harus konsisten — file ini menggunakan getStatistics()
-//     dari dashboardService yang sudah benar.
-//   - Semua field name sudah camelCase sesuai backend Java.
+//   - Hapus label hardcoded "Dari sesi non-EPUB" — diganti info yang akurat
+//     sesuai data dari backend (totalChaptersRead sekarang mencakup EPUB)
+//   - Hapus label hardcoded "Tidak tersedia untuk EPUB" pada kecepatan —
+//     backend sekarang mengirim estimasi WPM dari durasi + halaman EPUB
+//   - Card kecepatan tetap menampilkan "—" hanya jika nilai benar-benar 0
+//     (tidak ada data sama sekali), bukan karena semua sesi adalah EPUB
+//   - Semua field name tetap camelCase sesuai backend Java
 // ============================================
 import { useState, useEffect, useCallback } from 'react'
 import { dashboardService } from '../../services/dashboardService'
@@ -59,12 +59,8 @@ const StatisticsPage = () => {
     try {
       setLoading(true)
       setError(null)
-
       const res = await dashboardService.getStatistics(period)
-      // PERBAIKAN: normalize() → { success, data }
-      // data = StatisticsResponse
       setStats(res?.data || {})
-
     } catch (err) {
       console.error('Error fetching statistics:', err)
       setError('Gagal memuat statistik')
@@ -76,19 +72,33 @@ const StatisticsPage = () => {
 
   useEffect(() => { fetchStatistics() }, [fetchStatistics])
 
-  if (loading) return <LoadingSpinner />
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <LoadingSpinner />
+    </div>
+  )
 
   const {
-    totalBooksRead         = 0,
-    totalChaptersRead      = 0,
-    totalReadingMinutes    = 0,
-    averageReadingSpeedWpm = 0,
-    readingTimeTrend       = null,
-    completionTrend        = null,
-    speedTrend             = null,
-    genreBreakdown         = [],
-    peakReadingTimes       = [],
+    totalBooksRead           = 0,
+    totalChaptersRead        = 0,
+    totalEpubChaptersRead    = 0,
+    totalReadingMinutes      = 0,
+    averageReadingSpeedWpm   = 0,
+    estimatedReadingSpeedWpm = 0,
+    readingTimeTrend         = null,
+    completionTrend          = null,
+    speedTrend               = null,
+    genreBreakdown           = [],
+    peakReadingTimes         = [],
   } = stats || {}
+
+  // Gunakan estimasi WPM jika WPM akurat tidak tersedia
+  const displaySpeedWpm = averageReadingSpeedWpm > 0
+    ? averageReadingSpeedWpm
+    : estimatedReadingSpeedWpm
+
+  // Total bab gabungan: chapter reader + EPUB chapters
+  const totalAllChapters = totalChaptersRead + totalEpubChaptersRead
 
   return (
     <div>
@@ -130,6 +140,8 @@ const StatisticsPage = () => {
 
       {/* Summary stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+
+        {/* Total Buku */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm text-gray-600 dark:text-gray-400">Total Buku</h3>
@@ -138,38 +150,55 @@ const StatisticsPage = () => {
           <p className="text-3xl font-bold">{totalBooksRead}</p>
         </div>
 
+        {/* Total Bab — sekarang mencakup EPUB + chapter reader */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm text-gray-600 dark:text-gray-400">Total Bab</h3>
             <Book className="w-8 h-8 text-blue-500 opacity-50" />
           </div>
-          <p className="text-3xl font-bold">{totalChaptersRead}</p>
-          <p className="text-xs text-gray-400 mt-1">Dari sesi non-EPUB</p>
+          <p className="text-3xl font-bold">{totalAllChapters}</p>
+          {/* Tampilkan breakdown hanya jika keduanya ada */}
+          {totalEpubChaptersRead > 0 && totalChaptersRead > 0 ? (
+            <p className="text-xs text-gray-400 mt-1">
+              {totalEpubChaptersRead} EPUB · {totalChaptersRead} chapter
+            </p>
+          ) : totalEpubChaptersRead > 0 ? (
+            <p className="text-xs text-gray-400 mt-1">Dari sesi EPUB</p>
+          ) : totalChaptersRead > 0 ? (
+            <p className="text-xs text-gray-400 mt-1">Dari chapter reader</p>
+          ) : null}
         </div>
 
+        {/* Waktu Membaca */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm text-gray-600 dark:text-gray-400">Waktu Membaca</h3>
             <Clock className="w-8 h-8 text-green-500 opacity-50" />
           </div>
-          <p className="text-3xl font-bold">{Math.floor(totalReadingMinutes / 60)}h</p>
-          <p className="text-xs text-gray-500">{totalReadingMinutes % 60}m</p>
+          <p className="text-3xl font-bold">{Math.floor(totalReadingMinutes / 60)}j</p>
+          <p className="text-xs text-gray-500">{totalReadingMinutes % 60} menit</p>
         </div>
 
+        {/* Kecepatan — sekarang pakai estimasi untuk EPUB */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm text-gray-600 dark:text-gray-400">Kecepatan</h3>
             <Zap className="w-8 h-8 text-yellow-500 opacity-50" />
           </div>
-          {averageReadingSpeedWpm > 0 ? (
+          {displaySpeedWpm > 0 ? (
             <>
-              <p className="text-3xl font-bold">{Math.round(averageReadingSpeedWpm)}</p>
-              <p className="text-xs text-gray-500">kata/menit</p>
+              <p className="text-3xl font-bold">{Math.round(displaySpeedWpm)}</p>
+              <p className="text-xs text-gray-500">
+                kata/menit
+                {averageReadingSpeedWpm === 0 && estimatedReadingSpeedWpm > 0 && (
+                  <span className="ml-1 text-gray-400">(estimasi)</span>
+                )}
+              </p>
             </>
           ) : (
             <>
               <p className="text-3xl font-bold text-gray-300 dark:text-gray-600">—</p>
-              <p className="text-xs text-gray-400">Tidak tersedia untuk EPUB</p>
+              <p className="text-xs text-gray-400">Belum ada data</p>
             </>
           )}
         </div>

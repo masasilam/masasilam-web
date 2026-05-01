@@ -154,8 +154,8 @@ const Footer = () => {
 
       {/* Bottom bar */}
       <div className="border-t border-gray-100 dark:border-gray-800">
-        <div className="container mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-gray-400 dark:text-gray-600 text-center sm:text-left">
+        <div className="container mx-auto px-4 sm:px-6 py-4 flex flex-row items-center justify-between gap-3">
+          <p className="text-xs text-gray-400 dark:text-gray-600">
             {/* Crossed-out © = public domain philosophy */}
             <span className="relative inline-block mr-1">
               ©

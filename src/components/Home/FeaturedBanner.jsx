@@ -3,9 +3,13 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen, Film, Newspaper, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 
+// ── Hanya konversi kalau memang URL Wikimedia, sisanya return as-is ──────────
 const getWikimediaThumb = (url, w = 800) => {
   if (!url) return null
+  // Kalau sudah ada /thumb/ di URL, return langsung
   if (url.includes('/thumb/')) return url
+  // Kalau bukan Wikimedia, return URL asli tanpa modifikasi
+  if (!url.includes('upload.wikimedia.org')) return url
   const m = url.match(
     /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
   )
@@ -16,14 +20,34 @@ const getWikimediaThumb = (url, w = 800) => {
   return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
 }
 
+// ── Ambil poster film — coba semua field yang mungkin ───────────────────────
 const getFilmPoster = (film) => {
   if (!film) return null
-  return (
-    film.posterUrl || film.poster_url || film.poster ||
-    film.thumbnailUrl || film.thumbnail || film.coverUrl || film.imageUrl ||
-    (typeof film.imageUrls === 'string' && film.imageUrls
-      ? film.imageUrls.split(',')[0].trim() : null) || null
-  )
+  // Coba satu per satu field yang umum dipakai backend
+  const candidates = [
+    film.posterUrl,
+    film.poster_url,
+    film.poster,
+    film.thumbnailUrl,
+    film.thumbnail_url,
+    film.thumbnail,
+    film.coverUrl,
+    film.cover_url,
+    film.imageUrl,
+    film.image_url,
+    film.image,
+    film.foto,
+    film.gambar,
+    // imageUrls bisa berupa string CSV
+    typeof film.imageUrls === 'string' && film.imageUrls
+      ? film.imageUrls.split(',')[0].trim()
+      : null,
+    // atau array
+    Array.isArray(film.imageUrls) && film.imageUrls.length
+      ? film.imageUrls[0]
+      : null,
+  ]
+  return candidates.find(v => v && typeof v === 'string' && v.trim() !== '') || null
 }
 
 const TYPE_CONFIG = {
@@ -72,19 +96,23 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
       _sub: b.authorNames || b.author || 'Anonim',
       _desc: b.description,
     })),
-    ...films.slice(0, 2).map(f => ({
+    ...films.slice(0, 2).map(f => {
+      const poster = getFilmPoster(f)
+      // DEBUG: hapus setelah poster muncul
+      console.log('[FeaturedBanner] film:', f.judul, '| poster:', poster, '| keys:', Object.keys(f).join(', '))
+      return {
       ...f, _type: 'film',
-      _image: getFilmPoster(f),
+      _image: poster,
       _title: f.judul,
       _sub: f.tahunRilis
         ? (typeof f.tahunRilis === 'string' && f.tahunRilis.length === 4
             ? f.tahunRilis : new Date(f.tahunRilis).getFullYear())
         : '',
       _desc: f.deskripsi || f.sinopsis || f.description,
-    })),
+    }}),
     ...articles.slice(0, 1).map(a => ({
       ...a, _type: 'newspaper',
-      _image: null, _title: a.title,
+      _image: null, _title: a.title,  // ← Added comma here
       _sub: a.categoryName || a.category,
       _desc: a.summary || a.excerpt,
     })),
@@ -102,7 +130,6 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
     return () => clearInterval(t)
   }, [activeIdx, featured.length, goTo])
 
-  // ── Touch / swipe handlers ─────────────────────────────────────────────────
   const handleTouchStart = useCallback((e) => {
     touchStartX.current = e.touches[0].clientX
   }, [])
@@ -124,18 +151,18 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
   const Icon = cfg.icon
   const rawImage = item._image
 
-  const bgThumb = rawImage && !bgErrors[activeIdx]
-    ? getWikimediaThumb(rawImage, 900) : null
-  const posterThumb = rawImage && !posterErrors[activeIdx]
-    ? getWikimediaThumb(rawImage, 400) : null
+  // FIX: getWikimediaThumb sekarang aman untuk semua URL — return as-is jika bukan Wikimedia
+  // Untuk non-Wikimedia URL, getWikimediaThumb return URL asli — jadi selalu gunakan langsung
+  const bgThumb     = rawImage ? getWikimediaThumb(rawImage, 900) : null
+  const posterThumb = rawImage ? getWikimediaThumb(rawImage, 400) : null
 
   return (
     <div
-      className="relative w-full overflow-hidden bg-gray-900"
+      className="relative w-full overflow-hidden bg-gray-900 mb-6 sm:mb-10"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Background ────────────────────────────────────────────────────── */}
+      {/* ── Background ──────────────────────────────────────────────────── */}
       <div
         className={`absolute inset-0 transition-opacity duration-300 ${fading ? 'opacity-0' : 'opacity-100'}`}
         aria-hidden="true"
@@ -156,7 +183,7 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-950/10 to-gray-950/60" />
       </div>
 
-      {/* ── Content ───────────────────────────────────────────────────────── */}
+      {/* ── Content ─────────────────────────────────────────────────────── */}
       <div
         className={`relative z-10 transition-all duration-300 ${
           fading ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
@@ -173,7 +200,14 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
                   src={posterThumb}
                   alt={item._title}
                   className="w-full h-full object-cover"
-                  onError={() => setPosterErrors(prev => ({ ...prev, [activeIdx]: true }))}
+                  onError={(e) => {
+                    // Jika thumb gagal, coba URL asli (untuk URL non-Wikimedia yang sudah sama)
+                    if (rawImage && e.target.src !== rawImage) {
+                      e.target.src = rawImage
+                    } else {
+                      setPosterErrors(prev => ({ ...prev, [activeIdx]: true }))
+                    }
+                  }}
                 />
               ) : (
                 <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${cfg.fallbackGradient}`}>
@@ -216,7 +250,7 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
         </div>
       </div>
 
-      {/* ── Dots ──────────────────────────────────────────────────────────── */}
+      {/* ── Dots ────────────────────────────────────────────────────────── */}
       {featured.length > 1 && (
         <div className="relative z-20 flex justify-center gap-1.5 pb-4">
           {featured.map((_, i) => (
@@ -230,7 +264,7 @@ const FeaturedBanner = ({ books = [], films = [], articles = [] }) => {
         </div>
       )}
 
-      {/* ── Arrows ────────────────────────────────────────────────────────── */}
+      {/* ── Arrows ──────────────────────────────────────────────────────── */}
       {featured.length > 1 && (
         <>
           <button

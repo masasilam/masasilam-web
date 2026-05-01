@@ -14,7 +14,7 @@ export const userService = {
     return response.data
   },
 
-  // Update user profile
+  // Update user profile (username, fullName, bio, profilePictureUrl, emailNotifications)
   updateProfile: async (userId, profileData) => {
     const response = await api.put(`/user/${userId}`, profileData)
     return response.data
@@ -34,7 +34,7 @@ export const userService = {
     return response.data
   },
 
-  // ✅ FIXED: Upload profile picture dengan userId sebagai query param
+  // Upload profile picture dengan userId sebagai query param
   uploadProfilePicture: async (file, userId) => {
     const formData = new FormData()
     formData.append('file', file)

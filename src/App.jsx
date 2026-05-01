@@ -1,6 +1,5 @@
 // ============================================
 // FILE: src/App.jsx
-// PERUBAHAN: Tambah import CorrectionQueuePage + route /dasbor/koreksi
 // ============================================
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
@@ -25,6 +24,11 @@ import FilmDetailPage from './pages/FilmDetailPage'
 import FilmWatchPage from './pages/FilmWatchPage'
 import PersonDetailPage from './pages/PersonDetailPage'
 import CompanyDetailPage from './pages/CompanyDetailPage'
+
+// ── Zine routes ──────────────────────────────────────────────────────────────
+import ZinesPage from './pages/ZinesPage'
+import ZineDetailPage from './pages/ZineDetailPage'
+import ZineReviewsPage from './pages/ZineReviewsPage'
 
 import GenresPage from './pages/GenresPage'
 import GenreDetailPage from './pages/GenreDetailPage'
@@ -79,8 +83,29 @@ import BlogEditorPage from './pages/dashboard/BlogEditorPage'
 import NewspaperManagePage from './pages/dashboard/NewspaperManagePage'
 import NewspaperEditorPage from './pages/dashboard/NewspaperEditorPage'
 
-// ← BARU: Halaman antrian koreksi untuk admin
 import CorrectionQueuePage from './pages/dashboard/CorrectionQueuePage'
+
+// ── Zine dashboard pages ─────────────────────────────────────────────────────
+import ZineLibraryPage from './pages/dashboard/ZineLibraryPage'
+import ZineReadingHistoryPage from './pages/dashboard/ZineReadingHistoryPage'
+import ZineStatisticsPage from './pages/dashboard/ZineStatisticsPage'
+
+// ── Social pages ─────────────────────────────────────────────────────────────
+import SocialLayout              from './pages/social/SocialLayout'
+import SocialHubPage             from './pages/social/SocialHubPage'
+import SocialFeedPage            from './pages/social/SocialFeedPage'
+import ReadingListsPage          from './pages/social/ReadingListsPage'
+import ReadingListDetailPage     from './pages/social/ReadingListDetailPage'
+import ReadingGroupsPage         from './pages/social/ReadingGroupsPage'
+import GroupDetailPage           from './pages/social/GroupDetailPage'
+import ReadingChallengesPage     from './pages/social/ReadingChallengesPage'
+import ChallengeDetailPage       from './pages/social/ChallengeDetailPage'
+import SocialAnnotationsPage     from './pages/social/SocialAnnotationsPage'
+import SocialProfilePage         from './pages/social/SocialProfilePage'
+import ReadingTwinsPage          from './pages/social/ReadingTwinsPage'
+import TimeCapsulePage           from './pages/social/TimeCapsulePage'
+import NotificationsPage         from './pages/social/NotificationsPage'
+import SocialProfileSettingsPage from './pages/social/SocialProfileSettingsPage'
 
 import NotFoundPage from './pages/NotFoundPage'
 import MaintenancePage from './pages/MaintenancePage'
@@ -104,14 +129,14 @@ function App() {
           duration: 3000,
           style: { background: '#363636', color: '#fff' },
           success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
-          error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+          error:   { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
         }}
       />
 
       <Routes>
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
 
-        {/* Book Routes */}
+        {/* ── Book Routes ────────────────────────────────────────────── */}
         <Route path="/buku" element={<PublicLayout><BooksPage /></PublicLayout>} />
         <Route path="/buku/terpopuler" element={<PublicLayout><PopularBooksPage /></PublicLayout>} />
         <Route path="/buku/terbaru" element={<PublicLayout><NewBooksPage /></PublicLayout>} />
@@ -122,18 +147,24 @@ function App() {
         <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />
         <Route path="/buku/:bookSlug/baca" element={<EpubReaderPage />} />
 
-        {/* Film Routes */}
+        {/* ── Zine Routes ────────────────────────────────────────────── */}
+        <Route path="/zine" element={<PublicLayout><ZinesPage /></PublicLayout>} />
+        <Route path="/zine/:zineSlug" element={<PublicLayout><ZineDetailPage /></PublicLayout>} />
+        <Route path="/zine/:zineSlug/ulasan" element={<PublicLayout><ZineReviewsPage /></PublicLayout>} />
+        <Route path="/zine/:zineSlug/baca" element={<EpubReaderPage mode="zine" />} />
+
+        {/* ── Film Routes ────────────────────────────────────────────── */}
         <Route path="/film" element={<PublicLayout><FilmsPage /></PublicLayout>} />
         <Route path="/film/:filmSlug" element={<PublicLayout><FilmDetailPage /></PublicLayout>} />
         <Route path="/film/:filmSlug/tonton" element={<FilmWatchPage />} />
         <Route path="/person/:personSlug" element={<PublicLayout><PersonDetailPage /></PublicLayout>} />
         <Route path="/perusahaan/:companySlug" element={<PublicLayout><CompanyDetailPage /></PublicLayout>} />
 
-        {/* Blog Routes */}
+        {/* ── Blog Routes ────────────────────────────────────────────── */}
         <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
         <Route path="/blog/:slug" element={<PublicLayout><BlogDetailPage /></PublicLayout>} />
 
-        {/* Koran Routes */}
+        {/* ── Koran Routes ───────────────────────────────────────────── */}
         <Route path="/koran" element={<PublicLayout><NewspaperPage /></PublicLayout>} />
         <Route path="/koran/cari" element={<PublicLayout><NewspaperSearchPage /></PublicLayout>} />
         <Route path="/koran/hari-ini" element={<PublicLayout><NewspaperOnThisDayPage /></PublicLayout>} />
@@ -142,16 +173,16 @@ function App() {
         <Route path="/koran/:categorySlug/:date" element={<PublicLayout><NewspaperDatePage /></PublicLayout>} />
         <Route path="/koran/:categorySlug/:date/:articleSlug" element={<PublicLayout><NewspaperArticleDetailPage /></PublicLayout>} />
 
-        {/* Search */}
+        {/* ── Search ─────────────────────────────────────────────────── */}
         <Route path="/cari" element={<PublicLayout><SearchResultsPage /></PublicLayout>} />
 
-        {/* Metadata Routes */}
+        {/* ── Metadata Routes ────────────────────────────────────────── */}
         <Route path="/kategori" element={<PublicLayout><GenresPage /></PublicLayout>} />
         <Route path="/kategori/:genreSlug" element={<PublicLayout><GenreDetailPage /></PublicLayout>} />
         <Route path="/penulis" element={<PublicLayout><AuthorsPage /></PublicLayout>} />
         <Route path="/penulis/:authorSlug" element={<PublicLayout><AuthorDetailPage /></PublicLayout>} />
 
-        {/* Static Pages */}
+        {/* ── Static Pages ───────────────────────────────────────────── */}
         <Route path="/tentang" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/cara-membaca" element={<PublicLayout><HowToReadPage /></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout><FAQPage /></PublicLayout>} />
@@ -159,16 +190,18 @@ function App() {
         <Route path="/privasi" element={<PublicLayout><PrivacyPolicyPage /></PublicLayout>} />
         <Route path="/syarat-ketentuan" element={<PublicLayout><TermsOfServicePage /></PublicLayout>} />
 
-        {/* Auth */}
+        {/* ── Auth ───────────────────────────────────────────────────── */}
         <Route path="/masuk" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/daftar" element={<AuthLayout><RegisterPage /></AuthLayout>} />
         <Route path="/lupa-kata-sandi" element={<AuthLayout><ForgotPasswordPage /></AuthLayout>} />
         <Route path="/reset-kata-sandi" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/verifikasi-email" element={<AuthLayout><VerifyEmailPage /></AuthLayout>} />
 
-        {/* Protected Dashboard Routes */}
+        {/* ── Protected Dashboard Routes ─────────────────────────────── */}
         <Route path="/dasbor" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DashboardOverview />} />
+
+          {/* Buku */}
           <Route path="perpustakaan" element={<MyLibraryPage />} />
           <Route path="riwayat" element={<ReadingHistoryPage />} />
           <Route path="anotasi" element={<AnnotationsPage />} />
@@ -178,6 +211,12 @@ function App() {
           <Route path="target" element={<GoalsPage />} />
           <Route path="pengaturan" element={<SettingsPage />} />
           <Route path="kelola" element={<AdminPage />} />
+          <Route path="koreksi" element={<CorrectionQueuePage />} />
+
+          {/* Zine dashboard */}
+          <Route path="zine" element={<ZineLibraryPage />} />
+          <Route path="zine/riwayat" element={<ZineReadingHistoryPage />} />
+          <Route path="zine/statistik" element={<ZineStatisticsPage />} />
 
           {/* Blog Admin */}
           <Route path="blog" element={<BlogManagePage />} />
@@ -189,11 +228,40 @@ function App() {
           <Route path="koran/baru" element={<NewspaperEditorPage />} />
           <Route path="koran/edit/:id" element={<NewspaperEditorPage />} />
 
-          {/* ← BARU: Correction Queue Admin */}
-          <Route path="koreksi" element={<CorrectionQueuePage />} />
+          {/* Social Profile Settings */}
+          <Route path="profil-sosial" element={<SocialProfileSettingsPage />} />
         </Route>
 
-        {/* Error Pages */}
+        {/* ── Social Routes ──────────────────────────────────────────── */}
+        {/*                                                               */}
+        {/* FIX: dibungkus PublicLayout agar Header utama (Buku, Film,   */}
+        {/* Koran, Blog, dll) tetap tampil di semua halaman /sosial/*.    */}
+        {/* SocialLayout hanya menyediakan sub-nav sidebar sosial.        */}
+        <Route
+          path="/sosial"
+          element={
+            <PublicLayout>
+              <SocialLayout />
+            </PublicLayout>
+          }
+        >
+          <Route index                         element={<SocialHubPage />} />
+          <Route path="feed"                   element={<SocialFeedPage />} />
+          <Route path="anotasi"                element={<SocialAnnotationsPage />} />
+          <Route path="daftar"                 element={<ReadingListsPage />} />
+          <Route path="daftar/:listId"         element={<ReadingListDetailPage />} />
+          <Route path="grup"                   element={<ReadingGroupsPage />} />
+          <Route path="grup/:slug"             element={<GroupDetailPage />} />
+          <Route path="tantangan"              element={<ReadingChallengesPage />} />
+          <Route path="tantangan/:challengeId" element={<ChallengeDetailPage />} />
+          <Route path="twin"                   element={<ReadingTwinsPage />} />
+          <Route path="kapsul"                 element={<TimeCapsulePage />} />
+          <Route path="notifikasi"             element={<NotificationsPage />} />
+          <Route path="profil/:username"       element={<SocialProfilePage />} />
+          <Route path="pengaturan-profil"      element={<SocialProfileSettingsPage />} />
+        </Route>
+
+        {/* ── Error Pages ────────────────────────────────────────────── */}
         <Route path="/pemeliharaan" element={<MaintenancePage />} />
         <Route path="/404" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         <Route path="*" element={<Navigate to="/404" replace />} />

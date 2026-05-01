@@ -1,6 +1,4 @@
-// ============================================
-// src/pages/dashboard/SettingsPage.jsx - FIXED VERSION
-// ============================================
+// src/pages/dashboard/SettingsPage.jsx
 
 import { useState, useEffect, useContext } from 'react'
 import {
@@ -21,8 +19,9 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Profile settings
+  // Profile settings — ✅ tambahkan username
   const [profileData, setProfileData] = useState({
+    username: '',
     fullName: '',
     bio: '',
     profilePictureUrl: '',
@@ -69,7 +68,9 @@ const SettingsPage = () => {
     console.log('🔵 SettingsPage: User from context:', user)
 
     if (user) {
+      // ✅ Tambahkan username saat load
       setProfileData({
+        username: user.username || '',
         fullName: user.fullName || user.name || '',
         bio: user.bio || '',
         profilePictureUrl: user.profilePictureUrl || '',
@@ -108,11 +109,35 @@ const SettingsPage = () => {
     }
   }, [user])
 
-  // ✅ FIXED: Handle profile update
+  // ✅ Validasi username sebelum submit
+  const validateUsername = (username) => {
+    if (!username || username.trim() === '') {
+      return 'Username tidak boleh kosong'
+    }
+    if (username.length < 3) {
+      return 'Username minimal 3 karakter'
+    }
+    if (username.length > 50) {
+      return 'Username maksimal 50 karakter'
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return 'Username hanya boleh berisi huruf, angka, dan underscore'
+    }
+    return null
+  }
+
+  // ✅ Handle profile update — sekarang kirim username juga
   const handleUpdateProfile = async () => {
     if (!user?.id) {
       toast.error('User ID tidak ditemukan')
       console.error('❌ User ID not found:', user)
+      return
+    }
+
+    // Validasi username
+    const usernameError = validateUsername(profileData.username)
+    if (usernameError) {
+      toast.error(usernameError)
       return
     }
 
@@ -124,6 +149,7 @@ const SettingsPage = () => {
       console.log('🔵 Profile data:', profileData)
 
       const response = await userService.updateProfile(user.id, {
+        username: profileData.username,           // ✅ kirim username
         fullName: profileData.fullName,
         bio: profileData.bio,
         profilePictureUrl: profileData.profilePictureUrl,
@@ -131,16 +157,15 @@ const SettingsPage = () => {
       })
 
       console.log('✅ Update response:', response)
-      console.log('✅ Response data:', response.data)
 
       if (response.result === 'success' || response.result === 'Success' || response.statusCode === 200 || response.code === 200) {
-        // 🔥 CRITICAL: Update dengan seluruh data dari response
         console.log('🔥 Updating user context with:', response.data)
 
         updateUser(response.data)
 
-        // Update juga local state agar form tetap sinkron
+        // ✅ Sync local state dengan response — termasuk username
         setProfileData({
+          username: response.data.username || '',
           fullName: response.data.fullName || '',
           bio: response.data.bio || '',
           profilePictureUrl: response.data.profilePictureUrl || '',
@@ -149,11 +174,9 @@ const SettingsPage = () => {
 
         toast.success('Profil berhasil diperbarui')
 
-        // 🔥 DEBUG: Cek localStorage setelah update
         setTimeout(() => {
           const updatedUser = JSON.parse(localStorage.getItem('user'))
           console.log('🔍 User in localStorage after update:', updatedUser)
-          console.log('🔍 ProfilePictureUrl:', updatedUser?.profilePictureUrl)
         }, 500)
       } else {
         throw new Error(response.message || response.detail || 'Update failed')
@@ -168,14 +191,13 @@ const SettingsPage = () => {
     }
   }
 
-  // ✅ FIXED: Handle password change
+  // Handle password change
   const handleChangePassword = async () => {
     if (!user?.id) {
       toast.error('User ID tidak ditemukan')
       return
     }
 
-    // Validation
     if (!passwordData.currentPassword || !passwordData.newPassword) {
       toast.error('Semua field password harus diisi')
       return
@@ -206,7 +228,6 @@ const SettingsPage = () => {
 
       if (response.result === 'success' || response.result === 'Success' || response.statusCode === 200 || response.code === 200) {
         toast.success('Password berhasil diubah')
-        // Reset password fields
         setPasswordData({
           currentPassword: '',
           newPassword: '',
@@ -225,25 +246,21 @@ const SettingsPage = () => {
     }
   }
 
-  // ✅ FIXED: Handle profile picture upload
+  // Handle profile picture upload
   const handleProfilePictureUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate user ID
     if (!user?.id) {
       toast.error('User ID tidak ditemukan')
-      console.error('❌ User ID not found:', user)
       return
     }
 
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('Ukuran file maksimal 2MB')
       return
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('File harus berupa gambar')
       return
@@ -252,43 +269,26 @@ const SettingsPage = () => {
     try {
       setSaving(true)
       console.log('🔵 Uploading profile picture:', file.name)
-      console.log('🔵 User ID:', user.id)
 
       const response = await userService.uploadProfilePicture(file, user.id)
 
       console.log('✅ Upload response:', response)
-      console.log('✅ Upload response data:', response.data)
 
       if (response.result === 'success' || response.result === 'Success' || response.statusCode === 200 || response.code === 200) {
-        // 🔥 PENTING: Ambil URL dari response - bisa di response.data.url atau response.data.profilePictureUrl
         const newProfilePictureUrl = response.data?.url || response.data?.profilePictureUrl
 
-        console.log('🔥 New profile picture URL:', newProfilePictureUrl)
-
         if (!newProfilePictureUrl) {
-          console.error('❌ No profile picture URL in response:', response.data)
           throw new Error('URL foto profil tidak ditemukan dalam response')
         }
 
-        // Update local state
-        setProfileData({
-          ...profileData,
+        setProfileData(prev => ({
+          ...prev,
           profilePictureUrl: newProfilePictureUrl
-        })
+        }))
 
-        // 🔥 CRITICAL: Update AuthContext
-        updateUser({
-          profilePictureUrl: newProfilePictureUrl
-        })
+        updateUser({ profilePictureUrl: newProfilePictureUrl })
 
         toast.success('Foto profil berhasil diupload')
-
-        // 🔥 DEBUG: Cek localStorage setelah update
-        setTimeout(() => {
-          const updatedUser = JSON.parse(localStorage.getItem('user'))
-          console.log('🔍 User in localStorage after upload:', updatedUser)
-          console.log('🔍 ProfilePictureUrl:', updatedUser?.profilePictureUrl)
-        }, 500)
       } else {
         throw new Error(response.message || response.detail || 'Upload failed')
       }
@@ -318,7 +318,7 @@ const SettingsPage = () => {
     toast.success('Pengaturan privasi disimpan')
   }
 
-  // ✅ FIXED: Handle delete account
+  // Handle delete account
   const handleDeleteAccount = async () => {
     if (!window.confirm('Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan!')) {
       return
@@ -332,11 +332,8 @@ const SettingsPage = () => {
 
       const response = await userService.deleteAccount(user.id, hardDelete)
 
-      console.log('✅ Delete response:', response)
-
       if (response.result === 'success' || response.result === 'Success' || response.statusCode === 200 || response.code === 200) {
         toast.success('Akun berhasil dihapus')
-        // Logout and redirect
         setTimeout(() => {
           logout()
           window.location.href = '/masuk'
@@ -413,11 +410,13 @@ const SettingsPage = () => {
         {/* Main Content */}
         <main className="lg:col-span-3">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            {/* Profile Tab */}
+
+            {/* ===== Profile Tab ===== */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Informasi Profil</h2>
 
+                {/* Foto Profil */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">Foto Profil</label>
                   <div className="flex items-center gap-4">
@@ -430,7 +429,7 @@ const SettingsPage = () => {
                         />
                       ) : (
                         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-2xl font-bold">
-                          {profileData.fullName?.charAt(0) || user?.name?.charAt(0) || user?.username?.charAt(0) || 'U'}
+                          {profileData.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
                         </div>
                       )}
                       <label className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-2 cursor-pointer hover:bg-primary-dark transition-colors">
@@ -451,29 +450,36 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
+                {/* ✅ Username — sekarang bisa diedit */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">Username</label>
                   <input
                     type="text"
-                    value={user?.username || ''}
-                    className="w-full px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
-                    disabled
+                    value={profileData.username}
+                    onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border dark:border-gray-700 dark:bg-gray-900"
+                    disabled={saving}
+                    maxLength={50}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Username tidak dapat diubah</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Hanya huruf, angka, dan underscore (_). 3–50 karakter.
+                  </p>
                 </div>
 
+                {/* Nama Lengkap */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">Nama Lengkap</label>
                   <input
                     type="text"
                     value={profileData.fullName}
-                    onChange={(e) => setProfileData({...profileData, fullName: e.target.value})}
+                    onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border dark:border-gray-700 dark:bg-gray-900"
                     disabled={saving}
                     maxLength={255}
                   />
                 </div>
 
+                {/* Email — tetap disabled */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">Email</label>
                   <input
@@ -485,11 +491,12 @@ const SettingsPage = () => {
                   <p className="text-xs text-gray-500 mt-1">Email tidak dapat diubah</p>
                 </div>
 
+                {/* Bio */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">Bio</label>
                   <textarea
                     value={profileData.bio}
-                    onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                     rows={4}
                     className="w-full px-4 py-2 rounded-lg border dark:border-gray-700 dark:bg-gray-900"
                     placeholder="Ceritakan sedikit tentang Anda..."
@@ -501,12 +508,13 @@ const SettingsPage = () => {
                   </p>
                 </div>
 
+                {/* Email Notifications */}
                 <div>
                   <label className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       checked={profileData.emailNotifications}
-                      onChange={(e) => setProfileData({...profileData, emailNotifications: e.target.checked})}
+                      onChange={(e) => setProfileData({ ...profileData, emailNotifications: e.target.checked })}
                       className="w-5 h-5"
                       disabled={saving}
                     />
@@ -514,11 +522,13 @@ const SettingsPage = () => {
                   </label>
                 </div>
 
+                {/* Action Buttons */}
                 <div className="flex justify-end gap-3 mt-8 pt-6 border-t dark:border-gray-700">
                   <button
                     onClick={() => {
-                      // Reset to original user data
+                      // ✅ Reset termasuk username
                       setProfileData({
+                        username: user?.username || '',
                         fullName: user?.fullName || user?.name || '',
                         bio: user?.bio || '',
                         profilePictureUrl: user?.profilePictureUrl || '',
@@ -551,7 +561,7 @@ const SettingsPage = () => {
               </div>
             )}
 
-            {/* Reading Preferences Tab */}
+            {/* ===== Reading Preferences Tab ===== */}
             {activeTab === 'reading' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Preferensi Membaca</h2>
@@ -565,7 +575,7 @@ const SettingsPage = () => {
                     min="12"
                     max="24"
                     value={readingPrefs.fontSize}
-                    onChange={(e) => setReadingPrefs({...readingPrefs, fontSize: parseInt(e.target.value)})}
+                    onChange={(e) => setReadingPrefs({ ...readingPrefs, fontSize: parseInt(e.target.value) })}
                     className="w-full"
                   />
                 </div>
@@ -574,7 +584,7 @@ const SettingsPage = () => {
                   <label className="block text-sm font-semibold mb-2">Jenis Font</label>
                   <select
                     value={readingPrefs.fontFamily}
-                    onChange={(e) => setReadingPrefs({...readingPrefs, fontFamily: e.target.value})}
+                    onChange={(e) => setReadingPrefs({ ...readingPrefs, fontFamily: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border dark:border-gray-700 dark:bg-gray-900"
                   >
                     <option value="serif">Serif</option>
@@ -593,7 +603,7 @@ const SettingsPage = () => {
                     max="2.5"
                     step="0.1"
                     value={readingPrefs.lineHeight}
-                    onChange={(e) => setReadingPrefs({...readingPrefs, lineHeight: parseFloat(e.target.value)})}
+                    onChange={(e) => setReadingPrefs({ ...readingPrefs, lineHeight: parseFloat(e.target.value) })}
                     className="w-full"
                   />
                 </div>
@@ -603,7 +613,7 @@ const SettingsPage = () => {
                     <input
                       type="checkbox"
                       checked={readingPrefs.autoBookmark}
-                      onChange={(e) => setReadingPrefs({...readingPrefs, autoBookmark: e.target.checked})}
+                      onChange={(e) => setReadingPrefs({ ...readingPrefs, autoBookmark: e.target.checked })}
                       className="w-5 h-5"
                     />
                     <span>Simpan penanda otomatis saat menutup buku</span>
@@ -613,7 +623,7 @@ const SettingsPage = () => {
                     <input
                       type="checkbox"
                       checked={readingPrefs.pageAnimation}
-                      onChange={(e) => setReadingPrefs({...readingPrefs, pageAnimation: e.target.checked})}
+                      onChange={(e) => setReadingPrefs({ ...readingPrefs, pageAnimation: e.target.checked })}
                       className="w-5 h-5"
                     />
                     <span>Animasi perpindahan halaman</span>
@@ -632,7 +642,7 @@ const SettingsPage = () => {
               </div>
             )}
 
-            {/* Appearance Tab */}
+            {/* ===== Appearance Tab ===== */}
             {activeTab === 'appearance' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Tampilan</h2>
@@ -688,71 +698,30 @@ const SettingsPage = () => {
               </div>
             )}
 
-            {/* Notifications Tab */}
+            {/* ===== Notifications Tab ===== */}
             {activeTab === 'notifications' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Notifikasi</h2>
 
                 <div className="space-y-4">
-                  <label className="flex items-center justify-between">
-                    <span>Notifikasi Email</span>
-                    <input
-                      type="checkbox"
-                      checked={notifications.email}
-                      onChange={(e) => setNotifications({...notifications, email: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <span>Notifikasi Push</span>
-                    <input
-                      type="checkbox"
-                      checked={notifications.push}
-                      onChange={(e) => setNotifications({...notifications, push: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <span>Buku Baru</span>
-                    <input
-                      type="checkbox"
-                      checked={notifications.newBooks}
-                      onChange={(e) => setNotifications({...notifications, newBooks: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <span>Pencapaian</span>
-                    <input
-                      type="checkbox"
-                      checked={notifications.achievements}
-                      onChange={(e) => setNotifications({...notifications, achievements: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <span>Pengingat Membaca</span>
-                    <input
-                      type="checkbox"
-                      checked={notifications.reminders}
-                      onChange={(e) => setNotifications({...notifications, reminders: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <span>Newsletter</span>
-                    <input
-                      type="checkbox"
-                      checked={notifications.newsletter}
-                      onChange={(e) => setNotifications({...notifications, newsletter: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
+                  {[
+                    { key: 'email', label: 'Notifikasi Email' },
+                    { key: 'push', label: 'Notifikasi Push' },
+                    { key: 'newBooks', label: 'Buku Baru' },
+                    { key: 'achievements', label: 'Pencapaian' },
+                    { key: 'reminders', label: 'Pengingat Membaca' },
+                    { key: 'newsletter', label: 'Newsletter' },
+                  ].map(({ key, label }) => (
+                    <label key={key} className="flex items-center justify-between">
+                      <span>{label}</span>
+                      <input
+                        type="checkbox"
+                        checked={notifications[key]}
+                        onChange={(e) => setNotifications({ ...notifications, [key]: e.target.checked })}
+                        className="w-5 h-5"
+                      />
+                    </label>
+                  ))}
                 </div>
 
                 <div className="flex justify-end gap-3 mt-8 pt-6 border-t dark:border-gray-700">
@@ -767,71 +736,31 @@ const SettingsPage = () => {
               </div>
             )}
 
-            {/* Privacy Tab */}
+            {/* ===== Privacy Tab ===== */}
             {activeTab === 'privacy' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Privasi & Keamanan</h2>
 
                 <div className="space-y-4">
-                  <label className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">Profil Publik</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Orang lain dapat melihat profil Anda
+                  {[
+                    { key: 'profileVisible', label: 'Profil Publik', desc: 'Orang lain dapat melihat profil Anda' },
+                    { key: 'showReadingActivity', label: 'Aktivitas Membaca', desc: 'Tampilkan apa yang sedang Anda baca' },
+                    { key: 'showLibrary', label: 'Perpustakaan Publik', desc: 'Orang lain dapat melihat perpustakaan Anda' },
+                    { key: 'allowRecommendations', label: 'Rekomendasi Personal', desc: 'Gunakan data bacaan untuk rekomendasi' },
+                  ].map(({ key, label, desc }) => (
+                    <label key={key} className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold">{label}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">{desc}</div>
                       </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={privacy.profileVisible}
-                      onChange={(e) => setPrivacy({...privacy, profileVisible: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">Aktivitas Membaca</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Tampilkan apa yang sedang Anda baca
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={privacy.showReadingActivity}
-                      onChange={(e) => setPrivacy({...privacy, showReadingActivity: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">Perpustakaan Publik</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Orang lain dapat melihat perpustakaan Anda
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={privacy.showLibrary}
-                      onChange={(e) => setPrivacy({...privacy, showLibrary: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">Rekomendasi Personal</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Gunakan data bacaan untuk rekomendasi
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={privacy.allowRecommendations}
-                      onChange={(e) => setPrivacy({...privacy, allowRecommendations: e.target.checked})}
-                      className="w-5 h-5"
-                    />
-                  </label>
+                      <input
+                        type="checkbox"
+                        checked={privacy[key]}
+                        onChange={(e) => setPrivacy({ ...privacy, [key]: e.target.checked })}
+                        className="w-5 h-5"
+                      />
+                    </label>
+                  ))}
                 </div>
 
                 <div className="flex justify-end gap-3 mt-8 pt-6 border-t dark:border-gray-700">
@@ -846,7 +775,7 @@ const SettingsPage = () => {
               </div>
             )}
 
-            {/* Account Tab */}
+            {/* ===== Account Tab ===== */}
             {activeTab === 'account' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-xl mb-4">Pengaturan Akun</h2>
@@ -862,7 +791,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                {/* Change Password Section */}
+                {/* Change Password */}
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 space-y-4">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Lock className="w-5 h-5" />
@@ -874,7 +803,7 @@ const SettingsPage = () => {
                     <input
                       type="password"
                       value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                       className="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800"
                       disabled={saving}
                     />
@@ -885,7 +814,7 @@ const SettingsPage = () => {
                     <input
                       type="password"
                       value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                       className="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800"
                       disabled={saving}
                     />
@@ -897,7 +826,7 @@ const SettingsPage = () => {
                     <input
                       type="password"
                       value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                       className="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800"
                       disabled={saving}
                     />
@@ -953,6 +882,7 @@ const SettingsPage = () => {
                 </div>
               </div>
             )}
+
           </div>
         </main>
       </div>

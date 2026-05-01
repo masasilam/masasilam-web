@@ -134,43 +134,23 @@ export const chapterService = {
   //           → EpubAnnotationController
   // ============================================
 
-  /**
-   * Dipanggil saat EpubReaderPage mount.
-   * Hanya untuk increment read count pada first-time read.
-   * Session record dibuat oleh recordEpubSession.
-   *
-   * POST /api/books/{slug}/reading/start
-   */
-  epubStartReading: async (slug, sessionData) => {
-    const response = await api.post(`/books/${slug}/reading/start`, sessionData)
-    return response.data?.data || response.data
-  },
+    epubStartReading: async (slug, sessionData, isZine = false) => {
+      const base = isZine ? `/zines/${slug}` : `/books/${slug}`
+      const response = await api.post(`${base}/reading/start`, sessionData)
+      return response.data?.data || response.data
+    },
 
-  /**
-   * No-op untuk EPUB — tersedia untuk konsistensi API.
-   * Data sesi direkam via recordEpubSession.
-   *
-   * POST /api/books/{slug}/reading/end
-   */
-  epubEndReading: async (slug, sessionData) => {
-    const response = await api.post(`/books/${slug}/reading/end`, sessionData)
-    return response.data?.data || response.data
-  },
+    epubEndReading: async (slug, sessionData, isZine = false) => {
+      const base = isZine ? `/zines/${slug}` : `/books/${slug}`
+      const response = await api.post(`${base}/reading/end`, sessionData)
+      return response.data?.data || response.data
+    },
 
-  /**
-   * Kirim data sesi baca EPUB ke backend saat user meninggalkan halaman.
-   * Dipanggil dari EpubReaderPage cleanup (unmount / navigasi internal React).
-   * Untuk tab ditutup, EpubReaderPage menggunakan fetch+keepalive langsung.
-   *
-   * POST /api/books/{slug}/reading/epub-session
-   */
-  recordEpubSession: async (slug, sessionData) => {
-    const response = await api.post(
-      `/books/${slug}/reading/epub-session`,
-      sessionData
-    )
-    return response.data?.data || response.data
-  },
+    recordEpubSession: async (slug, sessionData, isZine = false) => {
+      const base = isZine ? `/zines/${slug}` : `/books/${slug}`
+      const response = await api.post(`${base}/reading/epub-session`, sessionData)
+      return response.data?.data || response.data
+    },
 
   // ============================================
   // SEARCH IN BOOK

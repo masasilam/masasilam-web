@@ -1,35 +1,55 @@
 // ============================================
 // src/components/Film/FilmCard.jsx
+// LIGHT: White card, cool slate shadows, blue accent
+// DARK:  Slate-900 card, deep shadows, blue accent
+//
+// LIGHT MODE PALETTE:
+//   Card bg     : white      (#ffffff)
+//   Border      : slate-200  (#e2e8f0)
+//   Text primary: slate-900  (#0f172a)
+//   Text muted  : slate-500  (#64748b)
+//   Genre pill  : blue-50/blue-100/blue-600
+//   Hover border: blue-300
+//
+// DARK MODE PALETTE:
+//   Card bg     : slate-900  (#0f172a)
+//   Border      : slate-800  (#1e293b)
+//   Text primary: slate-100  (#f1f5f9)
+//   Text muted  : slate-500  (#64748b)
+//   Genre pill  : blue-900/20 / blue-400
+//   Hover border: slate-600
 // ============================================
 
 import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, Film as FilmIcon, Play, Video } from 'lucide-react'
+import { Clock, Film as FilmIcon, Play, Video, Star, Globe, User } from 'lucide-react'
 
 /**
  * Konversi URL Wikimedia Commons ke URL thumbnail.
- * PENTING: regex pakai [^/] bukan [a-f0-9] karena hash dir
- * bisa berisi huruf kapital, angka, dan karakter lain —
- * contoh: "d/da/", "8/8e/", "2/24/", "0/08/" semua valid.
+ * Regex pakai [^/] karena hash dir bisa berisi huruf kapital & angka.
  */
 const getWikimediaThumb = (url, w = 300) => {
   if (!url) return null
-  // Jika sudah URL thumb, kembalikan apa adanya
   if (url.includes('/thumb/')) return url
-
-  // Cocokkan pola upload.wikimedia.org/wikipedia/{namespace}/{hash}/{filename}
   const m = url.match(
     /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
   )
-  if (!m) return url // bukan URL Wikimedia — kembalikan apa adanya
-
+  if (!m) return url
   const [, base, hash, filename] = m
   const isSvg = filename.toLowerCase().endsWith('.svg')
-  // SVG perlu ekstensi .png di nama thumb
   const thumbFilename = isSvg ? `${filename}.png` : filename
   return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
 }
 
+// ── Stat chip ─────────────────────────────────────────────────────────────────
+const Stat = ({ icon: Icon, value, className = '' }) => (
+  <span className={`inline-flex items-center gap-1 text-[11px] leading-none ${className}`}>
+    <Icon className="w-3 h-3 flex-shrink-0" />
+    {value}
+  </span>
+)
+
+// ── FilmCard ──────────────────────────────────────────────────────────────────
 const FilmCard = memo(({ film }) => {
   const [imgStatus, setImgStatus] = useState('loading') // 'loading' | 'loaded' | 'error'
 
@@ -39,15 +59,15 @@ const FilmCard = memo(({ film }) => {
         : new Date(film.tahunRilis).getFullYear())
     : null
 
-  // Coba semua kemungkinan field poster dari API
+  // Fallback chain untuk URL poster
   const rawPosterUrl =
-    film.posterUrl ||
-    film.poster_url ||
-    film.poster ||
+    film.posterUrl   ||
+    film.poster_url  ||
+    film.poster      ||
     film.thumbnailUrl ||
-    film.thumbnail ||
-    film.coverUrl ||
-    film.imageUrl ||
+    film.thumbnail   ||
+    film.coverUrl    ||
+    film.imageUrl    ||
     (typeof film.imageUrls === 'string' && film.imageUrls
       ? film.imageUrls.split(',')[0].trim()
       : null) ||
@@ -55,10 +75,9 @@ const FilmCard = memo(({ film }) => {
 
   const thumbUrl = getWikimediaThumb(rawPosterUrl, 300)
 
-  // Fallback bertingkat: thumb gagal → coba URL asli → tampilkan icon
+  // Fallback bertingkat: thumb → URL asli → icon
   const handleError = (e) => {
     const currentSrc = e.target.src
-    // Jika sedang pakai thumb URL dan URL asli berbeda, coba URL asli
     if (rawPosterUrl && currentSrc !== rawPosterUrl && thumbUrl !== rawPosterUrl) {
       e.target.src = rawPosterUrl
       return
@@ -66,17 +85,33 @@ const FilmCard = memo(({ film }) => {
     setImgStatus('error')
   }
 
+  const rating = film.reviewScores?.length > 0 ? film.reviewScores[0].value : null
+  const genreList = film.genre
+    ? (Array.isArray(film.genre) ? film.genre : [film.genre]).slice(0, 2)
+    : []
+  const director = film.sutradara?.[0]?.name || null
+
   return (
     <Link
       to={`/film/${film.slug || film.id}`}
-      className="group block bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700"
+      className="group relative flex flex-col rounded-xl overflow-hidden
+                 transition-all duration-300 ease-out
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                 border shadow-sm hover:shadow-xl hover:-translate-y-1
+                 bg-white border-slate-200 shadow-slate-100/80
+                 hover:border-blue-300 hover:shadow-blue-100/60
+                 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none
+                 dark:hover:border-slate-600 dark:hover:shadow-black/60 dark:hover:shadow-xl"
     >
-      {/* Poster - PORTRAIT 2:3 */}
-      <div className="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-700">
+      {/* ── Cover ─────────────────────────────────────────────────────── */}
+      <div className="relative aspect-[2/3] overflow-hidden flex-shrink-0
+                      bg-slate-100 dark:bg-slate-800">
 
-        {/* Skeleton shimmer saat loading */}
+        {/* Shimmer skeleton saat loading */}
         {imgStatus === 'loading' && thumbUrl && (
-          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br
+                          from-slate-200 via-slate-100 to-slate-200
+                          dark:from-slate-700 dark:via-slate-600 dark:to-slate-700" />
         )}
 
         {/* Poster image */}
@@ -88,99 +123,147 @@ const FilmCard = memo(({ film }) => {
             decoding="async"
             onLoad={() => setImgStatus('loaded')}
             onError={handleError}
-            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${
-              imgStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
-            }`}
+            className={`w-full h-full object-cover group-hover:scale-[1.04]
+                        transition-transform duration-500 ease-out
+                        ${imgStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-gray-900">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2
+                          bg-gradient-to-br from-blue-50 to-slate-100
+                          dark:from-blue-950/50 dark:to-slate-900">
             <FilmIcon className="w-10 h-10 text-blue-400/60 dark:text-blue-500/40" />
-            <p className="text-[9px] text-center text-gray-500 dark:text-gray-400 px-2 line-clamp-2">{film.judul}</p>
+            <p className="text-[9px] text-center text-slate-500 dark:text-slate-400 px-2 line-clamp-2">
+              {film.judul}
+            </p>
           </div>
         )}
 
-        {/* Play overlay */}
+        {/* Bottom gradient vignette */}
+        <div className="absolute inset-x-0 bottom-0 h-1/3
+                        bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+
+        {/* Play overlay (hanya jika ada videoUrl) */}
         {film.videoUrl && (
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30
+                          transition-colors duration-300 flex items-center justify-center">
             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 ml-0.5" fill="currentColor" />
+              <div className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center
+                              shadow-lg shadow-black/30">
+                <Play className="w-5 h-5 text-blue-600 ml-0.5" fill="currentColor" />
               </div>
             </div>
           </div>
         )}
 
-        {/* Year badge */}
+        {/* ── Top-left: year badge ──────────────────────────────────── */}
         {year && (
-          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-gray-900/80 backdrop-blur-sm rounded text-[10px] sm:text-xs text-white font-semibold">
+          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md
+                          bg-gray-900/80 backdrop-blur-sm
+                          text-white text-[10px] font-bold tracking-wide">
             {year}
           </div>
         )}
 
-        {/* Video/Trailer badges */}
-        <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
+        {/* ── Top-right: Video / Trailer badges ────────────────────── */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
           {film.videoUrl && (
-            <div className="px-1.5 py-0.5 bg-green-600/90 backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-white font-semibold flex items-center gap-0.5">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md shadow-sm
+                             bg-emerald-600/90 backdrop-blur-sm
+                             text-white text-[9px] font-bold">
               <Play className="w-2 h-2" fill="currentColor" />
               <span className="hidden sm:inline">Full</span>
-            </div>
+            </span>
           )}
           {film.trailerUrl && (
-            <div className="px-1.5 py-0.5 bg-blue-600/90 backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-white font-semibold flex items-center gap-0.5">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md shadow-sm
+                             bg-blue-600/90 backdrop-blur-sm
+                             text-white text-[9px] font-bold">
               <Video className="w-2 h-2" />
               <span className="hidden sm:inline">Trailer</span>
+            </span>
+          )}
+        </div>
+
+        {/* ── Bottom: rating + durasi ───────────────────────────────── */}
+        <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between">
+          {rating ? (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
+                            bg-black/20 backdrop-blur-[2px]">
+              <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+              <span className="text-white/90 text-[10px] font-semibold tabular-nums">{rating}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
+                            bg-black/15 backdrop-blur-[2px]">
+              <Star className="w-2.5 h-2.5 text-white/40" />
+              <span className="text-white/40 text-[9px]">—</span>
+            </div>
+          )}
+          {film.durasi && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
+                            bg-black/20 backdrop-blur-[2px]">
+              <Clock className="w-2.5 h-2.5 text-white/60 flex-shrink-0" />
+              <span className="text-white/80 text-[9px] font-medium">{film.durasi}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Info */}
-      <div className="p-2 sm:p-3">
-        <h3 className="font-semibold text-xs sm:text-sm leading-snug text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-1">
+      {/* ── Info Panel ────────────────────────────────────────────────── */}
+      <div className="flex flex-col flex-1 p-2.5 sm:p-3 gap-1.5">
+
+        {/* Genre pills */}
+        {genreList.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {genreList.map((g, i) => (
+              <span key={i}
+                className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full
+                           text-[9px] font-medium leading-none
+                           bg-blue-50 border border-blue-100 text-blue-600
+                           dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400">
+                {g}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Title */}
+        <h3 className="font-semibold text-sm leading-snug line-clamp-2 hyphens-auto
+                       transition-colors duration-200
+                       text-slate-900 group-hover:text-blue-700
+                       dark:text-slate-100 dark:group-hover:text-blue-400">
           {film.judul}
         </h3>
 
-        {film.sutradara && film.sutradara.length > 0 && (
-          <p className="hidden sm:block text-[10px] text-gray-500 dark:text-gray-400 mb-1 truncate">
-            {film.sutradara[0].name}
+        {/* Director */}
+        {director && (
+          <p className="text-xs truncate leading-none text-slate-500 dark:text-slate-500">
+            {director}
           </p>
         )}
 
-        {film.durasi && (
-          <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <Clock className="w-2.5 h-2.5" />
-            <span>{film.durasi}</span>
-          </div>
-        )}
-
-        {film.genre && film.genre.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded text-[9px] sm:text-[10px] font-medium max-w-full truncate">
-              {film.genre[0]}
-            </span>
-            {film.genre[1] && (
-              <span className="hidden sm:inline px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded text-[10px] font-medium">
-                {film.genre[1]}
-              </span>
-            )}
-          </div>
-        )}
-
-        {film.reviewScores && film.reviewScores.length > 0 && (
-          <div className="mt-1 flex items-center gap-0.5">
-            <svg className="w-2.5 h-2.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span className="text-[10px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300">
-              {film.reviewScores[0].value}
-            </span>
-          </div>
-        )}
+        {/* Stats strip — country */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto pt-1.5
+                        border-t border-slate-100 dark:border-slate-800">
+          {film.negara && (
+            <Stat icon={Globe} value={film.negara}
+              className="text-slate-400 dark:text-slate-600 truncate max-w-full" />
+          )}
+          {!film.negara && film.durasi && (
+            <Stat icon={Clock} value={film.durasi}
+              className="text-slate-400 dark:text-slate-600" />
+          )}
+        </div>
       </div>
+
+      {/* ── Hover glow border (decorative) ───────────────────────────── */}
+      <div className="absolute inset-0 rounded-xl border-2 border-transparent
+                      pointer-events-none transition-colors duration-300
+                      group-hover:border-blue-300/40
+                      dark:group-hover:border-blue-500/20" />
     </Link>
   )
 })
 
 FilmCard.displayName = 'FilmCard'
-
 export default FilmCard

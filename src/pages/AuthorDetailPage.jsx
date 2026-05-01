@@ -31,7 +31,7 @@ const AuthorDetailPage = () => {
           bookService.getBooks({
             page: currentPage,
             limit: LIMIT,
-            authorName: authorSlug.replace(/-/g, ' '),
+            authorName: authorSlug,  // ✅ kirim "drs-mohammad-hatta" langsung, jangan di-replace
             sortField: 'publishedAt',
             sortOrder: 'DESC'
           })
