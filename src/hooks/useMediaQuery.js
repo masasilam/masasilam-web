@@ -11,8 +11,7 @@ export const useMediaQuery = (query) => {
     }
 
     const listener = () => setMatches(media.matches)
-    
-    // Modern browsers
+
     if (media.addEventListener) {
       media.addEventListener('change', listener)
       return () => media.removeEventListener('change', listener)
