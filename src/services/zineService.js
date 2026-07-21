@@ -1,8 +1,3 @@
-// ============================================
-// src/services/zineService.js
-// API service untuk Zine/Magazine
-// Mirrors bookService.js pattern
-// ============================================
 import api from './api'
 
 const cleanParams = (params) => {

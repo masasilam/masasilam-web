@@ -1,4 +1,3 @@
-// src/components/Social/NotificationBell.jsx
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Bell, Check, CheckCheck, User, Heart, MessageCircle, UserPlus, Trophy, BookOpen, Layers, X } from 'lucide-react'
 import { notificationService } from '../../services/socialService'

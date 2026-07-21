@@ -1,4 +1,3 @@
-// src/pages/dashboard/CorrectionQueuePage.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
@@ -188,21 +187,22 @@ const CorrectionQueuePage = () => {
   const LIMIT = 10
 
   const fetchCorrections = useCallback(async (tab, p) => {
-    setLoading(true)
-    try {
-      setError(null)
-      const res = await dashboardService.getCorrections(tab, p, LIMIT)
-      setCorrections(res.data?.items || [])
-      const total = res.data?.total || 0
-      setTotalItems(total)
-      setTotalPages(Math.ceil(total / LIMIT) || 1)
-    } catch (err) {
-      setError(err?.response?.status === 401 ? 'auth' : 'network')
-      setCorrections([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      setLoading(true)
+      try {
+        setError(null)
+        const res = await dashboardService.getCorrections(tab, p, LIMIT)
+        // Handle kedua shape: DatatableResponse (list) dan DataResponse (items)
+        setCorrections(res.data?.items || res.data?.list || [])
+        const total = res.data?.total ?? res.data?.totalData ?? 0
+        setTotalItems(total)
+        setTotalPages(Math.ceil(total / LIMIT) || 1)
+      } catch (err) {
+        setError(err?.response?.status === 401 ? 'auth' : 'network')
+        setCorrections([])
+      } finally {
+        setLoading(false)
+      }
+    }, [])
 
   useEffect(() => { fetchCorrections(activeTab, page) }, [activeTab, page, fetchCorrections])
 

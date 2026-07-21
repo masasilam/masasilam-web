@@ -1,6 +1,3 @@
-// ============================================
-// FILE: src/hooks/useChapterNavigation.js - FIXED
-// ============================================
 import { useNavigate } from 'react-router-dom'
 
 export const buildChapterUrl = (bookSlug, chapterInfo) => {

@@ -1,7 +1,3 @@
-// src/components/Social/SocialSectionBlock.jsx
-// Wrapper section yang bisa di-collapse, digunakan di halaman detail
-// untuk menampilkan fitur sosial secara konsisten
-
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
@@ -9,7 +5,7 @@ const SocialSectionBlock = ({
   title,
   icon: Icon,
   iconColor = 'text-rose-500',
-  badge = null,       // angka badge misal jumlah item
+  badge = null,
   children,
   defaultOpen = false,
   className = '',

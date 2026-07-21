@@ -1,8 +1,3 @@
-// ============================================
-// src/utils/seoHelpers.js - COMPLETE ENHANCED VERSION
-// All Structured Data Schemas for Perfect SEO
-// ============================================
-
 const BASE_URL = 'https://masasilam.com'
 
 // ============================================
@@ -14,7 +9,7 @@ export const generateWebsiteStructuredData = () => ({
   "name": "MasasilaM",
   "alternateName": "Perpustakaan Digital MasasilaM",
   "url": BASE_URL,
-  "description": "Perpustakaan digital gratis untuk buku klasik domain publik dengan fitur smart reading, bookmark, dan highlight",
+  "description": "Perpustakaan digital gratis untuk karya domain publik dan yang terbengkalai dan yang terdegradasi",
   "inLanguage": "id-ID",
   "potentialAction": {
     "@type": "SearchAction",
@@ -50,8 +45,8 @@ export const generateOrganizationStructuredData = () => ({
   "alternateName": "Perpustakaan Digital MasasilaM",
   "url": BASE_URL,
   "logo": `${BASE_URL}/logo.png`,
-  "description": "Platform perpustakaan digital yang menyediakan akses gratis ke buku-buku domain publik",
-  "email": "support@masasilam.com",
+  "description": "Platform perpustakaan digital yang menyediakan akses gratis ke karya domain publik dan yang terbengkalai dan yang terdegradasi",
+  "email": "info@masa-silam.com",
   "foundingDate": "2025",
   "address": {
     "@type": "PostalAddress",
@@ -478,7 +473,7 @@ export const generateMetaDescription = (text, maxLength = 160) => {
 // HELPER: Generate Keywords
 // ============================================
 export const generateKeywords = (genres, author, bookTitle) => {
-  const keywords = ['buku gratis', 'domain publik', 'perpustakaan digital', 'literasi digital']
+  const keywords = ['buku gratis', 'domain publik', 'perpustakaan digital', 'literasi digital', 'ebook', 'ebook gratis', 'film', 'film gratis', 'arsip koran', 'majalah', 'zine']
 
   if (genres) {
     keywords.push(...genres.split(',').map(g => g.trim().toLowerCase()))

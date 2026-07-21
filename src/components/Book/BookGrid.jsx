@@ -1,14 +1,5 @@
-// ============================================
-// src/components/Book/BookGrid.jsx
-// LIGHT: skeleton warm stone tones
-// DARK:  skeleton cool slate tones
-// ============================================
-
 import BookCard from './BookCard'
 
-// ── Skeleton card ─────────────────────────────────────────────────────────────
-// LIGHT: bg-white border-stone-200 shimmer via white/30
-// DARK:  bg-slate-900 border-slate-800 shimmer via white/5
 const SkeletonCard = () => (
   <div className="rounded-xl border overflow-hidden animate-pulse
                   bg-white border-stone-200

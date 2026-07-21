@@ -1,4 +1,3 @@
-// src/components/Reader/TTSVoiceSetupBanner.jsx
 import { AlertCircle, X, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 

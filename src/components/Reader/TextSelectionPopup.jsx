@@ -1,7 +1,3 @@
-// ============================================
-// FILE: src/components/Reader/TextSelectionPopup.jsx
-// PERUBAHAN: Tambah tombol "Laporkan Typo" dan prop onReportTypo
-// ============================================
 import { X, Highlighter, Check, Lock, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 

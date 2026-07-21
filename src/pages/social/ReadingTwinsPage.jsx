@@ -1,4 +1,3 @@
-// src/pages/social/ReadingTwinsPage.jsx
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Users2, RefreshCw, BookOpen, Loader2, Sparkles, TrendingUp } from 'lucide-react'

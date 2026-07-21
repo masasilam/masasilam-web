@@ -1,6 +1,3 @@
-// ============================================
-// FILE 1: src/components/Reader/LoginPromptModal.jsx
-// ============================================
 import { X } from 'lucide-react'
 
 const LoginPromptModal = ({ icon: Icon, title, description, onClose, onLogin, onRegister }) => (

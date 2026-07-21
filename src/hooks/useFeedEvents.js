@@ -1,34 +1,16 @@
-// src/hooks/useFeedEvents.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Hook ini dipakai di SocialFeedPage untuk mendengarkan semua feed events
-// dan melakukan update state secara optimistik tanpa full-reload.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useEffect } from 'react'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 import { useAuth } from './useAuth'
 
-/**
- * @param {object} opts
- * @param {Function} opts.setItems     - setState untuk array items feed
- * @param {Function} opts.refresh      - fungsi untuk full-refresh feed (load page 1)
- * @param {object}   opts.currentUser  - user object dari useAuth
- */
 export function useFeedEvents({ setItems, refresh, currentUser }) {
   useEffect(() => {
-    // ── ACTIVITY_CREATED ──────────────────────────────────────────────────────
-    // Prepend aktivitas baru ke atas feed (optimistik)
     const unsubCreated = feedEvents.on(FEED_EVENTS.ACTIVITY_CREATED, (payload) => {
-      // Kalau payload sudah berisi full activity object dari server response,
-      // langsung prepend. Kalau tidak, fallback ke refresh.
       if (payload?.id) {
         setItems(prev => {
-          // Hindari duplikat jika feed juga di-poll
           if (prev.some(i => i.id === payload.id)) return prev
           return [payload, ...prev]
         })
       } else {
-        // Tidak ada data lengkap → refresh halaman pertama
         refresh()
       }
     })

@@ -1,7 +1,3 @@
-//============================================
-// src/components/Common/LoadingSpinner.jsx
-//============================================
-
 const LoadingSpinner = ({ fullScreen = false, size = 'md' }) => {
   const sizeClasses = {
     sm: 'w-6 h-6 border-2',

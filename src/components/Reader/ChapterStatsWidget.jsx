@@ -1,6 +1,3 @@
-// ============================================
-// FILE 3: src/components/Reader/ChapterStatsWidget.jsx
-// ============================================
 import { useState, useEffect } from 'react'
 import { BarChart3, ChevronDown, ChevronUp } from 'lucide-react'
 import { chapterService } from '../../services/chapterService'

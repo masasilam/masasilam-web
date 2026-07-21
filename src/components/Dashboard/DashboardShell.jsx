@@ -1,25 +1,3 @@
-// src/components/Dashboard/DashboardShell.jsx
-//
-// Wrapper loading & error yang SERAGAM untuk semua halaman dashboard.
-// Pakai ini di setiap halaman dashboard sebagai pengganti
-// `if (loading) return <LoadingSpinner />` yang posisinya berbeda-beda.
-//
-// Cara pakai:
-//   import DashboardShell from '../../components/Dashboard/DashboardShell'
-//
-//   const MyPage = () => {
-//     const [loading, setLoading] = useState(true)
-//     const [error,   setError]   = useState(null)  // null | 'auth' | 'network'
-//
-//     const handleLogin = () => navigate('/masuk', { state: { from: '/dasbor/...' } })
-//
-//     return (
-//       <DashboardShell loading={loading} error={error} onRetry={fetch} onLogin={handleLogin}>
-//         {/* konten halaman */}
-//       </DashboardShell>
-//     )
-//   }
-
 import { useNavigate } from 'react-router-dom'
 import { Book } from 'lucide-react'
 import LoadingSpinner from '../Common/LoadingSpinner'

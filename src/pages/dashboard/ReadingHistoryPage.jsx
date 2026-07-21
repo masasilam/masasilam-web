@@ -1,25 +1,19 @@
-// src/pages/dashboard/ReadingHistoryPage.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { dashboardService } from '../../services/dashboardService'
 import DashboardShell from '../../components/Dashboard/DashboardShell'
-import { Clock, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Clock, BookOpen, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react'
 import { parseCfiChapter } from '../../utils/epubUtils'
 
 const buildDescription = (item) => {
   const cfiChapter = parseCfiChapter(item?.lastCfi)
   const chapter    = cfiChapter ?? item?.chapterNumber
   const rawDesc    = item?.description ?? ''
-
   if (!chapter) return rawDesc || 'Membaca buku'
-
   const durasiMatch = rawDesc.match(/selama .+$/)
   const durasiStr   = durasiMatch ? durasiMatch[0] : ''
-
   const isEpub = !item?.chapterNumber && !item?.totalChapters
-  if (isEpub) {
-    return durasiStr ? `Membaca EPUB (bab ${chapter}) ${durasiStr}` : `Membaca EPUB (bab ${chapter})`
-  }
+  if (isEpub) return durasiStr ? `Membaca EPUB (bab ${chapter}) ${durasiStr}` : `Membaca EPUB (bab ${chapter})`
   return durasiStr ? `Membaca hingga Bab ${chapter} ${durasiStr}` : `Membaca hingga Bab ${chapter}`
 }
 
@@ -32,7 +26,7 @@ const groupByDateAndBook = (items) => {
   const byDate = {}
   items.forEach(item => {
     const dateKey = item.timestamp
-      ? new Date(item.timestamp).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+      ? new Date(item.timestamp).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
       : 'Tanggal tidak diketahui'
     if (!byDate[dateKey]) byDate[dateKey] = {}
     const bookKey = item.bookId
@@ -50,15 +44,23 @@ const groupByDateAndBook = (items) => {
 
 const ProgressBadge = ({ pct }) => {
   const color =
-    pct >= 95 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' :
-    pct >= 50 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
-                'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+    pct >= 95 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+    : pct >= 50 ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+    : 'bg-stone-100 text-stone-600 dark:bg-slate-700 dark:text-slate-300'
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${color}`}>
+    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${color}`}>
       {pct.toFixed(0)}%
     </span>
   )
 }
+
+const DAY_OPTIONS = [
+  { value: 7,   label: '7 Hari'  },
+  { value: 14,  label: '14 Hari' },
+  { value: 30,  label: '30 Hari' },
+  { value: 90,  label: '3 Bulan' },
+  { value: 365, label: '1 Tahun' },
+]
 
 const ReadingHistoryPage = () => {
   const navigate = useNavigate()
@@ -69,9 +71,7 @@ const ReadingHistoryPage = () => {
   const [page, setPage]               = useState(1)
   const LIMIT = 20
 
-  useEffect(() => {
-    document.title = 'Riwayat Membaca - Dashboard MasasilaM'
-  }, [])
+  useEffect(() => { document.title = 'Riwayat Membaca - Dashboard' }, [])
 
   const loadHistory = useCallback(async () => {
     try {
@@ -80,7 +80,6 @@ const ReadingHistoryPage = () => {
       setHistoryData(data?.data ?? null)
     } catch (err) {
       setError(err?.response?.status === 401 ? 'auth' : 'network')
-      console.error('Failed to load history:', err)
     } finally {
       setLoading(false)
     }
@@ -96,76 +95,74 @@ const ReadingHistoryPage = () => {
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
   const grouped    = groupByDateAndBook(items)
 
-  const DAY_OPTIONS = [
-    { value: 7,   label: '7 Hari'  },
-    { value: 14,  label: '14 Hari' },
-    { value: 30,  label: '30 Hari' },
-    { value: 90,  label: '3 Bulan' },
-    { value: 365, label: '1 Tahun' },
-  ]
-
   return (
     <DashboardShell
-      loading={loading}
-      error={error}
-      onRetry={loadHistory}
+      loading={loading} error={error} onRetry={loadHistory}
       onLogin={() => navigate('/masuk', { state: { from: '/dasbor/riwayat' } })}
     >
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-5">
 
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold mb-1">Riwayat Membaca</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {total} sesi ditemukan dalam {days} hari terakhir
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {DAY_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleDaysChange(opt.value)}
-                  className={`px-3 py-1.5 text-xs sm:text-sm rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                    days === opt.value
-                      ? 'bg-primary text-white border-primary'
-                      : 'text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-primary hover:text-primary'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-slate-50 mb-1">Riwayat Membaca</h1>
+          <p className="text-sm text-stone-500 dark:text-slate-400">
+            {total > 0
+              ? <><span className="font-semibold text-stone-700 dark:text-slate-300">{total} sesi</span> ditemukan dalam {days} hari terakhir</>
+              : `Tidak ada sesi dalam ${days} hari terakhir`}
+          </p>
         </div>
 
-        {/* Empty state */}
-        {items.length === 0 && (
-          <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-lg shadow">
-            <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Belum ada riwayat membaca dalam {days} hari terakhir
-            </p>
+        {/* ── Period Filter ────────────────────────────────────── */}
+        <div className="flex gap-2 flex-wrap">
+          {DAY_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => handleDaysChange(opt.value)}
+              className={`px-4 py-2 text-sm font-medium rounded-full border transition-all ${
+                days === opt.value
+                  ? 'bg-amber-500 text-stone-950 border-amber-500 font-bold shadow-sm shadow-amber-200 dark:shadow-amber-900/30'
+                  : 'bg-white dark:bg-slate-900 text-stone-600 dark:text-slate-400 border-stone-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Empty State ───────────────────────────────────────── */}
+        {!loading && items.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-700">
+            <div className="w-16 h-16 rounded-2xl bg-stone-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+              <Clock className="w-8 h-8 text-stone-300 dark:text-slate-600" />
+            </div>
+            <p className="text-stone-500 dark:text-slate-400 text-sm font-medium mb-1">Belum ada riwayat</p>
+            <p className="text-stone-400 dark:text-slate-500 text-xs">Mulai membaca buku untuk melihat aktivitas di sini</p>
           </div>
         )}
 
-        {/* List per tanggal → per buku */}
+        {/* ── History List ─────────────────────────────────────── */}
         {items.length > 0 && (
           <div className="space-y-6">
             {Object.entries(grouped).map(([date, books]) => {
               const totalSesi = Object.values(books).reduce((sum, b) => sum + b.sessions.length, 0)
               return (
                 <section key={date}>
+                  {/* Date separator */}
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-primary" />
-                      <h2 className="font-semibold text-sm sm:text-base text-gray-700 dark:text-gray-300">{date}</h2>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      </div>
+                      <h2 className="text-sm font-bold text-stone-800 dark:text-slate-200 capitalize">{date}</h2>
                     </div>
-                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{totalSesi} sesi</span>
+                    <div className="flex-1 h-px bg-stone-100 dark:bg-slate-800" />
+                    <span className="text-xs text-stone-400 dark:text-slate-500 flex-shrink-0 bg-stone-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                      {totalSesi} sesi
+                    </span>
                   </div>
-                  <div className="space-y-2 sm:space-y-3">
+
+                  {/* Book cards */}
+                  <div className="space-y-2 pl-0 sm:pl-3">
                     {Object.values(books).map(book => {
                       const pct = book.sessions[0]?.progressPercentage ?? 0
                       const handleBookClick = () => {
@@ -175,41 +172,50 @@ const ReadingHistoryPage = () => {
                         })
                       }
                       return (
-                        <div key={book.bookId} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:border-primary hover:shadow-md transition-all">
+                        <div key={book.bookId} className="bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-700 overflow-hidden hover:border-amber-300 dark:hover:border-amber-500/50 hover:shadow-sm transition-all">
+
+                          {/* Book header — clickable */}
                           <div
                             onClick={handleBookClick}
-                            className="flex gap-3 p-3 sm:p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            className="flex gap-3 p-4 cursor-pointer hover:bg-stone-50/60 dark:hover:bg-slate-800/30 transition-colors group"
                             role="link" tabIndex={0}
                             onKeyDown={e => e.key === 'Enter' && handleBookClick()}
                           >
-                            {book.bookCover ? (
-                              <img src={book.bookCover} alt={`Cover ${book.bookTitle}`} className="w-10 h-14 object-cover rounded shadow flex-shrink-0" loading="lazy" />
-                            ) : (
-                              <div className="w-10 h-14 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
-                                <BookOpen className="w-4 h-4 text-gray-400" />
-                              </div>
-                            )}
+                            {/* Cover */}
+                            <div className="w-11 flex-shrink-0 rounded-lg overflow-hidden border border-stone-100 dark:border-slate-700 aspect-[2/3] shadow-sm">
+                              {book.bookCover
+                                ? <img src={book.bookCover} alt={`Cover ${book.bookTitle}`} className="w-full h-full object-cover" loading="lazy" />
+                                : <div className="w-full h-full bg-stone-100 dark:bg-slate-800 flex items-center justify-center"><BookOpen className="w-4 h-4 text-stone-300" /></div>
+                              }
+                            </div>
+
+                            {/* Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2 mb-0.5">
-                                <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{book.bookTitle}</h3>
+                                <h3 className="font-bold text-sm text-stone-900 dark:text-slate-100 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{book.bookTitle}</h3>
                                 <ProgressBadge pct={pct} />
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{book.authorName}</p>
-                              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1">
-                                <div className="h-1 rounded-full bg-primary transition-all" style={{ width: `${Math.min(pct, 100)}%` }}
-                                  role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100" />
+                              <p className="text-xs text-stone-400 dark:text-slate-500 mb-2 truncate">{book.authorName}</p>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1.5 rounded-full bg-stone-100 dark:bg-slate-700 overflow-hidden">
+                                  <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
+                                    style={{ width: `${Math.min(pct, 100)}%` }}
+                                    role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100" />
+                                </div>
+                                <span className="text-xs text-stone-400 dark:text-slate-500 flex-shrink-0">
+                                  {book.sessions.length} sesi
+                                </span>
                               </div>
                             </div>
-                            <div className="flex-shrink-0 text-right pl-2">
-                              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{book.sessions.length} sesi</p>
-                            </div>
                           </div>
-                          <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-2 pl-16 space-y-1.5">
+
+                          {/* Sessions list */}
+                          <div className="border-t border-stone-100 dark:border-slate-800 divide-y divide-stone-50 dark:divide-slate-800/50">
                             {book.sessions.map(s => (
-                              <div key={s.activityId} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                                <span className="flex-1 truncate">{buildDescription(s)}</span>
-                                <span className="flex-shrink-0 text-gray-400 dark:text-gray-500">{formatTime(s.timestamp)}</span>
+                              <div key={s.activityId} className="flex items-center gap-3 px-4 py-2.5 pl-[4.25rem]">
+                                <div className="w-1.5 h-1.5 rounded-full bg-amber-300 dark:bg-amber-600 flex-shrink-0" />
+                                <span className="flex-1 text-xs text-stone-600 dark:text-slate-400 truncate">{buildDescription(s)}</span>
+                                <span className="flex-shrink-0 text-[11px] text-stone-400 dark:text-slate-500 font-medium">{formatTime(s.timestamp)}</span>
                               </div>
                             ))}
                           </div>
@@ -223,17 +229,25 @@ const ReadingHistoryPage = () => {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* ── Pagination ────────────────────────────────────────── */}
         {totalPages > 1 && (
-          <nav aria-label="Pagination" className="flex items-center justify-center gap-2 mt-4">
-            <button onClick={() => handlePageChange(Math.max(1, page - 1))} disabled={page === 1}
-              className="flex items-center gap-1 px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
-              <ChevronLeft className="w-4 h-4" />Sebelumnya
+          <nav className="flex items-center justify-center gap-2 pt-2" aria-label="Pagination">
+            <button
+              onClick={() => handlePageChange(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-stone-600 dark:text-slate-400 disabled:opacity-40 hover:border-stone-400 transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" /> Sebelumnya
             </button>
-            <span className="text-sm text-gray-500 dark:text-gray-400 px-2">{page} / {totalPages}</span>
-            <button onClick={() => handlePageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-              className="flex items-center gap-1 px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
-              Selanjutnya<ChevronRight className="w-4 h-4" />
+            <span className="px-4 py-2 text-sm text-stone-500 dark:text-slate-400">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-stone-600 dark:text-slate-400 disabled:opacity-40 hover:border-stone-400 transition-all"
+            >
+              Selanjutnya <ChevronRight className="w-4 h-4" />
             </button>
           </nav>
         )}

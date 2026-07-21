@@ -1,6 +1,5 @@
-// src/pages/dashboard/AchievementsPage.jsx
 import { useState, useEffect, useCallback } from 'react'
-import { Trophy, Award, Star, Lock, CheckCircle, Book, Clock, Target } from 'lucide-react'
+import { Trophy, Award, Star, Lock, CheckCircle, Book, Clock, Target, Zap, TrendingUp } from 'lucide-react'
 import { dashboardService } from '../../services/dashboardService'
 import DashboardShell from '../../components/Dashboard/DashboardShell'
 import { useNavigate } from 'react-router-dom'
@@ -20,7 +19,6 @@ const AchievementsPage = () => {
       setAchievements(res?.data || null)
     } catch (err) {
       setError(err?.response?.status === 401 ? 'auth' : 'network')
-      console.error('Failed to load achievements:', err)
     } finally {
       setLoading(false)
     }
@@ -39,6 +37,16 @@ const AchievementsPage = () => {
     return true
   })
 
+  const unlocked   = achievements?.unlocked || 0
+  const total      = achievements?.total    || 1
+  const progressPct = Math.round((unlocked / total) * 100)
+
+  const filters = [
+    { id: 'all',      label: 'Semua',    count: achievements?.total    || 0 },
+    { id: 'unlocked', label: 'Terbuka',  count: achievements?.unlocked || 0 },
+    { id: 'locked',   label: 'Terkunci', count: (achievements?.total || 0) - (achievements?.unlocked || 0) },
+  ]
+
   return (
     <DashboardShell
       loading={loading}
@@ -48,154 +56,194 @@ const AchievementsPage = () => {
     >
       <div className="space-y-6">
 
-        {/* Header with Stats */}
-        <div className="bg-gradient-to-r from-primary to-primary-dark rounded-lg shadow-lg p-8 text-white">
-          <div className="flex items-start justify-between">
+        {/* ── Hero Banner ───────────────────────────────────────── */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 p-6 sm:p-8 shadow-lg">
+          {/* Decorative circles */}
+          <div className="pointer-events-none absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -right-4 -bottom-16 w-64 h-64 rounded-full bg-white/5" />
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Pencapaian</h1>
-              <p className="text-primary-light">
-                Raih pencapaian dengan terus membaca dan jelajahi dunia literasi!
-              </p>
+              <div className="flex items-center gap-2 mb-2">
+                <Trophy className="w-6 h-6 text-white/90" />
+                <span className="text-sm font-semibold text-white/80 uppercase tracking-widest">Pencapaian</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-1">
+                {unlocked} <span className="text-white/60 font-normal text-2xl">/ {total}</span>
+              </h1>
+              <p className="text-white/75 text-sm">Raih semua pencapaian dengan terus membaca!</p>
             </div>
-            <div className="text-right">
-              <div className="text-4xl font-bold">{achievements?.unlocked || 0}</div>
-              <div className="text-sm text-primary-light">
-                dari {achievements?.total || 0} pencapaian
+
+            {/* Circular progress */}
+            <div className="flex-shrink-0 self-start sm:self-auto">
+              <div className="relative w-24 h-24">
+                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                  <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+                  <circle
+                    cx="48" cy="48" r="40" fill="none"
+                    stroke="white" strokeWidth="8"
+                    strokeDasharray={`${2 * Math.PI * 40}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - progressPct / 100)}`}
+                    strokeLinecap="round"
+                    className="transition-all duration-700"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-bold text-white">{progressPct}%</span>
+                </div>
               </div>
             </div>
           </div>
-          <div className="mt-6">
-            <div className="flex items-center justify-between text-sm mb-2">
+
+          {/* Progress bar */}
+          <div className="relative mt-5">
+            <div className="flex items-center justify-between text-xs text-white/70 mb-1.5">
               <span>Progress</span>
-              <span>
-                {Math.round(((achievements?.unlocked || 0) / (achievements?.total || 1)) * 100)}%
-              </span>
+              <span>{unlocked} dari {total} terbuka</span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-3">
+            <div className="h-2 rounded-full bg-white/20 overflow-hidden">
               <div
-                className="bg-white rounded-full h-3 transition-all"
-                style={{ width: `${((achievements?.unlocked || 0) / (achievements?.total || 1)) * 100}%` }}
+                className="h-full rounded-full bg-white transition-all duration-700"
+                style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <div className="flex gap-2">
-            {[
-              { id: 'all',      label: `Semua (${achievements?.total || 0})` },
-              { id: 'unlocked', label: `Terbuka (${achievements?.unlocked || 0})` },
-              { id: 'locked',   label: `Terkunci (${(achievements?.total || 0) - (achievements?.unlocked || 0)})` },
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filter === f.id
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Achievements Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAchievements?.map((achievement) => {
-            const CategoryIcon = getCategoryIcon(achievement.category)
-            const isUnlocked   = achievement.unlocked
-            return (
-              <div
-                key={achievement.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all ${
-                  isUnlocked ? 'hover:scale-105 cursor-pointer' : 'opacity-60'
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`p-4 rounded-full ${
-                    isUnlocked
-                      ? 'bg-gradient-to-br from-yellow-400 to-yellow-600'
-                      : 'bg-gray-300 dark:bg-gray-700'
-                  }`}>
-                    {isUnlocked
-                      ? <CategoryIcon className="w-8 h-8 text-white" />
-                      : <Lock className="w-8 h-8 text-gray-500" />}
+        {/* ── Category Summary ──────────────────────────────────── */}
+        {achievements?.categories && achievements.categories.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {achievements.categories.map((cat) => {
+              const Icon = getCategoryIcon(cat.id)
+              const catPct = cat.total > 0 ? Math.round((cat.unlocked / cat.total) * 100) : 0
+              return (
+                <div
+                  key={cat.id}
+                  className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-stone-200 dark:border-slate-700 text-center hover:border-amber-400 dark:hover:border-amber-500 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mx-auto mb-2">
+                    <Icon className="w-5 h-5 text-amber-500" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-bold text-lg">{achievement.title}</h3>
-                      {isUnlocked && <CheckCircle className="w-5 h-5 text-green-500" />}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      {achievement.description}
-                    </p>
-                    {achievement.progress && (
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                          <span className="font-semibold">
-                            {achievement.progress.current}/{achievement.progress.target}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all ${isUnlocked ? 'bg-green-500' : 'bg-primary'}`}
-                            style={{ width: `${(achievement.progress.current / achievement.progress.target) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs">
-                      {isUnlocked ? (
-                        <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                          <Trophy className="w-3 h-3" />
-                          {new Date(achievement.unlocked_at).toLocaleDateString('id-ID')}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500 dark:text-gray-400">Belum terbuka</span>
-                      )}
-                      <span className="font-semibold text-primary">{achievement.points} poin</span>
-                    </div>
+                  <p className="text-xs font-semibold text-stone-700 dark:text-slate-200 mb-0.5">{cat.name}</p>
+                  <p className="text-[11px] text-stone-400 dark:text-slate-500">{cat.unlocked}/{cat.total}</p>
+                  <div className="mt-2 h-1 rounded-full bg-stone-100 dark:bg-slate-700 overflow-hidden">
+                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${catPct}%` }} />
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {filteredAchievements?.length === 0 && (
-          <div className="text-center py-12">
-            <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">
-              {filter === 'unlocked'
-                ? 'Belum ada pencapaian yang terbuka. Terus membaca!'
-                : 'Semua pencapaian sudah terbuka. Luar biasa!'}
-            </p>
+              )
+            })}
           </div>
         )}
 
-        {/* Categories Summary */}
-        {achievements?.categories && achievements.categories.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="font-bold text-xl mb-4">Kategori Pencapaian</h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {achievements.categories.map((cat) => {
-                const Icon = getCategoryIcon(cat.id)
-                return (
-                  <div key={cat.id} className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <Icon className="w-8 h-8 mx-auto mb-2 text-primary" />
-                    <p className="font-semibold">{cat.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {cat.unlocked}/{cat.total}
-                    </p>
-                  </div>
-                )
-              })}
+        {/* ── Filter Tabs ───────────────────────────────────────── */}
+        <div className="flex gap-2 flex-wrap">
+          {filters.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all border ${
+                filter === f.id
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200 dark:shadow-amber-900/30'
+                  : 'bg-white dark:bg-slate-900 text-stone-600 dark:text-slate-400 border-stone-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400'
+              }`}
+            >
+              {f.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                filter === f.id ? 'bg-white/20 text-white' : 'bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400'
+              }`}>
+                {f.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Achievements Grid ─────────────────────────────────── */}
+        {filteredAchievements?.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-700">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+              <Trophy className="w-8 h-8 text-amber-400 opacity-50" />
             </div>
+            <p className="text-stone-500 dark:text-slate-400 text-sm">
+              {filter === 'unlocked' ? 'Belum ada pencapaian terbuka. Terus membaca!' : 'Semua pencapaian sudah terbuka. Luar biasa!'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredAchievements?.map((achievement) => {
+              const CategoryIcon = getCategoryIcon(achievement.category)
+              const isUnlocked   = achievement.unlocked
+              const progress     = achievement.progress
+              const progressPct  = progress ? Math.round((progress.current / progress.target) * 100) : 0
+
+              return (
+                <div
+                  key={achievement.id}
+                  className={`relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 ${
+                    isUnlocked
+                      ? 'bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-500/30 hover:shadow-lg hover:shadow-amber-100/60 dark:hover:shadow-amber-900/20 hover:-translate-y-0.5'
+                      : 'bg-stone-50 dark:bg-slate-900/50 border-stone-200 dark:border-slate-800 opacity-60'
+                  }`}
+                >
+                  {/* Unlocked glow */}
+                  {isUnlocked && (
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-50/60 via-transparent to-transparent dark:from-amber-500/5 dark:via-transparent" />
+                  )}
+
+                  <div className="relative flex items-start gap-4">
+                    <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm ${
+                      isUnlocked
+                        ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                        : 'bg-stone-200 dark:bg-slate-700'
+                    }`}>
+                      {isUnlocked
+                        ? <CategoryIcon className="w-7 h-7 text-white" />
+                        : <Lock className="w-7 h-7 text-stone-400 dark:text-slate-500" />
+                      }
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="font-bold text-stone-900 dark:text-slate-100 leading-tight">{achievement.title}</h3>
+                        {isUnlocked && <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />}
+                      </div>
+                      <p className="text-xs text-stone-500 dark:text-slate-400 mb-3 leading-relaxed">{achievement.description}</p>
+
+                      {progress && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="text-stone-500 dark:text-slate-400">Progress</span>
+                            <span className="font-semibold text-stone-700 dark:text-slate-300">
+                              {progress.current}/{progress.target}
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-stone-100 dark:bg-slate-700 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${isUnlocked ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                              style={{ width: `${Math.min(progressPct, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between">
+                        {isUnlocked ? (
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Trophy className="w-3 h-3" />
+                            {new Date(achievement.unlocked_at).toLocaleDateString('id-ID')}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-stone-400 dark:text-slate-500">Belum terbuka</span>
+                        )}
+                        <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
+                          <Zap className="w-3 h-3" />
+                          {achievement.points} poin
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

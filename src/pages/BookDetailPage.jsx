@@ -1,47 +1,60 @@
-// src/pages/BookDetailPage.jsx
-// ============================================
-// FIXES: CLS, LCP, INP — Core Web Vitals
-//
-//  CLS  → author photo slot selalu ada (tidak muncul tiba-tiba);
-//          hapus mt-auto dari mobile stats row;
-//          min-height pada reviews section;
-//          width/height eksplisit pada cover img
-//
-//  LCP  → fetchPriority="high" + loading="eager" pada cover img;
-//          decoding="sync" untuk gambar above-fold
-//
-//  INP  → useCallback pada SEMUA event handler + fetch helpers;
-//          startTransition untuk akordion non-kritis;
-//          useTransition di level komponen
-//
-// LIGHT: stone-* tokens, amber accent
-// DARK:  slate-* tokens, amber accent
-// ============================================
-
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import {
-  Book, BookOpen, Calendar, Clock, Download, Eye, Heart, Share2, Star,
+  BookOpen, Calendar, Clock, Download, Eye, Heart, Share2, Star,
   User, FileText, Globe, Building2, X, MessageCircle, ThumbsUp,
-  ArrowLeft, Pencil, ChevronDown, Database
+  ArrowLeft, ChevronDown, CheckCircle2, ChevronRight,
+  Bookmark, Layers, Info, ExternalLink, Feather,
+  Users, Tag, AlignLeft, List, Newspaper, Printer,
+  ThumbsDown, Frown, Angry, Zap, Activity,
+  Award, BarChart2, Heart as HeartIcon, TrendingUp
 } from 'lucide-react'
 import bookService from '../services/bookService'
 import { useAuth } from '../hooks/useAuth'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
-import Button from '../components/Common/Button'
 import Alert from '../components/Common/Alert'
 import SEO from '../components/Common/SEO'
-import {
-  generateBookStructuredData,
-  generateBreadcrumbStructuredData,
-  generateReviewStructuredData,
-  generateMetaDescription,
-  generateKeywords
-} from '../utils/seoHelpers'
 import BookDetailSocialSection from '../components/Social/BookDetailSocialSection'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
-// ── RatingModal ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CoverImage
+// ─────────────────────────────────────────────────────────────────────────────
+const CoverImage = ({ url, alt, className = '' }) => {
+  const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  const imgRef = useRef(null)
+
+  useEffect(() => { setLoaded(false); setError(false) }, [url])
+  useEffect(() => { if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) setLoaded(true) }, [url])
+
+  if (!url || error) {
+    return (
+      <div className={`flex flex-col items-center justify-center gap-3
+                       bg-gradient-to-br from-amber-50 to-stone-100
+                       dark:from-amber-950/50 dark:to-slate-900 ${className}`}>
+        <BookOpen className="w-10 h-10 text-amber-300/60" />
+        <p className="text-xs text-stone-400 px-3 text-center leading-snug line-clamp-3">{alt}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-stone-200 dark:bg-slate-700" />}
+      <img
+        ref={imgRef}
+        src={url} alt={alt} loading="eager" fetchpriority="high"
+        onLoad={() => setLoaded(true)} onError={() => setError(true)}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RatingModal
+// ─────────────────────────────────────────────────────────────────────────────
 const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
@@ -49,7 +62,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (rating === 0) return alert('Pilih rating bintang')
+    if (!rating) return alert('Pilih rating bintang')
     setSubmitting(true)
     await onSubmit({ rating })
     setSubmitting(false)
@@ -59,89 +72,57 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
   if (!isOpen) return null
 
   const ratingLabels = {
-    0.5: '⭐ 0.5 - Sangat Buruk', 1:   '⭐ 1.0 - Sangat Buruk',
-    1.5: '⭐ 1.5 - Buruk',        2:   '⭐⭐ 2.0 - Buruk',
-    2.5: '⭐⭐ 2.5 - Kurang',     3:   '⭐⭐⭐ 3.0 - Cukup',
-    3.5: '⭐⭐⭐ 3.5 - Lumayan',  4:   '⭐⭐⭐⭐ 4.0 - Bagus',
-    4.5: '⭐⭐⭐⭐ 4.5 - Sangat Bagus', 5: '⭐⭐⭐⭐⭐ 5.0 - Sempurna'
+    0.5: '⭐ 0.5 – Sangat Buruk', 1: '⭐ 1.0 – Sangat Buruk',
+    1.5: '⭐ 1.5 – Buruk',        2: '⭐⭐ 2.0 – Buruk',
+    2.5: '⭐⭐ 2.5 – Kurang',     3: '⭐⭐⭐ 3.0 – Cukup',
+    3.5: '⭐⭐⭐ 3.5 – Lumayan',  4: '⭐⭐⭐⭐ 4.0 – Bagus',
+    4.5: '⭐⭐⭐⭐ 4.5 – Sangat Bagus', 5: '⭐⭐⭐⭐⭐ 5.0 – Sempurna',
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="rounded-2xl shadow-2xl max-w-md w-full transition-colors
-                      bg-white dark:bg-slate-900
-                      border border-stone-200 dark:border-slate-700">
-        <div className="flex items-center justify-between p-6 border-b
-                        border-stone-200 dark:border-slate-700">
-          <h2 className="text-xl font-bold text-stone-900 dark:text-slate-50">Beri Rating</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-all
-                       text-stone-400 hover:text-stone-700 hover:bg-stone-100
-                       dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl bg-white dark:bg-slate-900 border-t border-x sm:border border-stone-200 dark:border-slate-700">
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-stone-200 dark:bg-slate-700" />
+        </div>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-stone-900 dark:text-slate-50">Beri Rating</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg transition-all text-stone-400 hover:text-stone-700 hover:bg-stone-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
-            <p className="text-sm mb-1 text-stone-500 dark:text-slate-400">Buku</p>
-            <p className="font-semibold leading-snug text-stone-900 dark:text-slate-100">{bookTitle}</p>
+            <p className="text-xs mb-0.5 text-stone-400 dark:text-slate-500">Buku</p>
+            <p className="font-semibold text-stone-900 dark:text-slate-100 leading-snug line-clamp-2">{bookTitle}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-4 text-stone-700 dark:text-slate-300">
-              Rating Bintang <span className="text-red-500">*</span>
-            </label>
-            <div className="flex gap-1 items-center justify-center">
+            <p className="text-sm font-medium mb-4 text-stone-700 dark:text-slate-300">Rating Bintang <span className="text-red-500">*</span></p>
+            <div className="flex gap-1.5 items-center justify-center">
               {[1, 2, 3, 4, 5].map(star => {
-                const isHalf = (hoverRating || rating) === star - 0.5
-                const isFull = (hoverRating || rating) >= star
+                const active = hoverRating || rating
+                const isFull = active >= star
+                const isHalf = active === star - 0.5
                 return (
-                  <div key={star} className="relative cursor-pointer group">
-                    <Star className={`w-12 h-12 transition-all ${
-                      isFull
-                        ? 'fill-amber-400 text-amber-400 scale-110'
-                        : 'fill-stone-200 text-stone-300 dark:fill-slate-700 dark:text-slate-600'
-                    } group-hover:scale-110`} />
-                    {isHalf && !isFull && (
-                      <Star
-                        className="w-12 h-12 absolute top-0 left-0 fill-amber-400 text-amber-400"
-                        style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }}
-                      />
-                    )}
+                  <div key={star} className="relative cursor-pointer">
+                    <Star className={`w-11 h-11 transition-all duration-150 ${isFull ? 'fill-amber-400 text-amber-400 scale-110' : 'fill-stone-100 text-stone-200 dark:fill-slate-800 dark:text-slate-700'}`} />
+                    {isHalf && !isFull && <Star className="w-11 h-11 absolute top-0 left-0 fill-amber-400 text-amber-400" style={{ clipPath: 'polygon(0 0,50% 0,50% 100%,0 100%)' }} />}
                     <div className="absolute inset-0 flex">
-                      <button
-                        type="button"
-                        className="w-1/2 h-full"
-                        onClick={() => setRating(star - 0.5)}
-                        onMouseEnter={() => setHoverRating(star - 0.5)}
-                        onMouseLeave={() => setHoverRating(0)}
-                      />
-                      <button
-                        type="button"
-                        className="w-1/2 h-full"
-                        onClick={() => setRating(star)}
-                        onMouseEnter={() => setHoverRating(star)}
-                        onMouseLeave={() => setHoverRating(0)}
-                      />
+                      <button type="button" className="w-1/2 h-full" onClick={() => setRating(star - 0.5)} onMouseEnter={() => setHoverRating(star - 0.5)} onMouseLeave={() => setHoverRating(0)} />
+                      <button type="button" className="w-1/2 h-full" onClick={() => setRating(star)} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} />
                     </div>
                   </div>
                 )
               })}
             </div>
-            {rating > 0 && (
-              <p className="text-sm text-center mt-3 font-medium text-amber-600 dark:text-amber-400">
-                {ratingLabels[rating]}
-              </p>
-            )}
+            {rating > 0 && <p className="text-sm text-center mt-3 font-semibold text-amber-600 dark:text-amber-400">{ratingLabels[rating]}</p>}
           </div>
-          <div className="flex gap-3">
-            <Button type="button" variant="secondary" fullWidth onClick={onClose} disabled={submitting}>
-              Batal
-            </Button>
-            <Button type="submit" variant="primary" fullWidth loading={submitting}
-              disabled={submitting || rating === 0}>
-              {submitting ? 'Mengirim...' : 'Kirim Rating'}
-            </Button>
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} disabled={submitting} className="flex-1 py-3 rounded-xl border text-sm font-medium transition border-stone-200 text-stone-600 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 disabled:opacity-50">Batal</button>
+            <button type="submit" disabled={submitting || !rating} className="flex-1 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 bg-amber-500 hover:bg-amber-400 active:scale-95 text-white">{submitting ? 'Mengirim...' : 'Kirim Rating'}</button>
           </div>
         </form>
       </div>
@@ -149,57 +130,61 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
   )
 }
 
-// ── StatPill ──────────────────────────────────────────────────────────────────
-const StatPill = ({ icon: Icon, value, label }) => (
-  <div className="flex flex-col items-center gap-0.5 min-w-0">
-    <div className="flex items-center gap-1 text-stone-700 dark:text-slate-200">
-      <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-      <span className="text-sm font-semibold tabular-nums">{value}</span>
+// ─────────────────────────────────────────────────────────────────────────────
+// StarDisplay
+// ─────────────────────────────────────────────────────────────────────────────
+const StarDisplay = ({ avg, size = 'sm' }) => {
+  const filled = Math.floor(avg)
+  const hasHalf = avg - filled >= 0.25 && avg - filled < 0.75
+  const hasAlmost = avg - filled >= 0.75
+  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(s => {
+        const isFull = s <= filled || (s === filled + 1 && hasAlmost)
+        const isHalf = s === filled + 1 && hasHalf
+        return (
+          <span key={s} className="relative inline-block">
+            <Star className={`${cls} text-stone-200 dark:text-slate-700`} />
+            {(isFull || isHalf) && <Star className={`${cls} absolute inset-0 fill-amber-400 text-amber-400`} style={isHalf ? { clipPath: 'polygon(0 0,50% 0,50% 100%,0 100%)' } : {}} />}
+          </span>
+        )
+      })}
     </div>
-    {label && <span className="text-[10px] whitespace-nowrap text-stone-400 dark:text-slate-500">{label}</span>}
-  </div>
-)
+  )
+}
 
-// ── RatingSummary ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// RatingSummary
+// ─────────────────────────────────────────────────────────────────────────────
 const RatingSummary = ({ ratingStats, onRate, userRating }) => {
-  if (!ratingStats || ratingStats.totalRatings === 0) {
+  const hasStats = ratingStats?.totalRatings > 0
+
+  if (!hasStats) {
     return (
-      <div className="flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-colors
-                      bg-stone-50 border-stone-200
-                      dark:bg-slate-800/60 dark:border-slate-700">
-        <div className="text-center">
-          <div className="text-4xl font-bold text-stone-200 dark:text-slate-700">—</div>
+      <div className="flex items-center gap-4 p-4 rounded-2xl border border-dashed bg-stone-50 border-stone-200 dark:bg-slate-800/60 dark:border-slate-700">
+        <div className="text-center flex-shrink-0">
+          <div className="text-3xl font-bold text-stone-200 dark:text-slate-700">—</div>
           <div className="flex gap-0.5 mt-1 justify-center">
-            {[1, 2, 3, 4, 5].map(s => (
-              <Star key={s} className="w-4 h-4 text-stone-200 dark:text-slate-700" />
-            ))}
+            {[1,2,3,4,5].map(s => <Star key={s} className="w-3.5 h-3.5 text-stone-200 dark:text-slate-700" />)}
           </div>
         </div>
         <div className="flex-1">
           <p className="text-sm mb-2 text-stone-500 dark:text-slate-400">Belum ada rating</p>
-          <button
-            onClick={onRate}
-            className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors
-                       text-amber-600 hover:text-amber-700
-                       dark:text-amber-400 dark:hover:text-amber-300">
+          <button onClick={onRate} className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
             <Star className="w-4 h-4" />
-            {userRating ? `Rating Anda: ${userRating.rating} ⭐` : 'Beri rating pertama'}
+            {userRating ? `Rating Anda: ${userRating.rating} ⭐` : 'Jadilah yang pertama memberi rating'}
           </button>
         </div>
       </div>
     )
   }
 
-  const avg   = ratingStats.averageRating
+  const avg = ratingStats.averageRating
   const total = ratingStats.totalRatings
-  const filledStars   = Math.floor(avg)
-  const hasHalf       = avg - filledStars >= 0.25 && avg - filledStars < 0.75
-  const hasAlmostFull = avg - filledStars >= 0.75
-  const ratingLabel   = avg >= 4.5 ? 'Luar Biasa' : avg >= 4 ? 'Sangat Bagus'
-    : avg >= 3.5 ? 'Bagus' : avg >= 3 ? 'Cukup' : avg >= 2 ? 'Kurang' : 'Buruk'
-
+  const ratingLabel = avg >= 4.5 ? 'Luar Biasa' : avg >= 4 ? 'Sangat Bagus' : avg >= 3.5 ? 'Bagus' : avg >= 3 ? 'Cukup' : avg >= 2 ? 'Kurang' : 'Buruk'
   const bars = [
-    { label: '5', count: (ratingStats.rating50Count || 0) },
+    { label: '5', count: ratingStats.rating50Count || 0 },
     { label: '4', count: (ratingStats.rating45Count || 0) + (ratingStats.rating40Count || 0) },
     { label: '3', count: (ratingStats.rating35Count || 0) + (ratingStats.rating30Count || 0) },
     { label: '2', count: (ratingStats.rating25Count || 0) + (ratingStats.rating20Count || 0) },
@@ -207,37 +192,15 @@ const RatingSummary = ({ ratingStats, onRate, userRating }) => {
   ]
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl border shadow-sm transition-colors
-                    bg-white border-stone-200 shadow-stone-100/80
-                    dark:bg-slate-900 dark:border-slate-700 dark:shadow-none">
-      <div className="flex gap-5 sm:gap-6">
+    <div className="p-4 rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
+      <div className="flex gap-5">
         <div className="flex flex-col items-center justify-center flex-shrink-0 min-w-[80px]">
-          <div className="text-5xl sm:text-6xl font-extrabold tabular-nums leading-none mb-1
-                          text-stone-900 dark:text-slate-50">
-            {avg.toFixed(1)}
-          </div>
-          <div className="flex gap-0.5 mb-1">
-            {[1, 2, 3, 4, 5].map(s => {
-              const isFull = s <= filledStars || (s === filledStars + 1 && hasAlmostFull)
-              const isHalf = s === filledStars + 1 && hasHalf
-              return (
-                <span key={s} className="relative inline-block">
-                  <Star className="w-4 h-4 text-stone-200 dark:text-slate-600" />
-                  {(isFull || isHalf) && (
-                    <Star
-                      className="w-4 h-4 absolute inset-0 fill-amber-400 text-amber-400"
-                      style={isHalf ? { clipPath: 'polygon(0 0,50% 0,50% 100%,0 100%)' } : {}}
-                    />
-                  )}
-                </span>
-              )
-            })}
-          </div>
-          <div className="text-xs font-semibold text-amber-600 dark:text-amber-400">{ratingLabel}</div>
+          <div className="text-5xl font-extrabold tabular-nums leading-none mb-1 text-stone-900 dark:text-slate-50">{avg.toFixed(1)}</div>
+          <StarDisplay avg={avg} size="md" />
+          <div className="text-xs font-semibold mt-1 text-amber-600 dark:text-amber-400">{ratingLabel}</div>
           <div className="text-[10px] mt-0.5 text-stone-400 dark:text-slate-500">{total} rating</div>
         </div>
-
-        <div className="flex-1 min-w-0 space-y-1.5 flex flex-col justify-center">
+        <div className="flex-1 space-y-1.5 flex flex-col justify-center">
           {bars.map(({ label, count }) => {
             const pct = total > 0 ? (count / total) * 100 : 0
             return (
@@ -247,38 +210,22 @@ const RatingSummary = ({ ratingStats, onRate, userRating }) => {
                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                 </div>
                 <div className="flex-1 h-2 rounded-full overflow-hidden bg-stone-100 dark:bg-slate-700">
-                  <div
-                    className="h-full bg-amber-400 rounded-full transition-all duration-700"
-                    style={{ width: `${pct}%` }}
-                  />
+                  <div className="h-full bg-amber-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                 </div>
-                <span className="text-[10px] w-6 text-right flex-shrink-0 text-stone-400 dark:text-slate-500">
-                  {count}
-                </span>
+                <span className="text-[10px] w-6 text-right text-stone-400 dark:text-slate-500">{count}</span>
               </div>
             )
           })}
         </div>
       </div>
-
-      <div className="mt-4 pt-3 border-t flex items-center justify-between flex-wrap gap-2
-                      border-stone-100 dark:border-slate-700">
-        {userRating ? (
+      <div className="mt-4 pt-3 border-t flex items-center justify-between flex-wrap gap-2 border-stone-100 dark:border-slate-700">
+        {userRating && (
           <div className="flex items-center gap-2">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-            <span className="text-sm text-stone-600 dark:text-slate-400">
-              Rating Anda:{' '}
-              <span className="font-semibold text-stone-900 dark:text-slate-100">{userRating.rating} ⭐</span>
-            </span>
+            <CheckCircle2 className="w-4 h-4 text-amber-500" />
+            <span className="text-sm text-stone-600 dark:text-slate-400">Rating Anda: <span className="font-semibold text-stone-900 dark:text-slate-100">{userRating.rating} ⭐</span></span>
           </div>
-        ) : (
-          <span className="text-sm text-stone-500 dark:text-slate-400">Sudah baca? Beri rating kamu</span>
         )}
-        <button
-          onClick={onRate}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all active:scale-95
-                     bg-amber-50 text-amber-700 hover:bg-amber-100
-                     dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/40">
+        <button onClick={onRate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/40">
           <Star className={`w-3.5 h-3.5 ${userRating ? 'fill-amber-400 text-amber-400' : ''}`} />
           {userRating ? 'Ubah Rating' : 'Beri Rating'}
         </button>
@@ -287,87 +234,176 @@ const RatingSummary = ({ ratingStats, onRate, userRating }) => {
   )
 }
 
-// ── BookDetailPage ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SeriesBookCard
+// ─────────────────────────────────────────────────────────────────────────────
+const SeriesBookCard = ({ seriesBook, currentSlug }) => {
+  const isCurrent = seriesBook.slug === currentSlug
+  return (
+    <Link to={isCurrent ? '#' : `/buku/${seriesBook.slug}`}
+      className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isCurrent ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700 cursor-default' : 'bg-white border-stone-100 hover:border-amber-300 hover:shadow-sm dark:bg-slate-900 dark:border-slate-700 dark:hover:border-amber-700/50 group'}`}>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold ${isCurrent ? 'bg-amber-400 text-white' : 'bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+        {seriesBook.seriesOrder || '?'}
+      </div>
+      {seriesBook.coverImageUrl && (
+        <div className="w-9 h-12 rounded-md overflow-hidden flex-shrink-0 bg-stone-100 dark:bg-slate-800">
+          <img src={seriesBook.coverImageUrl} alt={seriesBook.title} className="w-full h-full object-cover" loading="lazy" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className={`text-xs font-semibold truncate transition-colors ${isCurrent ? 'text-amber-700 dark:text-amber-400' : 'text-stone-800 dark:text-slate-200 group-hover:text-amber-700 dark:group-hover:text-amber-400'}`}>{seriesBook.title}</div>
+        {seriesBook.authorNames && <div className="text-[10px] truncate text-stone-400 dark:text-slate-500 mt-0.5">{seriesBook.authorNames}</div>}
+      </div>
+      {isCurrent
+        ? <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-700 dark:text-amber-400">Ini</span>
+        : <ChevronRight className="w-4 h-4 text-stone-300 dark:text-slate-600 flex-shrink-0 group-hover:text-amber-400 transition-colors" />
+      }
+    </Link>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ContributorCard
+// ─────────────────────────────────────────────────────────────────────────────
+const ContributorCard = ({ name, role, photoUrl, slug, isAuthor = false }) => {
+  const inner = (
+    <div className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all group cursor-pointer ${isAuthor ? 'bg-amber-50 border-amber-200 hover:border-amber-400 hover:shadow-sm dark:bg-amber-900/15 dark:border-amber-800/50' : 'bg-white border-stone-100 hover:border-amber-200 hover:shadow-sm dark:bg-slate-900 dark:border-slate-700 dark:hover:border-amber-700/50'}`}>
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${isAuthor ? 'bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-slate-800' : 'bg-gradient-to-br from-stone-100 to-stone-50 dark:from-slate-800 dark:to-slate-700'}`}>
+        {photoUrl ? <img src={photoUrl} alt={name} className="w-9 h-9 object-cover" loading="lazy" /> : <User className={`w-4 h-4 ${isAuthor ? 'text-amber-500' : 'text-stone-400 dark:text-slate-500'}`} />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className={`text-xs font-semibold truncate transition-colors ${isAuthor ? 'text-amber-800 dark:text-amber-300 group-hover:text-amber-700' : 'text-stone-800 dark:text-slate-200 group-hover:text-amber-700 dark:group-hover:text-amber-400'}`}>{name}</div>
+        <div className="text-[10px] truncate text-stone-400 dark:text-slate-500 mt-0.5 capitalize">{role}</div>
+      </div>
+      {isAuthor && <Feather className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+    </div>
+  )
+  return slug ? <Link to={`/penulis/${slug}`}>{inner}</Link> : inner
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// InfoRow
+// ─────────────────────────────────────────────────────────────────────────────
+const InfoRow = ({ label, value, icon: Icon, accent = false }) => {
+  if (!value && value !== 0) return null
+  return (
+    <div className="flex items-start gap-2 py-2.5 border-b border-stone-100 dark:border-slate-800 last:border-0">
+      {Icon && (
+        <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 bg-amber-50 dark:bg-amber-900/20">
+          <Icon className="w-3 h-3 text-amber-500" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="text-[9px] uppercase tracking-wider text-stone-400 dark:text-slate-500 mb-0.5 leading-tight">{label}</div>
+        <div className={`text-xs font-semibold break-words leading-snug ${accent ? 'text-amber-600 dark:text-amber-400' : 'text-stone-800 dark:text-slate-200'}`}>{value}</div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StatCard
+// ─────────────────────────────────────────────────────────────────────────────
+const StatCard = ({ icon: Icon, label, value, color = 'text-amber-500', bg = 'bg-amber-50 dark:bg-amber-900/20' }) => {
+  if (!value && value !== 0) return null
+  return (
+    <div className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl ${bg}`}>
+      <Icon className={`w-5 h-5 ${color}`} />
+      <div className="text-base font-bold text-stone-800 dark:text-slate-200 tabular-nums">
+        {typeof value === 'number' ? value.toLocaleString('id-ID') : value}
+      </div>
+      <div className="text-[10px] text-stone-400 dark:text-slate-500 text-center leading-tight">{label}</div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SectionTitle
+// ─────────────────────────────────────────────────────────────────────────────
+const SectionTitle = ({ icon: Icon, title, iconColor = 'text-amber-500' }) => (
+  <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2 text-stone-500 dark:text-slate-400">
+    <Icon className={`w-4 h-4 ${iconColor}`} />{title}
+  </h2>
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BookDetailPage
+// ─────────────────────────────────────────────────────────────────────────────
 const BookDetailPage = () => {
-  const { bookSlug }        = useParams()
-  const navigate            = useNavigate()
+  const { bookSlug } = useParams()
+  const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
 
-  const [book,             setBook]             = useState(null)
-  const [loading,          setLoading]          = useState(true)
-  const [downloadLoading,  setDownloadLoading]  = useState(false)
+  const [book, setBook] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [downloadLoading, setDownloadLoading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(null)
-  const [readingLoading,   setReadingLoading]   = useState(false)
-  const [error,            setError]            = useState(null)
+  const [readingLoading, setReadingLoading] = useState(false)
+  const [error, setError] = useState(null)
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
-  const [userRating,       setUserRating]       = useState(null)
-  const [ratingStats,      setRatingStats]      = useState(null)
-  const [recentReviews,    setRecentReviews]    = useState([])
-  const [reviewsLoading,   setReviewsLoading]   = useState(false)
-  const [showBookDetails,  setShowBookDetails]  = useState(false)
-  const [authorPhotos,     setAuthorPhotos]     = useState({})
-  const [coverLoaded,      setCoverLoaded]      = useState(false)
+  const [userRating, setUserRating] = useState(null)
+  const [ratingStats, setRatingStats] = useState(null)
+  const [recentReviews, setRecentReviews] = useState([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [showFullDesc, setShowFullDesc] = useState(false)
+  const [showAllDetails, setShowAllDetails] = useState(false)
+  const [activeTab, setActiveTab] = useState('info')
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [seriesBooks, setSeriesBooks] = useState([])
+  const [seriesLoading, setSeriesLoading] = useState(false)
+  const [authorPhotos, setAuthorPhotos] = useState({})
 
-  // FIX INP: startTransition untuk update akordion & update non-kritis
   const [, startTransition] = useTransition()
-
   const backUrl = useRef(sessionStorage.getItem('booksPageUrl') || '/buku')
 
-  // ── Fetch helpers (useCallback agar tidak dibuat ulang) ──────────────────
   const fetchUserRating = useCallback(async () => {
-    try {
-      const r = await bookService.getMyRating(bookSlug)
-      setUserRating(r.data || null)
-    } catch { setUserRating(null) }
+    try { const r = await bookService.getMyRating(bookSlug); setUserRating(r?.data || null) }
+    catch { setUserRating(null) }
   }, [bookSlug])
 
   const fetchRatingStats = useCallback(async () => {
-    try {
-      const r = await bookService.getRatingStats(bookSlug)
-      setRatingStats(r.data || null)
-    } catch {}
+    try { const r = await bookService.getRatingStats(bookSlug); setRatingStats(r?.data || null) }
+    catch { }
   }, [bookSlug])
 
   const fetchRecentReviews = useCallback(async () => {
     try {
       setReviewsLoading(true)
       const r = await bookService.getReviews(bookSlug, 1, 5, 'helpful')
-      setRecentReviews(r.data?.list || [])
+      setRecentReviews(r?.data?.list || [])
     } catch { setRecentReviews([]) }
     finally { setReviewsLoading(false) }
   }, [bookSlug])
 
-  const fetchBookDetail = useCallback(async () => {
+  const fetchSeriesBooks = useCallback(async (seriesSlug) => {
+    if (!seriesSlug) return
     try {
-      const d = await bookService.getBookBySlug(bookSlug)
-      setBook(d)
-    } catch {}
-  }, [bookSlug])
+      setSeriesLoading(true)
+      const result = await bookService.getBooksBySeries(seriesSlug)
+      setSeriesBooks(result?.data || [])
+    } catch { setSeriesBooks([]) }
+    finally { setSeriesLoading(false) }
+  }, [])
 
-  const fetchAuthorPhotos = useCallback(async (authorSlugs) => {
-    const slugs = authorSlugs.split(',').map(s => s.trim())
-    const photos = {}
-    try {
-      const res = await bookService.getAuthors(1, 1000)
-      slugs.forEach(slug => {
-        const found = res.data?.list?.find(a => a.slug === slug)
-        if (found?.photoUrl) photos[slug] = found.photoUrl
-      })
-    } catch {}
-    // FIX INP: startTransition agar update foto penulis tidak blok interaksi
-    startTransition(() => { setAuthorPhotos(photos) })
+  const fetchAuthorPhotos = useCallback(async (slugsStr, photoUrlsStr) => {
+    const slugs = (slugsStr || '').split(',').map(s => s.trim()).filter(Boolean)
+    const photos = (photoUrlsStr || '').split(',').map(s => s.trim()).filter(Boolean)
+    const map = {}
+    slugs.forEach((slug, i) => { if (photos[i]) map[slug] = photos[i] })
+    startTransition(() => setAuthorPhotos(map))
   }, []) // eslint-disable-line
 
-  // ── Init ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
     const init = async () => {
       setLoading(true); setError(null)
-      // reset foto penulis setiap slug buku berubah
-      setAuthorPhotos({})
       try {
         const bookData = await bookService.getBookBySlug(bookSlug)
-        if (!cancelled) setBook(bookData)
+        if (!cancelled) {
+          setBook(bookData)
+          if (bookData?.authorSlugs) fetchAuthorPhotos(bookData.authorSlugs, bookData.authorPhotoUrls)
+          if (bookData?.seriesSlug) fetchSeriesBooks(bookData.seriesSlug)
+        }
       } catch {
         if (!cancelled) setError('Buku tidak ditemukan')
       } finally {
@@ -375,51 +411,29 @@ const BookDetailPage = () => {
       }
       if (!cancelled) {
         await Promise.allSettled([
-          fetchRatingStats(),
-          fetchRecentReviews(),
+          fetchRatingStats(), fetchRecentReviews(),
           ...(isAuthenticated ? [fetchUserRating()] : [])
         ])
       }
     }
     init()
     return () => { cancelled = true }
-  }, [bookSlug, isAuthenticated, fetchRatingStats, fetchRecentReviews, fetchUserRating])
+  }, [bookSlug, isAuthenticated]) // eslint-disable-line
 
   useEffect(() => {
-    if (book) document.title = `${book.title} - ${book.authorNames} | Perpustakaan Digital`
+    if (book) document.title = `${book.title} — ${book.authorNames} | Perpustakaan Digital MasasilaM`
   }, [book])
 
-  useEffect(() => {
-    if (book?.authorSlugs) fetchAuthorPhotos(book.authorSlugs)
-  }, [book, fetchAuthorPhotos])
-
-  // ── Event handlers (semua useCallback agar stabil antar render) ──────────
-  const handleRead = useCallback(async () => {
+  const handleRead = async () => {
     try {
       setReadingLoading(true)
       navigate(`/buku/${bookSlug}/baca`)
-
-      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
-        activityType: 'started_reading',
-        entityType:   'BOOK',
-        entitySlug:   bookSlug,
-        entityTitle:  book?.title,
-        entityCover:  book?.coverImageUrl,
-      })
+      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, { activityType: 'started_reading', entityType: 'BOOK', entitySlug: bookSlug, entityTitle: book?.title, entityCover: book?.coverImageUrl })
     } catch (e) { alert(`Gagal: ${e.message}`) }
     finally { setReadingLoading(false) }
-  }, [bookSlug, book, navigate])
+  }
 
-  const handleStartReading = useCallback(async () => {
-    try {
-      setReadingLoading(true)
-      const last = localStorage.getItem(`lastChapter_${bookSlug}`)
-      navigate(last ? `/buku/${bookSlug}/${last}` : `/buku/${bookSlug}/daftar-isi`)
-    } catch (e) { alert(`Gagal: ${e.message}`) }
-    finally { setReadingLoading(false) }
-  }, [bookSlug, navigate])
-
-  const handleDownload = useCallback(async () => {
+  const handleDownload = async () => {
     if (!book?.fileUrl) return alert('File buku tidak tersedia')
     try {
       setDownloadLoading(true)
@@ -427,116 +441,100 @@ const BookDetailPage = () => {
       setDownloadProgress({ percent: 0, loaded: 0, total: null })
       const response = await fetch(downloadUrl)
       if (!response.ok) throw new Error('Gagal mengunduh file')
-      const total = response.headers.get('Content-Length')
-        ? parseInt(response.headers.get('Content-Length'))
-        : null
+      const total = response.headers.get('Content-Length') ? parseInt(response.headers.get('Content-Length')) : null
       const reader = response.body.getReader()
       const chunks = []; let loaded = 0
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         chunks.push(value); loaded += value.length
-        setDownloadProgress({
-          loaded, total,
-          percent: total ? Math.round((loaded / total) * 100) : null
-        })
+        setDownloadProgress({ loaded, total, percent: total ? Math.round((loaded / total) * 100) : null })
       }
       const blob = new Blob(chunks, { type: 'application/epub+zip' })
-      const url  = window.URL.createObjectURL(blob)
+      const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url; link.download = filename
       document.body.appendChild(link); link.click()
       document.body.removeChild(link); window.URL.revokeObjectURL(url)
-      await fetchBookDetail(); setDownloadProgress(null)
-    } catch (e) {
-      console.error(e); setDownloadProgress(null); alert('❌ Gagal mengunduh buku.')
+      setDownloadProgress(null)
+    } catch {
+      setDownloadProgress(null); alert('❌ Gagal mengunduh buku.')
     } finally { setDownloadLoading(false) }
-  }, [book, bookSlug, fetchBookDetail])
+  }
 
-  const handleShare = useCallback(async () => {
-    const shareData = {
-      title: book?.title,
-      text:  `Baca "${book?.title}" oleh ${book?.authorNames}`,
-      url:   window.location.href
-    }
+  const handleShare = async () => {
     try {
-      if (navigator.share) await navigator.share(shareData)
+      if (navigator.share) await navigator.share({ title: book?.title, url: window.location.href })
       else { await navigator.clipboard.writeText(window.location.href); alert('✅ Link disalin!') }
-    } catch {}
-  }, [book])
+    } catch { }
+  }
 
-  const handleAddToFavorite = useCallback(() => {
+  const handleFavorite = () => {
     if (!isAuthenticated) return navigate('/masuk')
-    alert('Fitur favorite segera hadir!')
-  }, [isAuthenticated, navigate])
+    setIsFavorited(v => !v)
+  }
 
-  const handleOpenRatingModal = useCallback(() => {
+  const handleOpenRatingModal = () => {
     if (!isAuthenticated) { alert('Silakan login terlebih dahulu'); return navigate('/masuk') }
     setIsRatingModalOpen(true)
-  }, [isAuthenticated, navigate])
+  }
 
-  const handleCloseRatingModal = useCallback(() => setIsRatingModalOpen(false), [])
-
-  const handleDeleteRating = useCallback(async () => {
+  const handleDeleteRating = async () => {
     if (!confirm('Hapus rating Anda?')) return
     try {
       await bookService.deleteRating(bookSlug)
-      alert('✅ Rating dihapus!'); setUserRating(null)
-      fetchBookDetail(); fetchRatingStats()
+      alert('✅ Rating dihapus!'); setUserRating(null); fetchRatingStats()
     } catch { alert('❌ Gagal menghapus rating') }
-  }, [bookSlug, fetchBookDetail, fetchRatingStats])
+  }
 
-  const handleSubmitRating = useCallback(async (ratingData) => {
+  const handleSubmitRating = async (ratingData) => {
     try {
       await bookService.addRating(bookSlug, { rating: ratingData.rating })
       alert('✅ Rating ditambahkan!')
       setIsRatingModalOpen(false)
-      fetchBookDetail(); fetchUserRating(); fetchRatingStats()
-
-      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
-        activityType: 'reviewed',
-        entityType:   'BOOK',
-        entitySlug:   bookSlug,
-        entityTitle:  book?.title,
-        entityCover:  book?.coverImageUrl,
-      })
+      fetchUserRating(); fetchRatingStats()
+      feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, { activityType: 'reviewed', entityType: 'BOOK', entitySlug: bookSlug, entityTitle: book?.title, entityCover: book?.coverImageUrl })
     } catch (e) { alert(`❌ Gagal: ${e.response?.data?.detail || e.message}`) }
-  }, [bookSlug, book, fetchBookDetail, fetchUserRating, fetchRatingStats])
+  }
 
-  // FIX INP: akordion pakai startTransition — tidak perlu blok frame interaksi
-  const handleToggleBookDetails = useCallback(() => {
-    startTransition(() => {
-      setShowBookDetails(prev => !prev)
-    })
-  }, []) // eslint-disable-line
-
-  const handleNavigateToc     = useCallback(() => navigate(`/buku/${bookSlug}/daftar-isi`), [bookSlug, navigate])
-  const handleNavigateReviews = useCallback(() => navigate(isAuthenticated ? `/buku/${bookSlug}/ulasan` : '/masuk'), [bookSlug, isAuthenticated, navigate])
-  const handleNavigateAllReviews = useCallback(() => navigate(`/buku/${bookSlug}/ulasan`), [bookSlug, navigate])
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-  const getSourceDomain = useCallback((url) => {
+  const getSourceDomain = (url) => {
     try {
       const { hostname, pathname } = new URL(url)
       const domain = hostname.replace('www.', '')
-      const socialDomains = ['x.com', 'twitter.com', 'instagram.com', 'threads.com', 'facebook.com', 'tiktok.com', 'youtube.com']
-      if (socialDomains.includes(domain)) {
+      const social = ['x.com','twitter.com','instagram.com','threads.com','facebook.com','tiktok.com','youtube.com']
+      if (social.includes(domain)) {
         const username = pathname.split('/').filter(Boolean)[0]
         return username ? `${domain}/${username}` : domain
       }
       return domain
     } catch { return url }
-  }, [])
+  }
 
-  const formatBytes = useCallback((bytes) => {
-    if (!bytes) return ''
+  const formatBytes = (bytes) => {
+    if (!bytes) return null
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  }, [])
+  }
 
-  const handleCoverLoad = useCallback(() => setCoverLoaded(true), [])
+  const formatDate = (dateStr) => {
+      if (!dateStr) return null
+      // Kalau cuma tahun (mis. "1925"), jangan dipaksa jadi tanggal lengkap —
+      // new Date("1925") akan salah diinterpretasikan sebagai 1 Januari 1925.
+      if (/^\d{4}$/.test(String(dateStr).trim())) return String(dateStr).trim()
+      try {
+        const d = new Date(dateStr)
+        if (isNaN(d.getTime())) return dateStr
+        return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+      }
+      catch { return dateStr }
+    }
 
-  // ── Early returns ────────────────────────────────────────────────────────
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return null
+    try { return new Date(dateStr).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+    catch { return dateStr }
+  }
+
   if (loading) return <LoadingSpinner fullScreen />
   if (error || !book) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -544,924 +542,640 @@ const BookDetailPage = () => {
     </div>
   )
 
-  // ── Derived data ─────────────────────────────────────────────────────────
-  const breadcrumbs = [
-    { name: 'Beranda',      url: '/' },
-    { name: 'Koleksi Buku', url: '/buku' },
-    { name: book.title,     url: '#' }
-  ]
-  const bookSchema       = generateBookStructuredData(book)
-  const breadcrumbSchema = generateBreadcrumbStructuredData(breadcrumbs)
-  const reviewSchema     = recentReviews.length > 0 ? generateReviewStructuredData(recentReviews, book) : null
-  const metaDescription  = generateMetaDescription(book.description || `${book.title} oleh ${book.authorNames}.`, 160)
-  const keywords         = generateKeywords(book.genres, book.authorNames, book.title)
-  const structuredData   = reviewSchema
-    ? [bookSchema, breadcrumbSchema, reviewSchema]
-    : [bookSchema, breadcrumbSchema]
-
   const authorList = book.authorNames
-    ? book.authorNames.split(',').map((name, i) => ({
-        name:     name.trim(),
-        slug:     name.trim().toLowerCase()
-          .replace(/\.\s*/g, '-').replace(/\s+/g, '-')
-          .replace(/-+/g, '-').replace(/^-|-$/g, ''),
-        // FIX CLS: baca dari authorPhotos state; null awalnya, terisi setelah fetch
-        photoUrl: book.authorSlugs
-          ? authorPhotos[book.authorSlugs.split(',')[i]?.trim()]
-          : null
-      }))
+    ? book.authorNames.split(',').map((name, i) => {
+        const slug = book.authorSlugs?.split(',')[i]?.trim()
+        const photoUrl = authorPhotos[slug] || null
+        return { name: name.trim(), slug, photoUrl }
+      })
     : []
 
-  const actionButtons = [
-    { icon: Book,   label: 'Daftar Isi', action: handleNavigateToc },
-    { icon: Heart,  label: 'Favorit',    action: handleAddToFavorite },
-    {
-      icon:   Star,
-      label:  book.averageRating > 0 ? `${book.averageRating.toFixed(1)}⭐` : 'Rating',
-      action: handleOpenRatingModal,
-      active: !!userRating
-    },
-    { icon: Share2, label: 'Bagikan', action: handleShare },
-  ]
+  const contributorList = book.contributors
+    ? book.contributors.split(',').map(contributor => {
+        const match = contributor.trim().match(/(.+?)\s*\((.+?)\)/)
+        return match ? { name: match[1].trim(), role: match[2].trim() } : { name: contributor.trim(), role: '' }
+      })
+    : []
 
-  const MetaItem = ({ icon: Icon, label, value, accent }) => (
-    <div className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${accent || 'bg-stone-50 dark:bg-slate-800/60'}`}>
-      <Icon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-stone-400 dark:text-slate-500" />
-      <div>
-        <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">{label}</div>
-        <div className="text-xs font-medium text-stone-800 dark:text-slate-200">{value}</div>
-      </div>
-    </div>
-  )
+  const genreList = book.genres ? book.genres.split(',').map(g => g.trim()).filter(Boolean) : []
+  const avgRating = ratingStats?.averageRating || book.averageRating || 0
+  const totalRatings = ratingStats?.totalRatings || book.totalRatings || 0
+  const hasSeries = !!(book.seriesId && book.seriesName)
+  const hasContributors = contributorList.length > 0
+  const totalEngagement = (book.totalAngry || 0) + (book.totalLikes || 0) + (book.totalLoves || 0) + (book.totalDislikes || 0) + (book.totalSad || 0)
+  const hasReactions = totalEngagement > 0 || book.totalComments > 0
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FIX CLS: AuthorAvatars — slot SELALU ada, foto mengisi setelah load
-  // ─────────────────────────────────────────────────────────────────────────
-  const AuthorAvatars = () => (
-    <div className="flex -space-x-2">
-      {authorList.length > 0
-        ? authorList.map((a, i) => (
-            <div
-              key={i}
-              className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden border-2
-                         border-white dark:border-slate-900">
-              {a.photoUrl
-                ? <img
-                    src={a.photoUrl}
-                    alt={a.name}
-                    width={36}
-                    height={36}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                  />
-                : <div className="w-full h-full flex items-center justify-center
-                                  bg-amber-100 dark:bg-amber-900/30">
-                    <User className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-              }
-            </div>
-          ))
-        : (
-          <div className="w-9 h-9 rounded-full flex items-center justify-center
-                          bg-amber-100 dark:bg-amber-900/30">
-            <User className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          </div>
-        )
-      }
-    </div>
-  )
+  const tabs = [
+    { id: 'info', label: 'Info', icon: Info },
+    { id: 'penulis', label: 'Kontributor', icon: Users },
+    { id: 'seri', label: 'Dalam Seri', icon: Layers, hidden: !hasSeries },
+    { id: 'ulasan', label: 'Ulasan', icon: MessageCircle },
+  ].filter(t => !t.hidden)
 
   return (
     <>
       <SEO
-        title={`${book.title} - ${book.authorNames}`}
-        description={metaDescription}
+        title={`${book.title} — ${book.authorNames}`}
+        description={(book.description || '').slice(0, 160)}
         url={`/buku/${bookSlug}`}
         type="book"
         image={book.coverImageUrl}
-        keywords={keywords}
         author={book.authorNames}
         publishedTime={book.publishedAt}
-        modifiedTime={book.updatedAt}
-        structuredData={structuredData}
-        ogType="book"
       />
 
-      <div className="min-h-screen pb-16 lg:pb-0 transition-colors duration-300
-                      bg-stone-50 dark:bg-slate-950">
-        <div className="container mx-auto px-4 max-w-6xl">
+      {/*
+        ══════════════════════════════════════════════════════════════
+        ROOT WRAPPER
+        overflow-x-hidden → cegah elemen manapun memicu scrollbar horizontal
+        yang akan mempersempit viewport dan merusak fixed bottom bar
+        ══════════════════════════════════════════════════════════════
+      */}
+      <div className="min-h-screen overflow-x-hidden transition-colors duration-300 bg-stone-50 dark:bg-slate-950">
 
-          {/* ── Breadcrumb ───────────────────────────────────────── */}
-          <div className="pt-4 pb-2">
-            <nav
-              className="flex items-center gap-1.5 text-xs mb-3 overflow-x-auto scrollbar-none
-                         text-stone-400 dark:text-slate-500"
-              aria-label="Breadcrumb">
-              <Link to="/" className="transition hover:text-stone-700 dark:hover:text-slate-300 whitespace-nowrap">
-                Beranda
-              </Link>
-              <span>/</span>
-              <Link
-                to={backUrl.current}
-                className="transition hover:text-stone-700 dark:hover:text-slate-300 whitespace-nowrap">
-                Koleksi Buku
-              </Link>
-              <span>/</span>
-              <span className="truncate max-w-[160px] text-stone-600 dark:text-slate-400">{book.title}</span>
-            </nav>
-            <button
-              onClick={() => navigate(backUrl.current)}
-              className="inline-flex items-center gap-1.5 text-sm font-medium group transition-colors
-                         text-stone-500 hover:text-stone-900
-                         dark:text-slate-500 dark:hover:text-slate-100">
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-              Kembali
-            </button>
-          </div>
+        {/* ════════════════════════════════════════════════════════════
+            HERO — dibungkus overflow-hidden agar scale(1.1) tidak bocor
+        ════════════════════════════════════════════════════════════ */}
+        <div className="relative overflow-hidden">
+          {book.coverImageUrl && (
+            <div
+              className="absolute inset-0 h-64 sm:h-72 pointer-events-none"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${book.coverImageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center top',
+                filter: 'blur(60px) brightness(0.25) saturate(1.5)',
+                // KUNCI: transform scale tanpa translate tidak bocor ke kanan
+                // karena parent sudah overflow-hidden
+                transform: 'scale(1.1)',
+              }}
+            />
+          )}
+          <div
+            className="absolute inset-0 h-64 sm:h-72 pointer-events-none bg-gradient-to-b from-transparent via-stone-50/40 to-stone-50 dark:via-slate-950/40 dark:to-slate-950"
+            aria-hidden="true"
+          />
 
-          {/* ═══ MAIN LAYOUT GRID ═══════════════════════════════════ */}
-          <div className="lg:grid lg:grid-cols-3 lg:gap-10 lg:items-start">
+          <div className="relative container mx-auto px-3 sm:px-4 max-w-5xl">
+            {/* Breadcrumb */}
+            <div className="pt-4 pb-2">
+              <nav className="flex items-center gap-1.5 text-xs mb-2 overflow-x-auto scrollbar-none text-stone-300 dark:text-slate-600">
+                <Link to="/" className="transition hover:text-stone-100 whitespace-nowrap">Beranda</Link>
+                <span>/</span>
+                <Link to={backUrl.current} className="transition hover:text-stone-100 whitespace-nowrap">Koleksi Buku</Link>
+                {hasSeries && (<><span>/</span><Link to={`/buku/seri/${book.seriesSlug}`} className="transition hover:text-stone-100 whitespace-nowrap truncate max-w-[100px]">{book.seriesName}</Link></>)}
+                <span>/</span>
+                <span className="truncate max-w-[140px] text-stone-200 dark:text-slate-500">{book.title}</span>
+              </nav>
+              <button onClick={() => navigate(backUrl.current)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium group transition-colors text-stone-300 hover:text-white dark:text-slate-500 dark:hover:text-slate-300">
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />Kembali
+              </button>
+            </div>
 
-            {/* ── SIDEBAR ─────────────────────────────────────────── */}
-            <aside className="lg:col-span-1">
-              <div className="lg:sticky lg:top-24 space-y-4">
-
-                {/* ── Mobile: horizontal hero ──────────────────────── */}
-                <div className="flex gap-4 py-4 lg:hidden">
-
-                  {/* Cover — FIX CLS: eksplisit w/h; FIX LCP: eager + fetchPriority */}
-                  <div className="flex-shrink-0 w-28 sm:w-36">
-                    <div className="relative rounded-xl overflow-hidden shadow-lg aspect-[2/3]
-                                    bg-stone-100 dark:bg-slate-800">
-                      <img
-                        src={book.coverImageUrl || 'https://via.placeholder.com/200x300?text=No+Cover'}
-                        alt={`Cover ${book.title}`}
-                        loading="eager"
-                        fetchPriority="high"
-                        decoding="sync"
-                        width={200}
-                        height={300}
-                        className={`w-full h-full object-cover transition-opacity duration-500
-                                    ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
-                        onLoad={handleCoverLoad}
-                      />
-                      {!coverLoaded && (
-                        <div className="absolute inset-0 animate-pulse bg-stone-200 dark:bg-slate-700" />
-                      )}
-                      {book.isFeatured && (
-                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5
-                                        bg-amber-400 text-stone-900 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                          <Star className="w-2.5 h-2.5 fill-current" />PILIHAN
-                        </div>
-                      )}
-                    </div>
+            {/* Cover + Info */}
+            <div className="flex gap-4 sm:gap-6 pt-2 pb-6">
+              {/* COVER */}
+              <div className="flex-shrink-0">
+                <div className="relative w-[110px] sm:w-[160px] lg:w-[192px]">
+                  <div className="w-full rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 dark:border-white/5" style={{ aspectRatio: '2/3' }}>
+                    <CoverImage url={book.coverImageUrl} alt={`Cover ${book.title}`} className="w-full h-full" />
                   </div>
-
-                  {/* Info kolom kanan */}
-                  <div className="flex-1 min-w-0 py-1 flex flex-col gap-1.5">
-                    <h1 className="text-base sm:text-lg font-bold leading-snug line-clamp-3
-                                   text-stone-900 dark:text-slate-50">
-                      {book.title}
-                    </h1>
-                    {book.subtitle && (
-                      <p className="text-xs line-clamp-1 text-stone-500 dark:text-slate-400">{book.subtitle}</p>
-                    )}
-
-                    {/* Penulis */}
-                    <div className="flex flex-wrap gap-x-1 gap-y-0.5">
-                      {authorList.map((author, i) => (
-                        <span key={i} className="inline-flex items-center">
-                          <Link
-                            to={`/penulis/${author.slug}`}
-                            className="text-xs font-medium hover:underline text-amber-600 dark:text-amber-400">
-                            {author.name}
-                          </Link>
-                          {i < authorList.length - 1 && (
-                            <span className="text-xs text-stone-400">,</span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Genre */}
-                    {book.genres && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {book.genres.split(',').map((genre, i) => {
-                          const g    = genre.trim()
-                          const slug = g.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')
-                          return (
-                            <Link
-                              key={i}
-                              to={`/kategori/${slug}`}
-                              className="px-2 py-0.5 rounded-full text-[10px] font-medium transition whitespace-nowrap border
-                                         bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100
-                                         dark:bg-blue-900/20 dark:border-blue-700/50 dark:text-blue-300 dark:hover:bg-blue-900/40">
-                              {g}
-                            </Link>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* Stats row — FIX CLS: mt-2 eksplisit, bukan mt-auto */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                      {book.averageRating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span className="text-xs font-semibold text-stone-800 dark:text-slate-200">
-                            {book.averageRating.toFixed(1)}
-                          </span>
-                          <span className="text-[10px] text-stone-400 dark:text-slate-500">
-                            ({book.totalRatings})
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1 text-stone-400 dark:text-slate-500">
-                        <Eye className="w-3 h-3" />
-                        <span className="text-xs">{book.viewCount || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-stone-400 dark:text-slate-500">
-                        <Download className="w-3 h-3" />
-                        <span className="text-xs">{book.downloadCount || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-stone-400 dark:text-slate-500">
-                        <BookOpen className="w-3 h-3" />
-                        <span className="text-xs">{book.readCount || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-stone-400 dark:text-slate-500">
-                        <Clock className="w-3 h-3" />
-                        <span className="text-xs">{book.estimatedReadTime}m</span>
-                      </div>
-                      {book.publicationYear && (
-                        <div className="flex items-center gap-1 text-stone-400 dark:text-slate-500">
-                          <Calendar className="w-3 h-3" />
-                          <span className="text-xs">{book.publicationYear}</span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {book.isFeatured && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-bold dark:bg-amber-900/30 dark:text-amber-400"><Star className="w-2 h-2 fill-current" />Pilihan</span>}
+                    {book.fileUrl && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold dark:bg-emerald-900/30 dark:text-emerald-400"><Download className="w-2 h-2" />{(book.fileFormat || 'epub').toUpperCase()}</span>}
+                    {hasSeries && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[9px] font-bold dark:bg-violet-900/30 dark:text-violet-400"><Layers className="w-2 h-2" />#{book.seriesOrder}</span>}
                   </div>
-                </div>
-
-                {/* Desktop: large cover */}
-                <div className="hidden lg:block relative rounded-2xl overflow-hidden shadow-xl aspect-[2/3]
-                                bg-stone-100 dark:bg-slate-800
-                                shadow-stone-200/80 dark:shadow-black/50">
-                  <img
-                    src={book.coverImageUrl || 'https://via.placeholder.com/400x600?text=No+Cover'}
-                    alt={`Cover buku ${book.title}`}
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="sync"
-                    width={400}
-                    height={600}
-                    className={`w-full h-full object-cover transition-opacity duration-500
-                                ${coverLoaded ? 'opacity-100' : 'opacity-0'}`}
-                    onLoad={handleCoverLoad}
-                  />
-                  {!coverLoaded && (
-                    <div className="absolute inset-0 animate-pulse bg-stone-200 dark:bg-slate-700" />
-                  )}
-                  {book.isFeatured && (
-                    <div className="absolute top-3 left-3 flex items-center gap-1
-                                    bg-amber-400 text-stone-900 text-xs font-bold px-2 py-1 rounded-lg">
-                      <Star className="w-3 h-3 fill-current" />PILIHAN
+                  {avgRating > 0 && (
+                    <div className="hidden sm:flex mt-2 items-center gap-1 justify-center px-2 py-1.5 rounded-lg border bg-white/80 dark:bg-slate-900/80 border-stone-200 dark:border-slate-700 backdrop-blur-sm">
+                      <StarDisplay avg={avgRating} />
+                      <span className="text-xs font-bold text-stone-800 dark:text-slate-200">{avgRating.toFixed(1)}</span>
+                      {totalRatings > 0 && <span className="text-[9px] text-stone-400 dark:text-slate-500">({totalRatings})</span>}
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* ── Action buttons ── */}
-                <div className="space-y-2">
-                  <Button fullWidth variant="primary" size="lg"
-                    onClick={handleRead} loading={readingLoading} disabled={readingLoading}>
-                    <BookOpen className="w-5 h-5 mr-2" />Baca
-                  </Button>
-                  <Button fullWidth variant="outline"
-                    onClick={handleStartReading} loading={readingLoading} disabled={readingLoading}>
-                    <Pencil className="w-5 h-5 mr-2" />Koreksi Teks
-                  </Button>
-                  <div>
-                    <Button
-                      fullWidth
-                      variant="secondary"
-                      onClick={handleDownload}
-                      loading={downloadLoading && !downloadProgress}
-                      disabled={downloadLoading || !book.fileUrl}>
-                      <Download className="w-5 h-5 mr-2" />
-                      {downloadLoading
-                        ? downloadProgress?.percent != null
-                          ? `Mengunduh ${downloadProgress.percent}%`
-                          : `Mengunduh ${formatBytes(downloadProgress?.loaded)}...`
-                        : 'Unduh EPUB'
-                      }
-                    </Button>
-                    {downloadLoading && downloadProgress && (
-                      <div className="mt-1.5 w-full h-1.5 rounded-full overflow-hidden
-                                      bg-stone-200 dark:bg-slate-700">
-                        {downloadProgress.percent != null
-                          ? <div
-                              className="h-full bg-amber-500 rounded-full transition-all duration-300"
-                              style={{ width: `${downloadProgress.percent}%` }}
-                            />
-                          : <div className="h-full bg-amber-500 animate-pulse w-full rounded-full" />
-                        }
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Icon grid buttons */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {actionButtons.map(({ icon: Icon, label, action, active }) => (
-                      <button
-                        key={label}
-                        onClick={action}
-                        className={`flex flex-col items-center gap-1 py-2.5 lg:py-3 px-1 rounded-xl border
-                                    text-xs font-medium transition-all active:scale-95 hover:scale-105
-                                    ${active
-                                      ? `bg-amber-50 border-amber-300 text-amber-600
-                                         dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400`
-                                      : `bg-stone-50 border-stone-200 text-stone-600
-                                         hover:border-amber-300 hover:text-amber-600
-                                         dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400
-                                         dark:hover:border-amber-600 dark:hover:text-amber-400`
-                                    }`}>
-                        <Icon className={`w-4 h-4 lg:w-5 lg:h-5 ${active ? 'fill-amber-400 text-amber-400' : ''}`} />
-                        <span className="leading-tight text-center">{label}</span>
-                      </button>
+              {/* INFO */}
+              <div className="flex-1 min-w-0 pt-1">
+                {genreList.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {genreList.slice(0, 3).map((g, i) => (
+                      <Link key={i} to={`/kategori/${g.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')}`}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-400/20 text-amber-200 border border-amber-400/30 hover:bg-amber-400/30 transition-colors dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50">
+                        {g}
+                      </Link>
                     ))}
                   </div>
-
-                  {/* User rating pill */}
-                  {userRating && (
-                    <div className="flex items-center justify-between p-3 rounded-xl border
-                                    bg-amber-50 border-amber-200
-                                    dark:bg-amber-900/10 dark:border-amber-800">
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                        <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                          Rating Anda: {userRating.rating}
-                        </span>
-                      </div>
-                      <button
-                        onClick={handleDeleteRating}
-                        className="text-xs font-medium px-2 py-1 rounded-lg transition
-                                   text-red-500 hover:text-red-700 hover:bg-red-50
-                                   dark:hover:bg-red-900/20">
-                        Hapus
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Mobile Rating Summary */}
-                <div className="lg:hidden">
-                  <RatingSummary ratingStats={ratingStats} onRate={handleOpenRatingModal} userRating={userRating} />
-                </div>
-
-                {/* Mobile meta pills */}
-                {(book.publisher || book.language || book.totalWord || book.copyrightStatus) && (
-                  <div className="lg:hidden grid grid-cols-2 gap-2">
-                    {book.language && (
-                      <MetaItem icon={Globe} label="Bahasa" value={book.language} />
-                    )}
-                    {book.publisher && (
-                      <MetaItem icon={Building2} label="Penerbit" value={book.publisher} />
-                    )}
-                    {book.totalWord && (
-                      <MetaItem icon={FileText} label="Total Kata" value={book.totalWord.toLocaleString()} />
-                    )}
-                    {book.copyrightStatus && (
-                      <MetaItem icon={FileText} label="Hak Cipta" value={book.copyrightStatus}
-                        accent="bg-amber-50/60 dark:bg-amber-900/10" />
-                    )}
+                )}
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold leading-tight mb-1 text-white dark:text-slate-50 drop-shadow-md">
+                  {book.title}
+                  {book.edition && book.edition > 1 && <span className="ml-2 text-sm font-normal text-white/60">(Edisi {book.edition})</span>}
+                </h1>
+                {book.subtitle && <p className="text-sm text-white/70 mb-2 leading-snug italic">{book.subtitle}</p>}
+                {authorList.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {authorList.map((a, i) => (
+                      <Link key={i} to={a.slug ? `/penulis/${a.slug}` : '#'} className="flex items-center gap-1.5 group">
+                        {a.photoUrl
+                          ? <img src={a.photoUrl} alt={a.name} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border border-amber-300/40" />
+                          : <div className="w-5 h-5 rounded-full bg-amber-400/20 flex items-center justify-center"><User className="w-3 h-3 text-amber-300" /></div>
+                        }
+                        <span className="text-sm font-semibold text-amber-300 group-hover:text-amber-200 transition-colors">{a.name}</span>
+                      </Link>
+                    ))}
                   </div>
                 )}
+                {hasSeries && (
+                  <Link to={`/buku/seri/${book.seriesSlug}`} className="inline-flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-lg bg-violet-400/20 border border-violet-400/30 text-violet-200 text-xs font-medium hover:bg-violet-400/30 transition-colors">
+                    <Layers className="w-3 h-3" />{book.seriesName} · Bagian {book.seriesOrder}
+                  </Link>
+                )}
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-white/60">
+                  {book.publicationYear && <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-amber-400" />{book.publicationYear}</span>}
+                  {book.language && <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-amber-400" />{book.language}</span>}
+                  {book.estimatedReadTime && <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-400" />{book.estimatedReadTime} mnt</span>}
+                  {book.firstPublished && <span className="flex items-center gap-1"><Printer className="w-3 h-3 text-amber-400" />{new Date(book.firstPublished).getFullYear()}{book.firstPublisher && ` · ${book.firstPublisher}`}</span>}
+                </div>
+                {avgRating > 0 && (
+                  <div className="sm:hidden flex items-center gap-2 mt-2">
+                    <StarDisplay avg={avgRating} />
+                    <span className="text-sm font-bold text-white">{avgRating.toFixed(1)}</span>
+                    {totalRatings > 0 && <span className="text-xs text-white/50">({totalRatings})</span>}
+                  </div>
+                )}
+                {/* Desktop action buttons */}
+                <div className="hidden sm:flex flex-wrap gap-2 mt-4">
+                  <button onClick={handleRead} disabled={readingLoading}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-60 bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-900/40">
+                    <BookOpen className="w-4 h-4" />{readingLoading ? 'Memuat...' : 'Baca Sekarang'}
+                  </button>
+                  {book.fileUrl && (
+                    <button onClick={handleDownload} disabled={downloadLoading}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60 bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm border border-white/20">
+                      <Download className="w-4 h-4" />
+                      {downloadLoading ? (downloadProgress?.percent != null ? `${downloadProgress.percent}%` : 'Mengunduh...') : `Unduh ${(book.fileFormat || 'EPUB').toUpperCase()}`}
+                    </button>
+                  )}
+                  <button onClick={handleFavorite} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-500/80 border-red-400/50 text-white' : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white'}`}>
+                    <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
+                  </button>
+                  <button onClick={handleOpenRatingModal} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${userRating ? 'bg-amber-500/80 border-amber-400/50 text-white' : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white'}`}>
+                    <Star className={`w-5 h-5 ${userRating ? 'fill-current' : ''}`} />
+                  </button>
+                  <button onClick={handleShare} className="p-2.5 rounded-xl border bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white transition-all active:scale-95">
+                    <Share2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* ── END HERO ── */}
 
-                {/* Desktop sidebar meta panel */}
-                {(book.publisher || book.language || book.totalWord || book.updatedAt ||
-                  book.createdAt || book.copyrightStatus || book.source) && (
-                  <div className="hidden lg:block p-4 rounded-2xl border space-y-3 text-sm transition-colors
-                                  bg-amber-50/60 border-amber-200
-                                  dark:bg-slate-800/60 dark:border-slate-700">
-                    {book.publisher && (
-                      <div className="flex items-start gap-2.5">
-                        <Building2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-stone-400 dark:text-slate-500" />
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">
-                            Diterbitkan Ulang Oleh
+        {/* ════════════════════════════════════════════════════════════
+            MAIN CONTENT
+            pb-[88px] → ruang untuk fixed bottom bar di mobile
+        ════════════════════════════════════════════════════════════ */}
+        <div className="container mx-auto px-3 sm:px-4 max-w-5xl pb-[88px] lg:pb-10">
+
+          {/* Download progress bar */}
+          {downloadLoading && downloadProgress && (
+            <div className="w-full h-1.5 rounded-full overflow-hidden bg-stone-200 dark:bg-slate-700 mb-4">
+              {downloadProgress.percent != null
+                ? <div className="h-full bg-amber-500 rounded-full transition-all duration-300" style={{ width: `${downloadProgress.percent}%` }} />
+                : <div className="h-full bg-amber-500 animate-pulse w-full rounded-full" />
+              }
+            </div>
+          )}
+
+          {/* User rating pill */}
+          {userRating && (
+            <div className="flex items-center justify-between p-3 rounded-xl border mb-4 bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Rating Anda: {userRating.rating} ⭐</span>
+              </div>
+              <button onClick={handleDeleteRating} className="text-xs font-medium px-2 py-1 rounded-lg transition text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">Hapus</button>
+            </div>
+          )}
+
+          {/* Engagement stats */}
+          {(book.viewCount > 0 || book.readCount > 0 || book.downloadCount > 0 || hasReactions) && (
+            <div className="mb-5">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                {book.viewCount > 0 && <StatCard icon={Eye} label="Dilihat" value={book.viewCount} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-900/20" />}
+                {book.readCount > 0 && <StatCard icon={BookOpen} label="Pembaca" value={book.readCount} color="text-amber-500" bg="bg-amber-50 dark:bg-amber-900/20" />}
+                {book.downloadCount > 0 && <StatCard icon={Download} label="Diunduh" value={book.downloadCount} color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
+                {book.totalComments > 0 && <StatCard icon={MessageCircle} label="Komentar" value={book.totalComments} color="text-violet-500" bg="bg-violet-50 dark:bg-violet-900/20" />}
+                {book.totalLikes > 0 && <StatCard icon={ThumbsUp} label="Suka" value={book.totalLikes} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />}
+                {book.totalLoves > 0 && <StatCard icon={HeartIcon} label="Cinta" value={book.totalLoves} color="text-rose-500" bg="bg-rose-50 dark:bg-rose-900/20" />}
+                {book.totalAngry > 0 && <StatCard icon={Angry} label="Marah" value={book.totalAngry} color="text-red-500" bg="bg-red-50 dark:bg-red-900/20" />}
+              </div>
+            </div>
+          )}
+
+          {/* Rating summary */}
+          <div className="mb-5">
+            <RatingSummary ratingStats={ratingStats} onRate={handleOpenRatingModal} userRating={userRating} />
+          </div>
+
+          {/* Series banner */}
+          {hasSeries && (
+            <div className="mb-5 p-4 rounded-2xl border overflow-hidden bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200 dark:from-violet-900/20 dark:to-slate-900 dark:border-violet-800/50">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0">
+                  <Layers className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] uppercase tracking-wide font-semibold mb-0.5 text-violet-500 dark:text-violet-400">Bagian dari Seri</div>
+                  <Link to={`/buku/seri/${book.seriesSlug}`} className="text-sm font-bold text-violet-800 dark:text-violet-300 hover:text-violet-600 dark:hover:text-violet-200 transition-colors">{book.seriesName}</Link>
+                  {book.seriesDescription && <p className="text-xs mt-1 text-violet-600/70 dark:text-violet-400/60 leading-relaxed line-clamp-2">{book.seriesDescription}</p>}
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">Buku ke-{book.seriesOrder} dalam seri ini</span>
+                    <Link to={`/buku/seri/${book.seriesSlug}`} className="text-xs text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-200 underline underline-offset-2">Lihat semua →</Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TABS */}
+          <div className="flex gap-1 p-1 rounded-xl mb-5 overflow-x-auto scrollbar-none bg-stone-100 dark:bg-slate-800/60">
+            {tabs.map(tab => {
+              const Icon = tab.icon
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${activeTab === tab.id ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-stone-500 dark:text-slate-400 hover:text-stone-700 dark:hover:text-slate-200'}`}>
+                  <Icon className="w-3.5 h-3.5" />{tab.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* ── TAB: INFO ── */}
+          {activeTab === 'info' && (
+            <div className="space-y-5">
+
+              {/* Sinopsis */}
+              <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
+                <div className="px-4 sm:px-5 pt-4 pb-1"><SectionTitle icon={BookOpen} title={<>Sinopsis <span className="text-sm text-stone-400 dark:text-slate-500">(Dibikin Otomatis)</span></>} /></div>
+                <div className="px-4 sm:px-5 pb-4">
+                  {book.description ? (
+                    <>
+                      <p className={`whitespace-pre-line leading-relaxed text-sm sm:text-base text-justify text-stone-700 dark:text-slate-300 ${!showFullDesc && book.description.length > 500 ? 'line-clamp-5' : ''}`}>
+                        {book.description}
+                      </p>
+                      {book.description.length > 500 && (
+                        <button onClick={() => setShowFullDesc(v => !v)} className="mt-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1">
+                          {showFullDesc ? 'Sembunyikan' : 'Baca selengkapnya'}
+                          <ChevronDown className={`w-4 h-4 transition-transform ${showFullDesc ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-stone-400 dark:text-slate-500 italic">Tidak ada sinopsis tersedia.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Riwayat Penerbitan */}
+              {(book.firstPublished || book.firstPublisher || book.publisher) && (
+                <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
+                  <div className="px-4 sm:px-5 pt-4 pb-0"><SectionTitle icon={Printer} title="Riwayat Penerbitan" iconColor="text-stone-500" /></div>
+                  {(book.firstPublished || book.firstPublisher) && (
+                    <div className="px-4 sm:px-5 pb-4">
+                      <div className="text-[10px] uppercase tracking-wider font-semibold mb-3 text-stone-400 dark:text-slate-500">Penerbitan Asli</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {book.firstPublished && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0"><Calendar className="w-4 h-4 text-amber-500" /></div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wide text-stone-400 dark:text-slate-500 mb-0.5">Tanggal Terbit</div>
+                              <div className="text-sm font-semibold text-stone-800 dark:text-slate-200">{formatDate(book.firstPublished)}</div>
+                            </div>
                           </div>
-                          <div className="font-medium text-stone-800 dark:text-slate-200">{book.publisher}</div>
-                        </div>
+                        )}
+                        {book.firstPublisher && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0"><Newspaper className="w-4 h-4 text-amber-500" /></div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wide text-stone-400 dark:text-slate-500 mb-0.5">Media / Penerbit</div>
+                              <div className="text-sm font-semibold text-stone-800 dark:text-slate-200">{book.firstPublisher}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {book.language && (
-                      <div className="flex items-start gap-2.5">
-                        <Globe className="w-4 h-4 flex-shrink-0 mt-0.5 text-stone-400 dark:text-slate-500" />
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Bahasa</div>
-                          <div className="font-medium text-stone-800 dark:text-slate-200">{book.language}</div>
-                        </div>
-                      </div>
-                    )}
-                    {book.totalWord && (
-                      <div className="flex items-start gap-2.5">
-                        <FileText className="w-4 h-4 flex-shrink-0 mt-0.5 text-stone-400 dark:text-slate-500" />
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Total Kata</div>
-                          <div className="font-medium text-stone-800 dark:text-slate-200">
-                            {book.totalWord.toLocaleString()} kata
+                    </div>
+                  )}
+                  {book.publisher && (
+                    <>
+                      {(book.firstPublished || book.firstPublisher) && <div className="border-t border-stone-100 dark:border-slate-800 mx-4" />}
+                      <div className="px-4 sm:px-5 py-4">
+                        <div className="text-[10px] uppercase tracking-wider font-semibold mb-3 text-stone-400 dark:text-slate-500">Edisi Digital</div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0"><Building2 className="w-4 h-4 text-stone-400 dark:text-slate-500" /></div>
+                          <div>
+                            <div className="text-sm font-semibold text-stone-800 dark:text-slate-200">{book.publisher}</div>
+                            {book.publicationYear && <div className="text-xs text-stone-400 dark:text-slate-500 mt-0.5">{book.publicationYear}{book.edition && book.edition > 1 && ` · Edisi ke-${book.edition}`}</div>}
                           </div>
                         </div>
                       </div>
-                    )}
-                    {book.updatedAt && (
-                      <div className="flex items-start gap-2.5">
-                        <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5 text-stone-400 dark:text-slate-500" />
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ═══════════════════════════════════════════════════
+                  DETAIL BUKU
+                  FIX C: grid-cols-2 aktif di SEMUA ukuran layar
+                  InfoRow juga diperkecil agar muat di 2 kolom sempit
+              ═══════════════════════════════════════════════════ */}
+              <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
+                <div className="px-4 sm:px-5 pt-4 pb-2"><SectionTitle icon={FileText} title="Detail Buku" /></div>
+
+                <div className="px-3 sm:px-5 pb-3">
+                  <div className="grid grid-cols-2 gap-x-2 sm:gap-x-6">
+                    <div>
+                      <InfoRow icon={FileText} label="Format" value={book.fileFormat?.toUpperCase()} />
+                      <InfoRow icon={Activity} label="Ukuran" value={formatBytes(book.fileSize)} />
+                      <InfoRow icon={List} label="Bab" value={book.totalPages ? `${Math.max(0, book.totalPages - 3)} bab` : null} />
+                      <InfoRow icon={AlignLeft} label="Kata" value={book.totalWord ? `${book.totalWord.toLocaleString('id-ID')}` : null} />
+                    </div>
+                    <div>
+                      <InfoRow icon={Clock} label="Est. Baca" value={book.estimatedReadTime ? `${book.estimatedReadTime} mnt` : null} />
+                      <InfoRow icon={Globe} label="Bahasa" value={book.language} />
+                      <InfoRow icon={Building2} label="Diterbitkan Ulang Oleh" value={book.publisher} />
+                      <InfoRow icon={Calendar} label="Terbit" value={book.publicationYear ? String(book.publicationYear) : null} />
+                    </div>
+                  </div>
+                </div>
+
+                {showAllDetails && (
+                  <div className="border-t border-stone-100 dark:border-slate-800">
+                    <div className="px-3 sm:px-5 pt-3 pb-3">
+                      <div className="grid grid-cols-2 gap-x-2 sm:gap-x-6">
                         <div>
-                          <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Diperbarui</div>
-                          <div className="font-medium text-stone-800 dark:text-slate-200">
-                            {new Date(book.updatedAt).toLocaleDateString('id-ID',
-                              { year: 'numeric', month: 'long', day: 'numeric' })}
-                          </div>
+                          <InfoRow icon={Calendar} label="Terbit Pertama" value={formatDate(book.firstPublished)} />
+                          <InfoRow icon={Newspaper} label="Penerbit Asli" value={book.firstPublisher} />
+                          <InfoRow icon={Bookmark} label="Edisi Digital" value={book.edition ? `ke-${book.edition}` : null} />
+                          <InfoRow icon={Award} label="Kesulitan" value={book.difficultyLevel} />
+                        </div>
+                        <div>
+                          <InfoRow icon={Calendar} label="Rilis Digital" value={formatDate(book.publishedAt)} />
+                          <InfoRow icon={TrendingUp} label="Status" value={book.isActive ? 'Aktif' : 'Nonaktif'} />
+                          <InfoRow icon={Calendar} label="Ditambahkan" value={formatDateTime(book.createdAt)} />
+                          <InfoRow icon={Calendar} label="Diperbarui" value={formatDateTime(book.updatedAt)} />
                         </div>
                       </div>
-                    )}
-                    {book.createdAt && (
-                      <div className="flex items-start gap-2.5">
-                        <Clock className="w-4 h-4 flex-shrink-0 mt-0.5 text-stone-400 dark:text-slate-500" />
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Ditambahkan</div>
-                          <div className="font-medium text-stone-800 dark:text-slate-200">
-                            {new Date(book.createdAt).toLocaleDateString('id-ID',
-                              { year: 'numeric', month: 'long', day: 'numeric' })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    </div>
                     {book.copyrightStatus && (
-                      <div className="pt-3 border-t border-amber-200 dark:border-slate-700">
-                        <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">
-                          Status Hak Cipta
-                        </div>
-                        <div className="font-medium text-amber-600 dark:text-amber-400">{book.copyrightStatus}</div>
+                      <div className="px-4 sm:px-5 py-3 border-t border-stone-100 dark:border-slate-800 bg-amber-50/50 dark:bg-amber-900/10">
+                        <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-slate-500 mb-1">Status Hak Cipta</div>
+                        <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{book.copyrightStatus}</div>
                       </div>
                     )}
                     {book.source && (
-                      <div className="pt-3 border-t border-amber-200 dark:border-slate-700">
-                        <div className="text-[10px] uppercase tracking-wide mb-1 text-stone-400 dark:text-slate-500">Sumber</div>
-                        <a
-                          href={book.source}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm flex items-center gap-1 break-all transition-colors
-                                     text-amber-600 hover:text-amber-700
-                                     dark:text-amber-400 dark:hover:text-amber-300">
-                          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          <span className="truncate">{getSourceDomain(book.source)}</span>
+                      <div className="px-4 sm:px-5 py-3 border-t border-stone-100 dark:border-slate-800">
+                        <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-slate-500 mb-1">Sumber Data</div>
+                        <a href={book.source} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors break-all">
+                          <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />{getSourceDomain(book.source)}
                         </a>
                       </div>
                     )}
                   </div>
                 )}
 
+                <button onClick={() => setShowAllDetails(v => !v)}
+                  className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-semibold border-t border-stone-100 dark:border-slate-800 transition-colors text-stone-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-stone-50 dark:hover:bg-slate-800/60">
+                  {showAllDetails ? 'Sembunyikan' : 'Tampilkan semua detail'}
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllDetails ? 'rotate-180' : ''}`} />
+                </button>
               </div>
-            </aside>
 
-            {/* ── ARTICLE col-2-3 ─────────────────────────────────── */}
-            <article className="lg:col-span-2 pb-8">
-
-              {/* Desktop title block */}
-              <div className="hidden lg:block mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  {book.isFeatured && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                     bg-amber-100 text-amber-700 border border-amber-200
-                                     dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/60">
-                      <Star className="w-3.5 h-3.5 mr-1 fill-current" />Pilihan Editor
-                    </span>
-                  )}
-                  {book.isActive === false && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                     bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                      Tidak Aktif
-                    </span>
-                  )}
+              {/* Statistik interaksi */}
+              {(hasReactions || book.totalRatings > 0) && (
+                <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
+                  <SectionTitle icon={BarChart2} title="Statistik Interaksi" iconColor="text-violet-500" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {book.totalRatings > 0 && <StatCard icon={Star} label="Total Rating" value={book.totalRatings} color="text-amber-500" bg="bg-amber-50 dark:bg-amber-900/20" />}
+                    {book.viewCount > 0 && <StatCard icon={Eye} label="Dilihat" value={book.viewCount} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-900/20" />}
+                    {book.readCount > 0 && <StatCard icon={BookOpen} label="Pembaca" value={book.readCount} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
+                    {book.downloadCount > 0 && <StatCard icon={Download} label="Diunduh" value={book.downloadCount} color="text-teal-500" bg="bg-teal-50 dark:bg-teal-900/20" />}
+                    {book.totalComments > 0 && <StatCard icon={MessageCircle} label="Komentar" value={book.totalComments} color="text-violet-500" bg="bg-violet-50 dark:bg-violet-900/20" />}
+                    {book.totalLikes > 0 && <StatCard icon={ThumbsUp} label="Suka" value={book.totalLikes} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />}
+                    {book.totalLoves > 0 && <StatCard icon={HeartIcon} label="Cinta" value={book.totalLoves} color="text-rose-500" bg="bg-rose-50 dark:bg-rose-900/20" />}
+                    {book.totalSad > 0 && <StatCard icon={Frown} label="Sedih" value={book.totalSad} color="text-sky-500" bg="bg-sky-50 dark:bg-sky-900/20" />}
+                    {book.totalAngry > 0 && <StatCard icon={Angry} label="Marah" value={book.totalAngry} color="text-red-500" bg="bg-red-50 dark:bg-red-900/20" />}
+                    {book.totalDislikes > 0 && <StatCard icon={ThumbsDown} label="Tidak Suka" value={book.totalDislikes} color="text-orange-500" bg="bg-orange-50 dark:bg-orange-900/20" />}
+                    {(book.totalReactions > 0 || totalEngagement > 0) && <StatCard icon={Zap} label="Total Reaksi" value={book.totalReactions || totalEngagement} color="text-pink-500" bg="bg-pink-50 dark:bg-pink-900/20" />}
+                  </div>
                 </div>
+              )}
+            </div>
+          )}
 
-                <h1 className="text-3xl xl:text-4xl font-bold leading-tight mb-2
-                               text-stone-900 dark:text-slate-50">
-                  {book.title}
-                </h1>
-                {book.subtitle && (
-                  <p className="text-lg mb-4 text-stone-500 dark:text-slate-400">{book.subtitle}</p>
-                )}
-
-                {/* Author row */}
-                <div className="flex items-center gap-3 mb-5">
-                  <AuthorAvatars />
-                  <div className="flex flex-wrap items-center gap-1">
-                    {authorList.map((author, i) => (
-                      <span key={i} className="inline-flex items-center">
-                        <Link
-                          to={`/penulis/${author.slug}`}
-                          className="text-base font-medium transition-colors
-                                     text-stone-700 hover:text-amber-600
-                                     dark:text-slate-300 dark:hover:text-amber-400">
-                          {author.name}
-                        </Link>
-                        {i < authorList.length - 1 && <span className="mx-1 text-stone-400">,</span>}
-                      </span>
+          {/* ── TAB: PENULIS ── */}
+          {activeTab === 'penulis' && (
+            <div className="space-y-5">
+              {authorList.length > 0 && (
+                <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
+                  <SectionTitle icon={Feather} title="Penulis" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {authorList.map((a, i) => <ContributorCard key={i} name={a.name} role="Penulis" photoUrl={a.photoUrl} slug={a.slug} isAuthor={true} />)}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-stone-100 dark:border-slate-800 flex flex-wrap gap-2">
+                    {authorList.map((a, i) => (
+                      <Link key={i} to={`/penulis/${a.slug}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-400 transition-all dark:bg-slate-800 dark:border-amber-800/50 dark:text-amber-400">
+                        <User className="w-3 h-3" />{a.name}
+                      </Link>
                     ))}
                   </div>
                 </div>
-
-                {/* Stat row */}
-                <div className="flex flex-wrap gap-5 text-sm py-3 mb-4 border-y
-                                text-stone-500 border-stone-100
-                                dark:text-slate-400 dark:border-slate-800">
-                  {book.averageRating > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                      <span className="font-semibold text-stone-800 dark:text-slate-200">
-                        {book.averageRating.toFixed(1)}
-                      </span>
-                      <span className="text-xs text-stone-400 dark:text-slate-500">
-                        ({book.totalRatings} rating)
-                      </span>
+              )}
+              {hasContributors && (
+                <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
+                  <SectionTitle icon={Users} title="Kontributor" iconColor="text-purple-500" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                    {contributorList.map((c, i) => <ContributorCard key={i} name={c.name} role={c.role} />)}
+                  </div>
+                  <div className="p-3 rounded-xl border border-dashed bg-purple-50 border-purple-200 dark:bg-purple-900/10 dark:border-purple-800/40">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                      {contributorList.map((c, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                          <span className="text-xs text-stone-600 dark:text-slate-400">
+                            <span className="font-semibold text-stone-800 dark:text-slate-200">{c.name}</span>
+                            {c.role && <span className="text-stone-400"> — {c.role}</span>}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <Eye className="w-4 h-4" /><span>{book.viewCount || 0} dilihat</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Download className="w-4 h-4" /><span>{book.downloadCount || 0} diunduh</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <BookOpen className="w-4 h-4" /><span>{book.readCount || 0} pembaca</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4" /><span>{book.estimatedReadTime} menit</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" /><span>{book.publicationYear}</span>
                   </div>
                 </div>
+              )}
+            </div>
+          )}
 
-                {/* Genre tags desktop */}
-                {book.genres && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {book.genres.split(',').map((genre, i) => {
-                      const g    = genre.trim()
-                      const slug = g.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')
-                      return (
-                        <Link
-                          key={i}
-                          to={`/kategori/${slug}`}
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all border
-                                     bg-amber-50 border-amber-200 text-amber-700
-                                     hover:bg-amber-100 hover:border-amber-300 hover:shadow-sm hover:scale-105
-                                     dark:bg-amber-900/20 dark:border-amber-700/50 dark:text-amber-300
-                                     dark:hover:bg-amber-900/40">
-                          {g}
-                        </Link>
-                      )
-                    })}
+          {/* ── TAB: SERI ── */}
+          {activeTab === 'seri' && hasSeries && (
+            <div className="space-y-4">
+              <div className="p-4 sm:p-5 rounded-2xl border bg-white border-violet-200 dark:bg-slate-900 dark:border-violet-800/50">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0">
+                    <Layers className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-stone-900 dark:text-slate-50">{book.seriesName}</h3>
+                    {book.seriesDescription && <p className="text-sm mt-1 text-stone-600 dark:text-slate-400 leading-relaxed">{book.seriesDescription}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-700 dark:text-violet-300">
+                    <Bookmark className="w-3.5 h-3.5" />Anda sedang membaca buku ke-{book.seriesOrder}
+                  </span>
+                  <Link to={`/buku/seri/${book.seriesSlug}`} className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200 transition-colors">
+                    Halaman seri <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+              <div>
+                <SectionTitle icon={Layers} title="Buku dalam seri ini" iconColor="text-violet-500" />
+                {seriesLoading ? (
+                  <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-16 rounded-xl animate-pulse bg-stone-100 dark:bg-slate-800" />)}</div>
+                ) : seriesBooks.length > 0 ? (
+                  <div className="space-y-2">
+                    {[...seriesBooks].sort((a,b) => (a.seriesOrder||0)-(b.seriesOrder||0)).map((sb,i) => (
+                      <SeriesBookCard key={sb.id || i} seriesBook={sb} currentSlug={bookSlug} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <SeriesBookCard seriesBook={{ slug: bookSlug, title: book.title, authorNames: book.authorNames, coverImageUrl: book.coverImageUrl, seriesOrder: book.seriesOrder }} currentSlug={bookSlug} />
+                    <div className="p-4 rounded-xl border border-dashed text-sm text-center bg-stone-50 border-stone-200 dark:bg-slate-800/60 dark:border-slate-700 text-stone-400 dark:text-slate-500">Buku lain dalam seri ini belum tersedia.</div>
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Desktop Rating Summary */}
-              <div className="hidden lg:block mb-6">
-                <RatingSummary ratingStats={ratingStats} onRate={handleOpenRatingModal} userRating={userRating} />
-              </div>
-
-              {/* Contributors */}
-              {(book.contributors || book.source) && (
-                <div className="mb-6">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider mb-2.5
-                                 text-stone-400 dark:text-slate-500">Kontributor</h3>
-                  <div className="rounded-xl p-3.5 border bg-gradient-to-r
-                                  from-purple-50 to-amber-50/40 border-purple-200
-                                  dark:from-purple-900/20 dark:to-slate-900 dark:border-purple-800">
-                    <div className="flex flex-wrap gap-2">
-                      {book.source && (
-                        <a
-                          href={book.source}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm border transition-colors
-                                     bg-white border-purple-100 hover:border-amber-300
-                                     dark:bg-slate-800 dark:border-purple-900 dark:hover:border-amber-700">
-                          <Database className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
-                          <div>
-                            <div className="text-xs font-medium text-stone-800 dark:text-slate-200">
-                              {getSourceDomain(book.source)}
-                            </div>
-                            <div className="text-[10px] text-stone-400 dark:text-slate-500">Digitalisasi</div>
-                          </div>
-                        </a>
-                      )}
-                      {book.contributors && book.contributors.split(',').map((contributor, i) => {
-                        const parts = contributor.trim().match(/(.+?)\s*\((.+?)\)/)
-                        const name  = parts ? parts[1].trim() : contributor.trim()
-                        const role  = parts ? parts[2].trim() : ''
-                        return (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm border
-                                       bg-white border-purple-100
-                                       dark:bg-slate-800 dark:border-purple-900">
-                            <User className="w-3.5 h-3.5 flex-shrink-0 text-purple-500" />
-                            <div>
-                              <div className="text-xs font-medium text-stone-800 dark:text-slate-200">{name}</div>
-                              {role && <div className="text-[10px] text-stone-400 dark:text-slate-500">{role}</div>}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              <section className="mb-8">
-                <h2 className="text-xl font-bold mb-3 text-stone-900 dark:text-slate-50">
-                  Deskripsi{' '}
-                  <span className="text-xs font-normal text-stone-400 dark:text-slate-500">
-                    (Dibuat otomatis)
-                  </span>
-                </h2>
-                <div className="whitespace-pre-line leading-relaxed text-justify text-sm sm:text-base
-                                text-stone-700 dark:text-slate-300">
-                  {book.description || 'Tidak ada deskripsi tersedia.'}
-                </div>
-              </section>
-
-              {/* Book Details Accordion */}
-              {(book.fileFormat || book.fileSize || book.totalPages || book.totalWord ||
-                book.publicationYear || book.publishedAt || book.createdAt || book.updatedAt ||
-                book.source || book.language || book.publisher || book.copyrightStatus ||
-                book.estimatedReadTime) && (
-                <section className="mb-6">
-                  <button
-                    onClick={handleToggleBookDetails}
-                    className="flex items-center justify-between w-full p-4 rounded-xl border transition-all
-                               bg-stone-50 border-stone-200 hover:bg-amber-50/60 hover:border-amber-200
-                               dark:bg-slate-800/60 dark:border-slate-700 dark:hover:bg-slate-800">
-                    <div className="flex items-center gap-2.5">
-                      <FileText className="w-4 h-4 text-stone-500 dark:text-slate-400" />
-                      <span className="font-semibold text-sm text-stone-800 dark:text-slate-200">
-                        Detail Buku Lengkap
-                      </span>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 transition-transform text-stone-400 dark:text-slate-500
-                                            ${showBookDetails ? 'rotate-180' : ''}`} />
+          {/* ── TAB: ULASAN ── */}
+          {activeTab === 'ulasan' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-stone-900 dark:text-slate-50">Ulasan Pembaca</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => navigate(isAuthenticated ? `/buku/${bookSlug}/ulasan` : '/masuk')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold transition-all bg-amber-500 hover:bg-amber-400 text-white">
+                    <MessageCircle className="w-3.5 h-3.5" />Tulis Ulasan
                   </button>
-
-                  {showBookDetails && (
-                    <div className="mt-2 p-4 rounded-xl border transition-colors
-                                    bg-stone-50 border-stone-200
-                                    dark:bg-slate-800/60 dark:border-slate-700">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        <div className="space-y-3">
-                          {book.fileFormat && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Format File</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">{book.fileFormat.toUpperCase()}</div>
-                            </div>
-                          )}
-                          {book.fileSize && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Ukuran File</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {(book.fileSize / 1024 / 1024).toFixed(2)} MB
-                              </div>
-                            </div>
-                          )}
-                          {book.totalPages && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Total Bab & Subbab</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {book.totalPages} bab & subbab
-                              </div>
-                            </div>
-                          )}
-                          {book.totalWord && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Total Kata</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {book.totalWord.toLocaleString()} kata
-                              </div>
-                            </div>
-                          )}
-                          {book.estimatedReadTime && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Estimasi Baca</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {book.estimatedReadTime} menit
-                              </div>
-                            </div>
-                          )}
-                          {book.language && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Bahasa</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">{book.language}</div>
-                            </div>
-                          )}
+                  {recentReviews.length > 0 && (
+                    <button onClick={() => navigate(`/buku/${bookSlug}/ulasan`)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 dark:border-slate-700 dark:text-slate-400">
+                      Lihat Semua
+                    </button>
+                  )}
+                </div>
+              </div>
+              {reviewsLoading ? (
+                <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 rounded-xl animate-pulse bg-stone-100 dark:bg-slate-800" />)}</div>
+              ) : recentReviews.length === 0 ? (
+                <div className="rounded-2xl p-10 text-center border border-dashed bg-stone-50 border-stone-200 dark:bg-slate-800/60 dark:border-slate-700">
+                  <MessageCircle className="w-10 h-10 mx-auto mb-3 text-stone-300 dark:text-slate-600" />
+                  <p className="mb-4 text-sm text-stone-500 dark:text-slate-400">Belum ada ulasan</p>
+                  <button onClick={() => navigate(isAuthenticated ? `/buku/${bookSlug}/ulasan` : '/masuk')}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-white transition-all">
+                    <MessageCircle className="w-4 h-4" />{isAuthenticated ? 'Jadilah yang Pertama' : 'Login untuk Ulasan'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentReviews.map(review => (
+                    <article key={review.id} className="rounded-xl p-4 sm:p-5 border transition-all hover:shadow-md bg-white border-stone-100 dark:bg-slate-900 dark:border-slate-700">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-amber-50 dark:bg-amber-900/20">
+                          {review.userPhotoUrl
+                            ? <img src={review.userPhotoUrl} alt={review.userName} className="w-9 h-9 object-cover" loading="lazy" />
+                            : <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{review.userName?.charAt(0)?.toUpperCase() || '?'}</span>
+                          }
                         </div>
-                        <div className="space-y-3">
-                          {book.publicationYear && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Tahun Terbit</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">{book.publicationYear}</div>
-                            </div>
-                          )}
-                          {book.publishedAt && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Tanggal Terbit</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {new Date(book.publishedAt).toLocaleDateString('id-ID',
-                                  { year: 'numeric', month: 'long', day: 'numeric' })}
-                              </div>
-                            </div>
-                          )}
-                          {book.publisher && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Diterbitkan Ulang Oleh</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">{book.publisher}</div>
-                            </div>
-                          )}
-                          {book.createdAt && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Ditambahkan</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {new Date(book.createdAt).toLocaleDateString('id-ID',
-                                  { year: 'numeric', month: 'long', day: 'numeric' })}
-                              </div>
-                            </div>
-                          )}
-                          {book.updatedAt && (
-                            <div>
-                              <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">Diperbarui</div>
-                              <div className="text-sm font-medium text-stone-800 dark:text-slate-200">
-                                {new Date(book.updatedAt).toLocaleDateString('id-ID',
-                                  { year: 'numeric', month: 'long', day: 'numeric' })}
-                              </div>
-                            </div>
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-stone-900 dark:text-slate-100 truncate">{review.userName}</span>
+                            {review.isOwner && <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">Anda</span>}
+                            <time className="text-xs ml-auto flex-shrink-0 text-stone-400 dark:text-slate-500" dateTime={review.createdAt}>
+                              {new Date(review.createdAt).toLocaleDateString('id-ID', { year:'numeric', month:'short', day:'numeric' })}
+                            </time>
+                          </div>
                         </div>
                       </div>
-                      {book.copyrightStatus && (
-                        <div className="pt-3 border-t border-stone-200 dark:border-slate-700">
-                          <div className="text-[10px] uppercase tracking-wide mb-0.5 text-stone-400 dark:text-slate-500">
-                            Status Hak Cipta
-                          </div>
-                          <div className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                            {book.copyrightStatus}
-                          </div>
-                        </div>
-                      )}
-                      {book.source && (
-                        <div className="pt-3 border-t border-stone-200 dark:border-slate-700">
-                          <div className="text-[10px] uppercase tracking-wide mb-1 text-stone-400 dark:text-slate-500">Sumber</div>
-                          <a
-                            href={book.source}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm flex items-center gap-1.5 break-all transition-colors
-                                       text-amber-600 hover:text-amber-700
-                                       dark:text-amber-400 dark:hover:text-amber-300">
-                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                            {getSourceDomain(book.source)}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
+                      {review.title && <h3 className="font-bold mb-1.5 text-sm text-stone-900 dark:text-slate-100">{review.title}</h3>}
+                      <p className="mb-3 line-clamp-3 text-sm leading-relaxed text-stone-600 dark:text-slate-300">{review.content}</p>
+                      <div className="flex items-center gap-4 text-xs text-stone-400 dark:text-slate-500">
+                        <div className="flex items-center gap-1"><ThumbsUp className="w-3.5 h-3.5" /><span>{review.helpfulCount || 0} membantu</span></div>
+                        {review.replyCount > 0 && <div className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /><span>{review.replyCount} balasan</span></div>}
+                      </div>
+                    </article>
+                  ))}
+                </div>
               )}
+            </div>
+          )}
 
-              {/* Reviews — FIX CLS: min-height */}
-              <section className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-stone-900 dark:text-slate-50">Ulasan Terbaik</h2>
-                  <div className="flex gap-2">
-                    <Button variant="primary" size="sm" onClick={handleNavigateReviews}>
-                      <MessageCircle className="w-3.5 h-3.5 mr-1" />
-                      <span className="hidden sm:inline">Tulis </span>Ulasan
-                    </Button>
-                    {recentReviews.length > 0 && (
-                      <Button variant="outline" size="sm" onClick={handleNavigateAllReviews}>
-                        Lihat Semua
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ minHeight: '200px' }}>
-                  {reviewsLoading ? (
-                    <div className="text-center py-10"><LoadingSpinner /></div>
-                  ) : recentReviews.length === 0 ? (
-                    <div className="rounded-2xl p-8 text-center border border-dashed transition-colors
-                                    bg-stone-50 border-stone-200
-                                    dark:bg-slate-800/60 dark:border-slate-700">
-                      <MessageCircle className="w-10 h-10 mx-auto mb-3 text-stone-300 dark:text-slate-600" />
-                      <p className="mb-4 text-sm text-stone-500 dark:text-slate-400">Belum ada ulasan</p>
-                      <Button variant="primary" size="sm" onClick={handleNavigateReviews}>
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        {isAuthenticated ? 'Jadilah yang Pertama' : 'Login untuk Ulasan'}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {recentReviews.map(review => (
-                        <article
-                          key={review.id}
-                          className="rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition border
-                                     bg-white border-stone-100 shadow-stone-50/80
-                                     dark:bg-slate-900 dark:border-slate-700 dark:shadow-none">
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden
-                                            bg-amber-50 dark:bg-amber-900/20">
-                              {review.userPhotoUrl
-                                ? <img
-                                    src={review.userPhotoUrl}
-                                    alt={review.userName}
-                                    width={36}
-                                    height={36}
-                                    className="w-9 h-9 object-cover"
-                                    loading="lazy"
-                                    decoding="async"
-                                  />
-                                : <User className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-sm truncate text-stone-900 dark:text-slate-100">
-                                  {review.userName}
-                                </span>
-                                {review.isOwner && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0
-                                                   bg-amber-50 text-amber-600
-                                                   dark:bg-amber-900/20 dark:text-amber-400">
-                                    Anda
-                                  </span>
-                                )}
-                                <span className="text-xs ml-auto text-stone-400 dark:text-slate-500">
-                                  {new Date(review.createdAt).toLocaleDateString('id-ID',
-                                    { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          {review.title && (
-                            <h3 className="font-semibold mb-1.5 text-sm text-stone-900 dark:text-slate-100">
-                              {review.title}
-                            </h3>
-                          )}
-                          <p className="mb-3 line-clamp-3 text-sm leading-relaxed text-stone-600 dark:text-slate-300">
-                            {review.content}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-stone-400 dark:text-slate-500">
-                            <div className="flex items-center gap-1">
-                              <ThumbsUp className="w-3.5 h-3.5" />
-                              <span>{review.helpfulCount || 0} membantu</span>
-                            </div>
-                            {review.replyCount > 0 && (
-                              <div className="flex items-center gap-1">
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                <span>{review.replyCount} balasan</span>
-                              </div>
-                            )}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              {/* ── Social Integration ── */}
-              <BookDetailSocialSection book={book} />
-
-            </article>
-          </div>{/* end grid */}
+          <div className="mt-8 mb-8"><BookDetailSocialSection book={book} /></div>
         </div>
 
-        <RatingModal
-          isOpen={isRatingModalOpen}
-          onClose={handleCloseRatingModal}
-          onSubmit={handleSubmitRating}
-          bookTitle={book.title}
-        />
+        {/* ════════════════════════════════════════════════════════════
+            FIXED BOTTOM BAR — mobile & tablet (< lg)
+            FIX A: overflow-x-hidden di root + inset-x-0 di sini
+            memastikan bar selalu penuh lebar viewport tanpa terpotong
+        ════════════════════════════════════════════════════════════ */}
+        <div
+          className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-stone-200 dark:border-slate-800"
+          style={{ paddingLeft: '12px', paddingRight: '12px', paddingTop: '8px', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex gap-2">
+            {/* Baca — flex-1 mengisi sisa */}
+            <button
+              onClick={handleRead}
+              disabled={readingLoading}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-200/80 dark:shadow-amber-900/40 transition-all active:scale-[0.98] disabled:opacity-60 min-w-0"
+            >
+              <BookOpen className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{readingLoading ? 'Memuat...' : 'Baca Sekarang'}</span>
+            </button>
+
+            {/* Unduh */}
+            {book.fileUrl && (
+              <button
+                onClick={handleDownload}
+                disabled={downloadLoading}
+                className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border transition-all disabled:opacity-60 bg-white border-stone-200 text-stone-600 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 active:scale-95"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Favorit */}
+            <button
+              onClick={handleFavorite}
+              className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-50 border-red-300 text-red-500 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400' : 'bg-white border-stone-200 text-stone-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'}`}
+            >
+              <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
+            </button>
+
+            {/* Bagikan */}
+            <button
+              onClick={handleShare}
+              className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-stone-200 dark:border-slate-700 text-stone-500 dark:text-slate-400 bg-white dark:bg-slate-900 transition-all active:scale-95"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <RatingModal isOpen={isRatingModalOpen} onClose={() => setIsRatingModalOpen(false)} onSubmit={handleSubmitRating} bookTitle={book.title} />
       </div>
     </>
   )

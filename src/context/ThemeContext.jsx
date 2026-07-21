@@ -1,8 +1,3 @@
-// ============================================
-// src/context/ThemeContext.jsx
-// Default: Dark Mode
-// ============================================
-
 import { createContext, useState, useEffect } from 'react'
 import { STORAGE_KEYS } from '../utils/constants'
 

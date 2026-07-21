@@ -1,15 +1,5 @@
-// ============================================
-// src/hooks/useMediaQuery.js
-// ============================================
-
 import { useState, useEffect } from 'react'
 
-/**
- * Hook untuk check media query
- * 
- * @param {string} query - Media query string
- * @returns {boolean} - Whether query matches
- */
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false)
 

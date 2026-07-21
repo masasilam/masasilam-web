@@ -1,8 +1,3 @@
-// ============================================
-// src/pages/dashboard/ZineReadingHistoryPage.jsx
-// Dashboard: Riwayat Baca Zine
-// LIGHT: stone palette | DARK: slate palette — Emerald accent
-// ============================================
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import zineDashboardService from '../../services/zineDashboardService'

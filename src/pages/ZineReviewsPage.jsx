@@ -1,8 +1,3 @@
-// ============================================
-// src/pages/ZineReviewsPage.jsx
-// LIGHT: stone palette, emerald accent
-// DARK:  slate palette, emerald accent
-// ============================================
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import {

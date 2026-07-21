@@ -1,7 +1,3 @@
-// ============================================
-// src/components/Layout/PublicLayout.jsx
-// ============================================
-
 import Header from './Header'
 import Footer from './Footer'
 

@@ -1,7 +1,3 @@
-// ============================================
-// src/components/Common/Alert.jsx
-// ============================================
-
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react'
 
 const Alert = ({ type = 'info', message, onClose }) => {

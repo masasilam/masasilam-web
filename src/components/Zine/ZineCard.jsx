@@ -1,9 +1,3 @@
-// ============================================
-// src/components/Zine/ZineCard.jsx
-// Magazine-style card — Emerald accent
-// LIGHT: border-stone-200, bg-white, hover emerald shadow
-// DARK:  border-slate-800, bg-slate-900, hover emerald shadow
-// ============================================
 import { Link } from 'react-router-dom'
 import {
   Clock, Eye, Download, BookOpen, Star, Award, Layers,

@@ -1,8 +1,4 @@
-// ============================================
-// src/components/Common/Input.jsx
-// ============================================
-
-const Input = ({ 
+const Input = ({
   label, 
   error, 
   helperText,

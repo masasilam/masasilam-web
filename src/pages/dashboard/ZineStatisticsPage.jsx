@@ -1,8 +1,3 @@
-// ============================================
-// src/pages/dashboard/ZineStatisticsPage.jsx
-// Dashboard: Statistik Baca Zine
-// LIGHT: stone palette | DARK: slate palette — Emerald accent
-// ============================================
 import { useState, useEffect, useCallback } from 'react'
 import zineDashboardService from '../../services/zineDashboardService'
 import LoadingSpinner from '../../components/Common/LoadingSpinner'

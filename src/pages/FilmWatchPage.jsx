@@ -79,13 +79,28 @@ const Icons = {
       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
     </svg>
   ),
+  Info: () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+    </svg>
+  ),
+  YouTube: () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+      <path d="M21.58 7.19a2.76 2.76 0 00-1.94-1.95C18.01 5 12 5 12 5s-6.01 0-7.64.24A2.76 2.76 0 002.42 7.19 28.87 28.87 0 002 12a28.87 28.87 0 00.42 4.81 2.76 2.76 0 001.94 1.95C5.99 19 12 19 12 19s6.01 0 7.64-.24a2.76 2.76 0 001.94-1.95A28.87 28.87 0 0022 12a28.87 28.87 0 00-.42-4.81zM10 15V9l5.2 3-5.2 3z"/>
+    </svg>
+  ),
+  Archive: () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+      <path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
+    </svg>
+  ),
 }
 
 // ─── Format time ──────────────────────────────────────────────────────────────
 const fmt = (s) => {
   if (!s || isNaN(s) || !isFinite(s)) return '0:00'
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
+  const h   = Math.floor(s / 3600)
+  const m   = Math.floor((s % 3600) / 60)
   const sec = Math.floor(s % 60)
   if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
   return `${m}:${String(sec).padStart(2,'0')}`
@@ -110,9 +125,8 @@ const TapRipple = ({ dir, show }) => (
                    flex items-center ${dir === 'left' ? 'justify-start pl-6' : 'justify-end pr-6'}
                    pointer-events-none z-20 transition-opacity duration-300
                    ${show ? 'opacity-100' : 'opacity-0'}`}>
-    <div className={`flex flex-col items-center gap-1 text-white
-                     ${show ? 'animate-bounce' : ''}`}
-      style={{animationDuration: '0.3s', animationIterationCount: 1}}>
+    <div className={`flex flex-col items-center gap-1 text-white ${show ? 'animate-bounce' : ''}`}
+      style={{ animationDuration: '0.3s', animationIterationCount: 1 }}>
       <div className="text-2xl">{dir === 'left' ? '⟪' : '⟫'}</div>
       <span className="text-xs font-bold bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm">
         {dir === 'left' ? '−10s' : '+10s'}
@@ -122,6 +136,156 @@ const TapRipple = ({ dir, show }) => (
 )
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+
+// ─── Ekstrak Archive.org identifier dari berbagai format URL ─────────────────
+// Menangani semua format:
+//   https://archive.org/download/{id}/file.mp4
+//   https://archive.org/details/{id}
+//   https://archive.org/embed/{id}
+//   https://ia801700.us.archive.org/32/items/{id}/file.mp4  (redirect URL)
+const extractArchiveIdentifier = (url) => {
+  if (!url) return null
+  // Format embed (sudah benar)
+  const embedMatch = url.match(/archive\.org\/embed\/([^/?#]+)/)
+  if (embedMatch) return embedMatch[1]
+  // Format download: archive.org/download/{id}/...
+  const downloadMatch = url.match(/archive\.org\/download\/([^/?#]+)/)
+  if (downloadMatch) return downloadMatch[1]
+  // Format details
+  const detailsMatch = url.match(/archive\.org\/details\/([^/?#]+)/)
+  if (detailsMatch) return detailsMatch[1]
+  // Format ia*.us.archive.org/*/items/{id}/... (redirect/CDN URL)
+  const iaMatch = url.match(/\.archive\.org\/\d+\/items\/([^/?#]+)/)
+  if (iaMatch) return iaMatch[1]
+  return null
+}
+
+// ─── Cek apakah URL berasal dari domain Archive.org (termasuk CDN-nya) ───────
+const isArchiveUrl = (url) => {
+  if (!url) return false
+  return url.includes('archive.org')
+}
+
+// ─── Deteksi apakah URL harus dirender sebagai iframe embed ──────────────────
+const isEmbedUrl = (url) => {
+  if (!url) return false
+  return (
+    url.includes('youtube') ||
+    url.includes('youtu.be') ||
+    url.includes('vimeo') ||
+    url.includes('dailymotion') ||
+    isArchiveUrl(url) ||   // archive.org wajib iframe (CORS)
+    url.includes('embed')
+  )
+}
+
+// ─── Deteksi provider embed ───────────────────────────────────────────────────
+const getEmbedProvider = (url) => {
+  if (!url) return null
+  if (url.includes('youtube') || url.includes('youtu.be')) return 'youtube'
+  if (url.includes('vimeo')) return 'vimeo'
+  if (url.includes('dailymotion')) return 'dailymotion'
+  if (isArchiveUrl(url)) return 'archive'
+  return 'embed'
+}
+
+// ─── Build embed URL dengan parameter optimal ─────────────────────────────────
+const buildEmbedUrl = (url) => {
+  if (!url) return url
+  const provider = getEmbedProvider(url)
+
+  if (provider === 'youtube') {
+    let embedUrl = url
+    if (url.includes('youtu.be/')) {
+      const id = url.split('youtu.be/')[1]?.split('?')[0]
+      embedUrl = `https://www.youtube.com/embed/${id}`
+    } else if (url.includes('watch?v=')) {
+      const id = new URLSearchParams(url.split('?')[1]).get('v')
+      embedUrl = `https://www.youtube.com/embed/${id}`
+    }
+    const base = embedUrl.split('?')[0]
+    const params = new URLSearchParams({
+      autoplay:         '1',
+      controls:         '1',
+      rel:              '0',
+      modestbranding:   '1',
+      fs:               '1',
+      cc_load_policy:   '1',
+      iv_load_policy:   '3',
+      playsinline:      '1',
+    })
+    return `${base}?${params.toString()}`
+  }
+
+  if (provider === 'vimeo') {
+    const base = url.split('?')[0]
+    const params = new URLSearchParams({
+      autoplay:   '1',
+      controls:   '1',
+      title:      '0',
+      byline:     '0',
+      portrait:   '0',
+    })
+    return `${base}?${params.toString()}`
+  }
+
+  if (provider === 'archive') {
+    // Ekstrak identifier lalu buat embed URL dengan autoplay
+    // Archive.org mendukung parameter: autoplay, start, playlist, list_type
+    // format=mp4 membantu JW Player langsung memilih file MP4 tanpa negosiasi format
+    const identifier = extractArchiveIdentifier(url)
+    if (identifier) {
+      const params = new URLSearchParams({ autoplay: '1', start: '0', format: 'mp4' })
+      return `https://archive.org/embed/${identifier}?${params.toString()}`
+    }
+    // Fallback jika identifier tidak ditemukan
+    return url
+  }
+
+  return url
+}
+
+// ─── Resolve video source terbaik ─────────────────────────────────────────────
+// Prioritas:
+//   1. quality override (pilihan manual user)
+//   2. film.videoUrl jika bukan CORS source
+//   3. archive.org → selalu konversi ke embed URL via identifier
+//   4. embedUrl dari videoSources
+//   5. directUrl dari videoSources (non-CORS)
+const resolveVideoSrc = (film, quality, mainVideo) => {
+  if (quality?.src) return quality.src
+
+  // film.videoUrl langsung
+  if (film?.videoUrl) {
+    if (isArchiveUrl(film.videoUrl)) {
+      // Konversi langsung ke embed URL agar tidak kena CORS
+      const id = extractArchiveIdentifier(film.videoUrl)
+      return id ? `https://archive.org/embed/${id}` : film.videoUrl
+    }
+    return film.videoUrl
+  }
+
+  if (!mainVideo) return ''
+
+  // Jika directUrl dari archive.org → konversi ke embed, jangan pakai sebagai <video src>
+  if (mainVideo.directUrl && isArchiveUrl(mainVideo.directUrl)) {
+    const id = extractArchiveIdentifier(mainVideo.directUrl)
+    if (id) return `https://archive.org/embed/${id}`
+  }
+
+  // rawUrl juga bisa berupa archive.org
+  if (mainVideo.rawUrl && isArchiveUrl(mainVideo.rawUrl)) {
+    const id = extractArchiveIdentifier(mainVideo.rawUrl)
+    if (id) return `https://archive.org/embed/${id}`
+  }
+
+  // Untuk provider lain: embedUrl lebih aman, directUrl sebagai fallback
+  if (mainVideo.embedUrl) return mainVideo.embedUrl
+  if (mainVideo.directUrl) return mainVideo.directUrl
+  if (mainVideo.rawUrl) return mainVideo.rawUrl
+
+  return ''
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FilmWatchPage() {
@@ -137,41 +301,45 @@ export default function FilmWatchPage() {
   const lastTap      = useRef(0)
   const dblTimer     = useRef(null)
   const volTimer     = useRef(null)
-  const durationRef  = useRef(0)   // FIX: selalu up-to-date, aman untuk closure touch handler
+  const durationRef  = useRef(0)
 
   // ── Video state ────────────────────────────────────────────────────────────
-  const [playing,      setPlaying]      = useState(false)
-  const [currentTime,  setCurrentTime]  = useState(0)
-  const [duration,     setDuration]     = useState(0)
-  const [buffered,     setBuffered]     = useState(0)
-  const [buffering,    setBuffering]    = useState(false)
-  const [volume,       setVolume]       = useState(1)
-  const [muted,        setMuted]        = useState(false)
-  const [fullscreen,   setFullscreen]   = useState(false)
-  const [pip,          setPip]          = useState(false)
-  const [showCtrl,     setShowCtrl]     = useState(true)
+  const [playing,     setPlaying]     = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration,    setDuration]    = useState(0)
+  const [buffered,    setBuffered]    = useState(0)
+  const [buffering,   setBuffering]   = useState(false)
+  const [volume,      setVolume]      = useState(1)
+  const [muted,       setMuted]       = useState(false)
+  const [fullscreen,  setFullscreen]  = useState(false)
+  const [pip,         setPip]         = useState(false)
+  const [showCtrl,    setShowCtrl]    = useState(true)
 
   // ── Interaction state ──────────────────────────────────────────────────────
-  const [seeking,      setSeeking]      = useState(false)
-  const seekingRef     = useRef(false)  // FIX: ref untuk cek di passive event handler
-  const [volDrag,      setVolDrag]      = useState(false)
-  const [hoverT,       setHoverT]       = useState({ on: false, t: 0, pct: 0 })
-  const [centerFlash,  setCenterFlash]  = useState(null)  // 'play'|'pause'
-  const [leftRipple,   setLeftRipple]   = useState(false)
-  const [rightRipple,  setRightRipple]  = useState(false)
-  const [volOSD,       setVolOSD]       = useState(false)
+  const [seeking,     setSeeking]     = useState(false)
+  const seekingRef    = useRef(false)
+  const [volDrag,     setVolDrag]     = useState(false)
+  const [hoverT,      setHoverT]      = useState({ on: false, t: 0, pct: 0 })
+  const [centerFlash, setCenterFlash] = useState(null)
+  const [leftRipple,  setLeftRipple]  = useState(false)
+  const [rightRipple, setRightRipple] = useState(false)
+  const [volOSD,      setVolOSD]      = useState(false)
 
   // ── Settings state ─────────────────────────────────────────────────────────
-  const [speed,        setSpeed]        = useState(1)
-  const [quality,      setQuality]      = useState(null)
-  const [showSpeedM,   setShowSpeedM]   = useState(false)
-  const [showQualM,    setShowQualM]    = useState(false)
-  const [showSubM,     setShowSubM]     = useState(false)
-  const [subOn,        setSubOn]        = useState(true)
-  const [subLang,      setSubLang]      = useState('en')
-  const [translating,  setTranslating]  = useState(false)
-  const [transP,       setTransP]       = useState(0)
-  const [subErr,       setSubErr]       = useState(null)
+  const [speed,      setSpeed]      = useState(1)
+  const [quality,    setQuality]    = useState(null)
+  const [showSpeedM, setShowSpeedM] = useState(false)
+  const [showQualM,  setShowQualM]  = useState(false)
+  const [showSubM,   setShowSubM]   = useState(false)
+  const [subOn,      setSubOn]      = useState(true)
+  const [subLang,    setSubLang]    = useState('en')
+  const [translating,setTranslating]= useState(false)
+  const [transP,     setTransP]     = useState(0)
+  const [subErr,     setSubErr]     = useState(null)
+
+  // ── Embed state ────────────────────────────────────────────────────────────
+  const [showEmbedHint, setShowEmbedHint] = useState(true)
+  const [iframeLoaded, setIframeLoaded]   = useState(false)
 
   // ── Data fetching ──────────────────────────────────────────────────────────
   const { data: film, isLoading } = useQuery({
@@ -197,22 +365,46 @@ export default function FilmWatchPage() {
     film?.subtitleUrl ? `${config.apiBaseUrl}/films/${filmSlug}/subtitle` : null,
   [film?.subtitleUrl, filmSlug])
 
-  const videoSrc  = quality?.src || film?.videoUrl || ''
-  const progress  = duration > 0 ? (currentTime / duration) * 100 : 0
-  const bufPct    = duration > 0 ? (buffered / duration) * 100 : 0
+  // ── Resolve video source ───────────────────────────────────────────────────
+  const mainVideo = film?.videoSources?.find(v => !v.isTrailer)
+
+  // PERBAIKAN: gunakan helper resolveVideoSrc agar archive.org tidak dicoba
+  // sebagai <video src> (akan kena CORS), melainkan langsung pakai embedUrl-nya.
+  const rawVideoSrc = resolveVideoSrc(film, quality, mainVideo)
+
+  const isEmbed       = isEmbedUrl(rawVideoSrc)
+  const embedProvider = getEmbedProvider(rawVideoSrc)
+
+  // Untuk embed: bangun URL dengan parameter optimal
+  const videoSrc = isEmbed ? buildEmbedUrl(rawVideoSrc) : rawVideoSrc
+
+  const hasVideo = !!(film?.videoUrl || mainVideo)
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
+  const bufPct   = duration > 0 ? (buffered  / duration) * 100 : 0
+
+  // ── Auto-hide hint setelah 8 detik ────────────────────────────────────────
+  useEffect(() => {
+    if (isEmbed && showEmbedHint) {
+      const t = setTimeout(() => setShowEmbedHint(false), 8000)
+      return () => clearTimeout(t)
+    }
+  }, [isEmbed, showEmbedHint])
+
+  useEffect(() => { setIframeLoaded(false) }, [videoSrc])
 
   // ── Auto-select best quality ───────────────────────────────────────────────
   useEffect(() => {
     if (videoInfo?.qualities?.length && !quality) {
-      const best = [...videoInfo.qualities].sort((a,b) => (b.width||0)-(a.width||0))[0]
+      const best = [...videoInfo.qualities].sort((a, b) => (b.width || 0) - (a.width || 0))[0]
       setQuality(best)
     }
   }, [videoInfo, quality])
 
-  // ── Video events ───────────────────────────────────────────────────────────
+  // ── Video events (hanya untuk direct video) ───────────────────────────────
   useEffect(() => {
     const v = videoRef.current
-    if (!v) return
+    if (!v || isEmbed) return
 
     const onPlay    = () => { setPlaying(true);  setBuffering(false) }
     const onPause   = () => { setPlaying(false); setBuffering(false) }
@@ -222,7 +414,7 @@ export default function FilmWatchPage() {
     const onUpdate  = () => {
       setCurrentTime(v.currentTime)
       setPlaying(!v.paused)
-      if (v.buffered.length) setBuffered(v.buffered.end(v.buffered.length-1))
+      if (v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1))
     }
     const onMeta   = () => { setDuration(v.duration); durationRef.current = v.duration }
     const onVol    = () => { setVolume(v.volume); setMuted(v.muted) }
@@ -256,7 +448,7 @@ export default function FilmWatchPage() {
       v.removeEventListener('enterpictureinpicture', onPipIn)
       v.removeEventListener('leavepictureinpicture', onPipOut)
     }
-  }, [])
+  }, [isEmbed])
 
   // ── Subtitle visibility ────────────────────────────────────────────────────
   useEffect(() => {
@@ -266,8 +458,8 @@ export default function FilmWatchPage() {
 
   // ── Playback speed ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (videoRef.current) videoRef.current.playbackRate = speed
-  }, [speed])
+    if (videoRef.current && !isEmbed) videoRef.current.playbackRate = speed
+  }, [speed, isEmbed])
 
   // ── Fullscreen ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -278,29 +470,30 @@ export default function FilmWatchPage() {
 
   // ── Initial subtitle ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (subtitleUrl && !trackUrlRef.current) loadTrack(subtitleUrl, 'en')
-  }, [subtitleUrl]) // eslint-disable-line
+    if (subtitleUrl && !trackUrlRef.current && !isEmbed) loadTrack(subtitleUrl, 'en')
+  }, [subtitleUrl, isEmbed]) // eslint-disable-line
 
-  // ── Auto-hide controls ─────────────────────────────────────────────────────
+  // ── Auto-hide controls (hanya untuk direct video) ─────────────────────────
   const bumpControls = useCallback(() => {
     setShowCtrl(true)
     clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => {
-      // FIX: cek langsung dari video element, bukan state
-      const v = videoRef.current
-      if (v && !v.paused) setShowCtrl(false)
-    }, 3000)
-  }, [])
+    if (!isEmbed) {
+      hideTimer.current = setTimeout(() => {
+        const v = videoRef.current
+        if (v && !v.paused) setShowCtrl(false)
+      }, 3000)
+    }
+  }, [isEmbed])
 
   // ── Seeking ────────────────────────────────────────────────────────────────
-  // FIX: baca dari durationRef bukan state, agar closure touch handler selalu fresh
   const seekTo = useCallback((clientX) => {
-    const el = progressRef.current, v = videoRef.current
+    const el  = progressRef.current
+    const v   = videoRef.current
     const dur = durationRef.current
     if (!el || !v || !dur) return
     const r = el.getBoundingClientRect()
     v.currentTime = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * dur
-  }, []) // tidak perlu [duration] lagi — baca dari ref
+  }, [])
 
   const onProgDown = useCallback((e) => {
     e.preventDefault(); e.stopPropagation()
@@ -309,43 +502,38 @@ export default function FilmWatchPage() {
     seekTo(e.clientX)
   }, [seekTo])
 
-  // FIX: touch event dipasang via useEffect dengan { passive: false }
-  // agar bisa memanggil preventDefault() tanpa error
   useEffect(() => {
     const el = progressRef.current
     if (!el) return
-
     const onTouchStart = (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setSeeking(true)
-      seekingRef.current = true
+      e.preventDefault(); e.stopPropagation()
+      setSeeking(true); seekingRef.current = true
       if (e.touches[0]) seekTo(e.touches[0].clientX)
     }
-
     el.addEventListener('touchstart', onTouchStart, { passive: false })
     return () => el.removeEventListener('touchstart', onTouchStart)
   }, [seekTo])
 
   const onProgHover = useCallback((e) => {
-    const el = progressRef.current
+    const el  = progressRef.current
     const dur = durationRef.current
     if (!el || !dur) return
-    const r = el.getBoundingClientRect()
-    const pct = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width))
-    setHoverT({ on: true, t: pct*dur, pct: pct*100 })
+    const r   = el.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width))
+    setHoverT({ on: true, t: pct * dur, pct: pct * 100 })
   }, [])
 
   // ── Volume drag ────────────────────────────────────────────────────────────
   const applyVol = useCallback((clientX) => {
-    const el = volumeRef.current, v = videoRef.current
+    const el = volumeRef.current
+    const v  = videoRef.current
     if (!el || !v) return
-    const r = el.getBoundingClientRect()
-    const vol = Math.max(0, Math.min(1, (clientX-r.left)/r.width))
+    const r   = el.getBoundingClientRect()
+    const vol = Math.max(0, Math.min(1, (clientX - r.left) / r.width))
     v.volume = vol; v.muted = vol === 0
   }, [])
 
-  // ── Global drag listeners ─────────────────────────────────────────────────
+  // ── Global drag listeners ──────────────────────────────────────────────────
   useEffect(() => {
     if (!seeking && !volDrag) return
     const mm = (e) => {
@@ -358,9 +546,7 @@ export default function FilmWatchPage() {
       if (volDrag) applyVol(e.touches[0].clientX)
     }
     const up = () => {
-      setSeeking(false)
-      seekingRef.current = false
-      setVolDrag(false)
+      setSeeking(false); seekingRef.current = false; setVolDrag(false)
     }
     window.addEventListener('mousemove', mm)
     window.addEventListener('touchmove', tm, { passive: false })
@@ -403,8 +589,7 @@ export default function FilmWatchPage() {
       clearTimeout(dblTimer.current)
       const rect = containerRef.current?.getBoundingClientRect()
       if (!rect) return
-      const v = videoRef.current
-      if (!v) return
+      const v = videoRef.current; if (!v) return
       if (e.clientX - rect.left < rect.width / 2) {
         v.currentTime = Math.max(0, v.currentTime - 10)
         setLeftRipple(true); setTimeout(() => setLeftRipple(false), 600)
@@ -423,33 +608,34 @@ export default function FilmWatchPage() {
   // ── Keyboard ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
-      const v = videoRef.current; if (!v) return
+      if (isEmbed) return
+      const v   = videoRef.current; if (!v) return
       const tag = document.activeElement?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
 
       switch (e.key) {
         case ' ': case 'k': e.preventDefault(); togglePlay(); break
         case 'ArrowLeft':
-          e.preventDefault(); v.currentTime = Math.max(0, v.currentTime-10)
-          setLeftRipple(true); setTimeout(()=>setLeftRipple(false),600); bumpControls(); break
+          e.preventDefault(); v.currentTime = Math.max(0, v.currentTime - 10)
+          setLeftRipple(true); setTimeout(() => setLeftRipple(false), 600); bumpControls(); break
         case 'ArrowRight':
-          e.preventDefault(); v.currentTime = Math.min(v.duration, v.currentTime+10)
-          setRightRipple(true); setTimeout(()=>setRightRipple(false),600); bumpControls(); break
+          e.preventDefault(); v.currentTime = Math.min(v.duration, v.currentTime + 10)
+          setRightRipple(true); setTimeout(() => setRightRipple(false), 600); bumpControls(); break
         case 'ArrowUp':
-          e.preventDefault(); v.volume = Math.min(1, v.volume+0.1); showVolOSD(); bumpControls(); break
+          e.preventDefault(); v.volume = Math.min(1, v.volume + 0.1); showVolOSD(); bumpControls(); break
         case 'ArrowDown':
-          e.preventDefault(); v.volume = Math.max(0, v.volume-0.1); showVolOSD(); bumpControls(); break
+          e.preventDefault(); v.volume = Math.max(0, v.volume - 0.1); showVolOSD(); bumpControls(); break
         case 'm': case 'M': e.preventDefault(); v.muted = !v.muted; break
         case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break
-        case 'c': case 'C': e.preventDefault(); setSubOn(s=>!s); break
-        case '>': e.preventDefault(); setSpeed(s => SPEEDS[Math.min(SPEEDS.indexOf(s)+1, SPEEDS.length-1)]); break
-        case '<': e.preventDefault(); setSpeed(s => SPEEDS[Math.max(SPEEDS.indexOf(s)-1, 0)]); break
+        case 'c': case 'C': e.preventDefault(); setSubOn(s => !s); break
+        case '>': e.preventDefault(); setSpeed(s => SPEEDS[Math.min(SPEEDS.indexOf(s) + 1, SPEEDS.length - 1)]); break
+        case '<': e.preventDefault(); setSpeed(s => SPEEDS[Math.max(SPEEDS.indexOf(s) - 1, 0)]); break
         default: break
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [togglePlay, bumpControls, showVolOSD]) // eslint-disable-line
+  }, [togglePlay, bumpControls, showVolOSD, isEmbed]) // eslint-disable-line
 
   // ── Subtitle track loader ──────────────────────────────────────────────────
   const loadTrack = (url, lang) => {
@@ -458,8 +644,8 @@ export default function FilmWatchPage() {
     trackUrlRef.current = url
     while (v.firstChild) v.removeChild(v.firstChild)
     const t = document.createElement('track')
-    t.kind='subtitles'; t.src=url; t.srclang=lang
-    t.label = lang==='id'?'Indonesian':'English'; t.default=true; v.appendChild(t)
+    t.kind = 'subtitles'; t.src = url; t.srclang = lang
+    t.label = lang === 'id' ? 'Indonesian' : 'English'; t.default = true; v.appendChild(t)
     const apply = () => { if (v.textTracks[0]) v.textTracks[0].mode = subOn ? 'showing' : 'hidden' }
     t.addEventListener('load', apply); setTimeout(apply, 200)
   }
@@ -469,44 +655,46 @@ export default function FilmWatchPage() {
     if (!subtitleUrl || translating) return
     setTranslating(true); setSubErr(null); setTransP(5)
     try {
-      const vtt = await fetch(subtitleUrl).then(r=>r.text())
-      const lines = vtt.split('\n'); const texts=[]; const structure=[]
-      let i=0
-      while (i<lines.length) {
-        const l=lines[i].trim()
-        if (!l) { structure.push({t:'e'}); i++; continue }
-        if (l.startsWith('WEBVTT')||l.startsWith('NOTE')) { structure.push({t:'h',c:l}); i++; continue }
-        if (l.match(/^\d+$/)) { structure.push({t:'n',c:l}); i++; continue }
+      const vtt = await fetch(subtitleUrl).then(r => r.text())
+      const lines = vtt.split('\n'); const texts = []; const structure = []
+      let i = 0
+      while (i < lines.length) {
+        const l = lines[i].trim()
+        if (!l) { structure.push({ t: 'e' }); i++; continue }
+        if (l.startsWith('WEBVTT') || l.startsWith('NOTE')) { structure.push({ t: 'h', c: l }); i++; continue }
+        if (l.match(/^\d+$/)) { structure.push({ t: 'n', c: l }); i++; continue }
         if (l.includes('-->')) {
-          structure.push({t:'ts',c:l}); i++
-          const seg=[]
-          while (i<lines.length && lines[i].trim() && !lines[i].includes('-->')) { seg.push(lines[i].trim()); texts.push(lines[i].trim()); i++ }
-          structure.push({t:'txt', count:seg.length}); continue
+          structure.push({ t: 'ts', c: l }); i++
+          const seg = []
+          while (i < lines.length && lines[i].trim() && !lines[i].includes('-->')) {
+            seg.push(lines[i].trim()); texts.push(lines[i].trim()); i++
+          }
+          structure.push({ t: 'txt', count: seg.length }); continue
         }
         i++
       }
       setTransP(20)
-      const r = await fetch(`${config.apiBaseUrl}/translate/batch`,{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({texts, targetLang:'id'})
+      const r = await fetch(`${config.apiBaseUrl}/translate/batch`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts, targetLang: 'id' })
       })
       if (!r.ok) throw new Error()
-      const {translatedTexts} = await r.json()
+      const { translatedTexts } = await r.json()
       setTransP(85)
-      let ti=0
-      const out = structure.map(s=>{
-        if (s.t==='e') return ''
-        if (s.t==='h'||s.t==='ts'||s.t==='n') return s.c
-        return Array.from({length:s.count},()=>translatedTexts[ti++]||'').join('\n')
+      let ti = 0
+      const out = structure.map(s => {
+        if (s.t === 'e') return ''
+        if (s.t === 'h' || s.t === 'ts' || s.t === 'n') return s.c
+        return Array.from({ length: s.count }, () => translatedTexts[ti++] || '').join('\n')
       })
-      const blob = new Blob([out.join('\n')],{type:'text/vtt;charset=utf-8'})
-      loadTrack(URL.createObjectURL(blob),'id'); setSubLang('id')
+      const blob = new Blob([out.join('\n')], { type: 'text/vtt;charset=utf-8' })
+      loadTrack(URL.createObjectURL(blob), 'id'); setSubLang('id')
       setTransP(100)
     } catch { setSubErr('Gagal menerjemahkan. Coba lagi.') }
     finally { setTranslating(false); setTransP(0) }
   }
 
-  const switchToEn = () => { setSubLang('en'); if (subtitleUrl) loadTrack(subtitleUrl,'en') }
+  const switchToEn = () => { setSubLang('en'); if (subtitleUrl) loadTrack(subtitleUrl, 'en') }
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) containerRef.current?.requestFullscreen()
@@ -521,38 +709,63 @@ export default function FilmWatchPage() {
   }
 
   const changeQuality = (q) => {
-    const v=videoRef.current; if (!v) return
-    const t=v.currentTime, wasPlaying=!v.paused
+    const v = videoRef.current; if (!v) return
+    const t = v.currentTime, wasPlaying = !v.paused
     setQuality(q); setShowQualM(false)
-    setTimeout(()=>{ v.currentTime=t; if(wasPlaying) v.play() },120)
+    setTimeout(() => { v.currentTime = t; if (wasPlaying) v.play() }, 120)
   }
 
   const closeMenus = () => { setShowSpeedM(false); setShowQualM(false); setShowSubM(false) }
 
-  // ── Helper skip ────────────────────────────────────────────────────────────
-  // FIX: skip helper yang tidak bergantung pada state duration
   const skipBack = useCallback((e) => {
     e.stopPropagation()
-    const v = videoRef.current
-    if (!v) return
+    const v = videoRef.current; if (!v) return
     v.currentTime = Math.max(0, v.currentTime - 10)
-    setLeftRipple(true)
-    setTimeout(() => setLeftRipple(false), 600)
+    setLeftRipple(true); setTimeout(() => setLeftRipple(false), 600)
     bumpControls()
   }, [bumpControls])
 
   const skipForward = useCallback((e) => {
     e.stopPropagation()
-    const v = videoRef.current
-    if (!v) return
+    const v = videoRef.current; if (!v) return
     v.currentTime = Math.min(v.duration, v.currentTime + 10)
-    setRightRipple(true)
-    setTimeout(() => setRightRipple(false), 600)
+    setRightRipple(true); setTimeout(() => setRightRipple(false), 600)
     bumpControls()
   }, [bumpControls])
 
-  // ── Volume icon ────────────────────────────────────────────────────────────
-  const VolIcon = muted || volume===0 ? Icons.VolumeOff : volume<0.5 ? Icons.VolumeLow : Icons.VolumeHigh
+  const VolIcon = muted || volume === 0
+    ? Icons.VolumeOff
+    : volume < 0.5 ? Icons.VolumeLow : Icons.VolumeHigh
+
+  // ── Label nama provider untuk hint bar ────────────────────────────────────
+  const providerLabel = {
+    youtube: 'Diputar via YouTube',
+    vimeo:   'Diputar via Vimeo',
+    archive: 'Diputar via Archive.org',
+  }[embedProvider] ?? 'Video Embed'
+
+  // ── Ikon provider untuk hint bar ──────────────────────────────────────────
+  const ProviderIcon = embedProvider === 'youtube'
+    ? Icons.YouTube
+    : embedProvider === 'archive'
+    ? Icons.Archive
+    : Icons.Info
+
+  // ── Pesan petunjuk kontrol sesuai provider ────────────────────────────────
+  const embedHintText = embedProvider === 'archive'
+    ? 'Gunakan kontrol di bagian bawah player Archive.org untuk volume, kualitas, dan subtitle.'
+    : (
+      <>
+        Gunakan ikon{' '}
+        <span className="inline-flex items-center gap-0.5 mx-0.5 px-1.5 py-0.5 rounded
+                         bg-white/10 text-white/70 text-[10px] font-mono">⚙</span>{' '}
+        di kanan bawah player untuk kualitas &amp; kecepatan.
+        Klik{' '}
+        <span className="inline-flex items-center gap-0.5 mx-0.5 px-1.5 py-0.5 rounded
+                         bg-white/10 text-white/70 text-[10px] font-mono">CC</span>{' '}
+        untuk subtitle. Volume lewat ikon 🔊 di player.
+      </>
+    )
 
   // ── Guards ─────────────────────────────────────────────────────────────────
   if (isLoading) return (
@@ -561,18 +774,19 @@ export default function FilmWatchPage() {
     </div>
   )
 
-  if (!film?.videoUrl) return (
+  if (!hasVideo) return (
     <div className="h-screen bg-[#0f0f0f] flex items-center justify-center">
       <div className="text-center space-y-4 px-8">
-        <div className="w-24 h-24 mx-auto rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
+        <div className="w-24 h-24 mx-auto rounded-3xl bg-white/5 border border-white/10
+                        flex items-center justify-center">
           <svg className="text-white/30" viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
           </svg>
         </div>
         <p className="text-white/50 text-base">Video tidak tersedia</p>
         <button onClick={() => navigate(`/film/${filmSlug}`)}
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/10
-                     hover:bg-white/20 text-white text-sm font-medium transition-colors">
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full
+                     bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
           <Icons.ArrowBack /> Kembali
         </button>
       </div>
@@ -591,398 +805,546 @@ export default function FilmWatchPage() {
         className="relative w-full h-screen bg-black overflow-hidden"
         style={{ cursor: showCtrl ? 'default' : 'none' }}
         onMouseMove={bumpControls}
-        onMouseLeave={() => { if (playing) setShowCtrl(false) }}
+        onMouseLeave={() => { if (playing && !isEmbed) setShowCtrl(false) }}
       >
 
-        {/* ── VIDEO ─────────────────────────────────────────────────── */}
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          className="w-full h-full object-contain"
-          crossOrigin="anonymous"
-          playsInline
-          preload="metadata"
-          onClick={onVideoClick}
-        />
-
-        {/* ── BUFFERING ─────────────────────────────────────────────── */}
-        {buffering && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="w-14 h-14 rounded-full border-4 border-white/20 border-t-white animate-spin" />
-          </div>
-        )}
-
-        {/* ── CENTER FLASH (play/pause feedback) ────────────────────── */}
-        <div className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none
-                         transition-all duration-500
-                         ${centerFlash ? 'opacity-100' : 'opacity-0'}`}>
-          <div className={`w-[72px] h-[72px] rounded-full bg-black/60 backdrop-blur-sm
-                           border border-white/20 flex items-center justify-center text-white
-                           transition-transform duration-300
-                           ${centerFlash ? 'scale-100' : 'scale-75'}`}>
-            {centerFlash === 'play' ? <Icons.Play /> : <Icons.Pause />}
-          </div>
-        </div>
-
-        {/* ── SEEK RIPPLES (double tap) ─────────────────────────────── */}
-        <TapRipple dir="left"  show={leftRipple} />
-        <TapRipple dir="right" show={rightRipple} />
-
-        {/* ── VOLUME OSD ────────────────────────────────────────────── */}
-        <div className={`absolute top-5 left-1/2 -translate-x-1/2 z-30 pointer-events-none
-                         flex items-center gap-2.5 px-4 py-2.5 rounded-2xl
-                         bg-black/80 backdrop-blur-md border border-white/10
-                         transition-all duration-300
-                         ${volOSD ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
-          <div className="text-white"><VolIcon /></div>
-          <div className="w-24 h-1.5 rounded-full bg-white/20 overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all duration-75"
-              style={{ width: `${muted ? 0 : volume * 100}%` }} />
-          </div>
-          <span className="text-white/70 text-xs font-mono w-7 text-right">
-            {muted ? '0' : Math.round(volume * 100)}
-          </span>
-        </div>
-
-        {/* ── SPEED BADGE ───────────────────────────────────────────── */}
-        {speed !== 1 && (
-          <div className={`absolute top-5 right-5 z-30 pointer-events-none
-                           px-3 py-1 rounded-xl bg-black/80 backdrop-blur-md border border-white/10
-                           text-white text-sm font-bold tabular-nums
-                           transition-opacity duration-300
-                           ${showCtrl ? 'opacity-100' : 'opacity-60'}`}>
-            {speed}×
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-            CONTROLS LAYER
-        ══════════════════════════════════════════════════════════ */}
-        <div className={`absolute inset-0 z-40 flex flex-col justify-between
-                         transition-opacity duration-300
-                         ${showCtrl ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-
-          {/* ── TOP GRADIENT + HEADER ──────────────────────────────── */}
-          <div className="px-4 pt-4 pb-20 bg-gradient-to-b from-black/85 via-black/20 to-transparent">
-            <div className="flex items-center gap-3">
-              <button onClick={() => navigate(`/film/${filmSlug}`)}
-                className="w-9 h-9 rounded-full text-white flex items-center justify-center
-                           hover:bg-white/15 active:bg-white/25 transition-colors">
-                <Icons.ArrowBack />
-              </button>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-white font-semibold text-[15px] tracking-[-0.01em] truncate leading-tight">
-                  {film.judul}
-                </h1>
-                {film.tahunRilis && (
-                  <p className="text-white/45 text-xs mt-0.5">
-                    {typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4
-                      ? film.tahunRilis : new Date(film.tahunRilis).getFullYear()}
+        {/* ── VIDEO atau EMBED ───────────────────────────────────────── */}
+        {isEmbed ? (
+          <>
+            {!iframeLoaded && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black gap-3">
+                <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />
+                {embedProvider === 'archive' && (
+                  <p className="text-white/40 text-sm text-center px-8">
+                    Memuat dari Archive.org, mungkin butuh beberapa saat…
                   </p>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* ── BOTTOM GRADIENT + ALL CONTROLS ───────────────────────── */}
-          <div className="pt-12 bg-gradient-to-t from-black/95 via-black/50 to-transparent">
-
-            {/* Sub error */}
-            {subErr && (
-              <div className="mx-4 mb-2 flex items-center justify-between gap-2
-                              px-3 py-2 rounded-xl bg-red-600/20 border border-red-500/30
-                              text-red-300 text-xs">
-                <span>{subErr}</span>
-                <button onClick={()=>setSubErr(null)} className="opacity-50 hover:opacity-100 text-lg leading-none">×</button>
-              </div>
             )}
+            <iframe
+              src={videoSrc}
+              className="w-full h-full"
+              allow="autoplay; fullscreen; picture-in-picture; accelerometer; clipboard-write; encrypted-media; gyroscope"
+              allowFullScreen
+              title={film.judul}
+              style={{ border: 'none' }}
+              onLoad={() => setIframeLoaded(true)}
+            />
+          </>
+        ) : (
+          <video
+            ref={videoRef}
+            src={videoSrc}
+            className="w-full h-full object-contain"
+            crossOrigin="anonymous"
+            playsInline
+            preload="metadata"
+            onClick={onVideoClick}
+          />
+        )}
 
-            {/* Translation progress */}
-            {translating && (
-              <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-white/8 border border-white/10">
-                <div className="flex justify-between text-white/60 text-[11px] mb-1.5">
-                  <span>Menerjemahkan subtitle…</span><span>{transP}%</span>
-                </div>
-                <div className="h-[3px] rounded-full bg-white/10">
-                  <div className="h-full bg-[#f00] rounded-full transition-all" style={{width:`${transP}%`}} />
-                </div>
-              </div>
-            )}
-
-            {/* ── PROGRESS BAR ─────────────────────────────────────────── */}
-            <div className="px-4 mb-1">
-              {/* Time stamps */}
-              <div className="flex items-center justify-between mb-1.5 px-px">
-                <span className="text-white/80 text-[12px] font-medium tabular-nums">{fmt(currentTime)}</span>
-                <span className="text-white/40 text-[12px] tabular-nums">{duration > 0 ? fmt(duration) : ''}</span>
-              </div>
-
-              {/* Scrubber */}
-              <div
-                ref={progressRef}
-                className="relative cursor-pointer group/bar"
-                style={{ height: '20px' }}
-                onMouseDown={onProgDown}
-                onMouseMove={onProgHover}
-                onMouseLeave={() => !seeking && setHoverT(h=>({...h,on:false}))}
-                // onTouchStart dipasang via useEffect dengan passive: false
-              >
-                {/* Track */}
-                <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 rounded-full overflow-hidden"
-                  style={{ height: seeking ? '5px' : '3px', transition: 'height 0.12s' }}>
-                  {/* BG */}
-                  <div className="absolute inset-0 bg-white/25" />
-                  {/* Buffered */}
-                  <div className="absolute top-0 left-0 h-full bg-white/40 rounded-full transition-all"
-                    style={{width:`${bufPct}%`}} />
-                  {/* Played */}
-                  <div className="absolute top-0 left-0 h-full bg-[#f00] rounded-full transition-none"
-                    style={{width:`${progress}%`}} />
-                </div>
-
-                {/* Thumb */}
-                <div className={`absolute top-1/2 -translate-y-1/2 w-[14px] h-[14px] rounded-full bg-white shadow-md
-                                 transition-opacity duration-100
-                                 ${seeking ? 'opacity-100 scale-[1.4]' : 'opacity-0 group-hover/bar:opacity-100 group-hover/bar:scale-125'}`}
-                  style={{left:`calc(${progress}% - 7px)`, transitionProperty:'opacity,transform'}} />
-
-                {/* Hover tooltip */}
-                {(hoverT.on || seeking) && (
-                  <div className="absolute bottom-6 pointer-events-none -translate-x-1/2 z-50"
-                    style={{left:`${hoverT.pct}%`}}>
-                    <div className="px-2 py-1 rounded-lg bg-[#161616] border border-white/10
-                                    text-white text-[11px] font-medium tabular-nums whitespace-nowrap shadow-xl">
-                      {fmt(hoverT.t)}
-                    </div>
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full
-                                    w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px]
-                                    border-l-transparent border-r-transparent border-t-[#161616]" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ── CONTROL ROW ─────────────────────────────────────────────── */}
-            {/* FIX: hapus onClick={closeMenus} dari wrapper — ini yang memblokir child clicks */}
-            <div className="px-2 pb-4 sm:pb-5 flex items-center gap-0.5">
-
-              {/* Play/Pause */}
-              <Tip label={playing ? 'Jeda (K)' : 'Putar (K)'}>
+        {/* ════════════════════════════════════════════════════════════════
+            EMBED OVERLAY — Top bar + Hint bar + Fullscreen button
+            Untuk YouTube, Archive.org, Vimeo, dan embed lainnya
+        ════════════════════════════════════════════════════════════════ */}
+        {isEmbed && (
+          <>
+            {/* ── Top bar: judul + tombol kembali ─────────────────────── */}
+            <div
+              className={`absolute top-0 left-0 right-0 z-40 px-4 pt-4 pb-8
+                           bg-gradient-to-b from-black/85 to-transparent
+                           transition-all duration-300
+                           ${showCtrl ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+              onMouseEnter={() => setShowCtrl(true)}
+            >
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={(e) => { e.stopPropagation(); closeMenus(); togglePlay() }}
-                  className="w-11 h-11 flex items-center justify-center text-white
-                             rounded-full hover:bg-white/10 active:scale-90 transition-all">
-                  {playing ? <Icons.Pause /> : <Icons.Play />}
+                  onClick={() => navigate(`/film/${filmSlug}`)}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center
+                             hover:bg-white/15 active:bg-white/25 transition-colors flex-shrink-0"
+                >
+                  <Icons.ArrowBack />
                 </button>
-              </Tip>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-white font-semibold text-[15px] tracking-[-0.01em] truncate leading-tight">
+                    {film.judul}
+                  </h1>
+                  {film.tahunRilis && (
+                    <p className="text-white/45 text-xs mt-0.5">
+                      {typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4
+                        ? film.tahunRilis
+                        : new Date(film.tahunRilis).getFullYear()}
+                    </p>
+                  )}
+                </div>
 
-              {/* Skip back — FIX: gunakan skipBack helper */}
-              <Tip label="−10 detik (←)">
-                <button onClick={skipBack}
-                  className="w-10 h-10 flex items-center justify-center text-white
-                             rounded-full hover:bg-white/10 active:scale-90 transition-all">
-                  <Icons.Replay10 />
-                </button>
-              </Tip>
-
-              {/* Skip fwd — FIX: gunakan skipForward helper */}
-              <Tip label="+10 detik (→)">
-                <button onClick={skipForward}
-                  className="w-10 h-10 flex items-center justify-center text-white
-                             rounded-full hover:bg-white/10 active:scale-90 transition-all">
-                  <Icons.Forward10 />
-                </button>
-              </Tip>
-
-              {/* Volume */}
-              <div className="flex items-center group/vol ml-0.5" onClick={e=>e.stopPropagation()}>
-                <Tip label={muted ? 'Suarakan (M)' : 'Bisukan (M)'}>
-                  <button onClick={()=>{ if(videoRef.current) videoRef.current.muted=!videoRef.current.muted }}
-                    className="w-10 h-10 flex items-center justify-center text-white
-                               rounded-full hover:bg-white/10 active:scale-90 transition-all">
-                    <VolIcon />
+                {/* Tombol fullscreen dari sisi app */}
+                <Tip label={fullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}>
+                  <button
+                    onClick={toggleFullscreen}
+                    className="w-9 h-9 rounded-full text-white flex items-center justify-center
+                               hover:bg-white/15 active:bg-white/25 transition-colors flex-shrink-0"
+                  >
+                    {fullscreen ? <Icons.ExitFullscreen /> : <Icons.Fullscreen />}
                   </button>
                 </Tip>
-                {/* Slider — expands on hover */}
-                <div className="overflow-hidden transition-all duration-200 w-0 group-hover/vol:w-[90px]">
-                  <div ref={volumeRef}
-                    className="relative w-[90px] h-4 flex items-center cursor-pointer ml-1"
-                    style={{touchAction:'none'}}
-                    onMouseDown={(e)=>{e.preventDefault();setVolDrag(true);applyVol(e.clientX)}}>
-                    <div className="absolute inset-y-0 left-0 right-0 my-auto h-[3px] rounded-full bg-white/20 overflow-hidden"
-                      style={{height:'3px'}}>
-                      <div className="h-full bg-white rounded-full transition-none"
-                        style={{width:`${muted?0:volume*100}%`}} />
-                    </div>
-                    <div className="absolute w-3 h-3 rounded-full bg-white shadow -translate-x-1/2
-                                    opacity-0 group-hover/vol:opacity-100 transition-opacity"
-                      style={{left:`${muted?0:volume*100}%`}} />
+              </div>
+            </div>
+
+            {/* ── Bottom hint bar ──────────────────────────────────────── */}
+            <div
+              className={`absolute bottom-0 left-0 right-0 z-40
+                           transition-all duration-500
+                           ${showEmbedHint
+                             ? 'opacity-100 translate-y-0'
+                             : 'opacity-0 translate-y-2 pointer-events-none'}`}
+              onMouseEnter={() => setShowEmbedHint(true)}
+            >
+              <div className="mx-3 mb-3 px-4 py-3 rounded-2xl
+                              bg-black/80 backdrop-blur-md border border-white/10
+                              flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+
+                {/* Kiri: info provider + petunjuk */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <ProviderIcon />
+                  </div>
+                  <div>
+                    <p className="text-white text-xs font-semibold mb-0.5">
+                      {providerLabel}
+                    </p>
+                    <p className="text-white/50 text-[11px] leading-relaxed">
+                      {embedHintText}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Kanan: tombol aksi */}
+                <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
+                  <button
+                    onClick={toggleFullscreen}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl
+                               text-xs font-semibold text-white
+                               bg-white/10 hover:bg-white/20 border border-white/15
+                               active:scale-95 transition-all"
+                  >
+                    {fullscreen ? <Icons.ExitFullscreen /> : <Icons.Fullscreen />}
+                    {fullscreen ? 'Keluar Penuh' : 'Layar Penuh'}
+                  </button>
+
+                  <button
+                    onClick={() => setShowEmbedHint(false)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center
+                               text-white/40 hover:text-white hover:bg-white/10
+                               transition-all text-lg leading-none"
+                    aria-label="Tutup petunjuk"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Tombol tampilkan hint kembali ─────────────────────────── */}
+            {!showEmbedHint && (
+              <button
+                onClick={() => setShowEmbedHint(true)}
+                className={`absolute bottom-3 right-3 z-40 w-8 h-8 rounded-full
+                             flex items-center justify-center
+                             bg-black/60 hover:bg-black/80 backdrop-blur-sm
+                             border border-white/10 text-white/40 hover:text-white
+                             transition-all duration-300
+                             ${showCtrl ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                title="Tampilkan petunjuk kontrol"
+              >
+                <Icons.Info />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════
+            DIRECT VIDEO CONTROLS — hanya untuk video langsung (bukan embed)
+        ════════════════════════════════════════════════════════════════ */}
+        {!isEmbed && (
+          <>
+            {/* ── BUFFERING ───────────────────────────────────────────── */}
+            {buffering && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                <div className="w-14 h-14 rounded-full border-4 border-white/20 border-t-white animate-spin" />
+              </div>
+            )}
+
+            {/* ── CENTER FLASH ────────────────────────────────────────── */}
+            <div className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none
+                             transition-all duration-500
+                             ${centerFlash ? 'opacity-100' : 'opacity-0'}`}>
+              <div className={`w-[72px] h-[72px] rounded-full bg-black/60 backdrop-blur-sm
+                               border border-white/20 flex items-center justify-center text-white
+                               transition-transform duration-300
+                               ${centerFlash ? 'scale-100' : 'scale-75'}`}>
+                {centerFlash === 'play' ? <Icons.Play /> : <Icons.Pause />}
+              </div>
+            </div>
+
+            {/* ── SEEK RIPPLES ─────────────────────────────────────────── */}
+            <TapRipple dir="left"  show={leftRipple} />
+            <TapRipple dir="right" show={rightRipple} />
+
+            {/* ── VOLUME OSD ───────────────────────────────────────────── */}
+            <div className={`absolute top-5 left-1/2 -translate-x-1/2 z-30 pointer-events-none
+                             flex items-center gap-2.5 px-4 py-2.5 rounded-2xl
+                             bg-black/80 backdrop-blur-md border border-white/10
+                             transition-all duration-300
+                             ${volOSD ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
+              <div className="text-white"><VolIcon /></div>
+              <div className="w-24 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div className="h-full bg-white rounded-full transition-all duration-75"
+                  style={{ width: `${muted ? 0 : volume * 100}%` }} />
+              </div>
+              <span className="text-white/70 text-xs font-mono w-7 text-right">
+                {muted ? '0' : Math.round(volume * 100)}
+              </span>
+            </div>
+
+            {/* ── SPEED BADGE ──────────────────────────────────────────── */}
+            {speed !== 1 && (
+              <div className={`absolute top-5 right-5 z-30 pointer-events-none
+                               px-3 py-1 rounded-xl bg-black/80 backdrop-blur-md border border-white/10
+                               text-white text-sm font-bold tabular-nums
+                               transition-opacity duration-300
+                               ${showCtrl ? 'opacity-100' : 'opacity-60'}`}>
+                {speed}×
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════
+                CONTROLS LAYER
+            ══════════════════════════════════════════════════════════ */}
+            <div className={`absolute inset-0 z-40 flex flex-col justify-between
+                             transition-opacity duration-300
+                             ${showCtrl ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+
+              {/* ── TOP BAR ───────────────────────────────────────────── */}
+              <div className="px-4 pt-4 pb-20 bg-gradient-to-b from-black/85 via-black/20 to-transparent">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => navigate(`/film/${filmSlug}`)}
+                    className="w-9 h-9 rounded-full text-white flex items-center justify-center
+                               hover:bg-white/15 active:bg-white/25 transition-colors">
+                    <Icons.ArrowBack />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-white font-semibold text-[15px] tracking-[-0.01em] truncate leading-tight">
+                      {film.judul}
+                    </h1>
+                    {film.tahunRilis && (
+                      <p className="text-white/45 text-xs mt-0.5">
+                        {typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4
+                          ? film.tahunRilis
+                          : new Date(film.tahunRilis).getFullYear()}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Spacer */}
-              <div className="flex-1" />
+              {/* ── BOTTOM CONTROLS ───────────────────────────────────── */}
+              <div className="pt-12 bg-gradient-to-t from-black/95 via-black/50 to-transparent">
 
-              {/* Subtitle toggle */}
-              {subtitleUrl && (
-                <div className="relative" onClick={e=>e.stopPropagation()}>
-                  <Tip label="Subtitle (C)">
-                    <button onClick={()=>{closeMenus(); setShowSubM(s=>!s)}}
-                      className={`w-10 h-10 flex items-center justify-center rounded-full
-                                 hover:bg-white/10 active:scale-95 transition-all
-                                 ${subOn ? 'text-white' : 'text-white/30'}`}>
-                      <Icons.CC />
-                    </button>
-                  </Tip>
-                  {showSubM && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={()=>setShowSubM(false)} />
-                      <div className="absolute right-0 bottom-14 z-50 w-48 rounded-2xl overflow-hidden
-                                      bg-[#1a1a1a] border border-white/10 shadow-2xl py-1.5">
-                        <div className="px-3 pt-0.5 pb-2">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Subtitle</p>
-                          <button onClick={()=>setSubOn(s=>!s)}
-                            className="w-full flex items-center justify-between py-1.5 px-1 rounded-lg
-                                       hover:bg-white/5 text-white text-sm transition-colors">
-                            <span className="text-white/80">{subOn ? 'Aktif' : 'Nonaktif'}</span>
-                            <div className={`w-9 h-5 rounded-full relative transition-colors ${subOn?'bg-[#f00]':'bg-white/20'}`}>
-                              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all
-                                              ${subOn?'left-4':'left-0.5'}`} />
-                            </div>
-                          </button>
-                        </div>
-                        <div className="h-px bg-white/8 mx-3 mb-1" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 py-1.5">Bahasa</p>
-                        <button onClick={switchToEn}
-                          className={`w-full flex items-center justify-between px-4 py-2
-                                      hover:bg-white/8 transition-colors text-sm
-                                      ${subLang==='en'?'text-white font-medium':'text-white/50'}`}>
-                          English {subLang==='en' && <Icons.Check />}
-                        </button>
-                        <button onClick={doTranslate} disabled={translating}
-                          className={`w-full flex items-center justify-between px-4 py-2
-                                      hover:bg-white/8 transition-colors text-sm
-                                      ${subLang==='id'?'text-white font-medium':'text-white/50'}
-                                      ${translating?'opacity-50 cursor-not-allowed':''}`}>
-                          <span className="flex items-center gap-2">
-                            Indonesia
-                            {translating && <span className="text-[#f00] text-xs">{transP}%</span>}
-                          </span>
-                          {subLang==='id' && !translating && <Icons.Check />}
-                          {translating && <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Speed */}
-              <div className="relative" onClick={e=>e.stopPropagation()}>
-                <Tip label={`Kecepatan (< >)`}>
-                  <button onClick={()=>{closeMenus(); setShowSpeedM(s=>!s)}}
-                    className={`h-10 px-2.5 rounded-full text-[13px] font-bold
-                               hover:bg-white/10 active:scale-95 transition-all
-                               ${speed!==1?'text-[#f00]':'text-white'}`}>
-                    {speed===1?'1×':`${speed}×`}
-                  </button>
-                </Tip>
-                {showSpeedM && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={()=>setShowSpeedM(false)} />
-                    <div className="absolute right-0 bottom-14 z-50 w-36 rounded-2xl overflow-hidden
-                                    bg-[#1a1a1a] border border-white/10 shadow-2xl py-1.5">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 py-1.5">
-                        Kecepatan
-                      </p>
-                      {SPEEDS.map(s => (
-                        <button key={s} onClick={()=>{setSpeed(s);setShowSpeedM(false)}}
-                          className={`w-full flex items-center justify-between px-4 py-2
-                                      text-sm hover:bg-white/8 transition-colors
-                                      ${speed===s?'text-white font-semibold':'text-white/50'}`}>
-                          {s===1?'Normal':`${s}×`}
-                          {speed===s && <Icons.Check />}
-                        </button>
-                      ))}
-                    </div>
-                  </>
+                {/* Sub error */}
+                {subErr && (
+                  <div className="mx-4 mb-2 flex items-center justify-between gap-2
+                                  px-3 py-2 rounded-xl bg-red-600/20 border border-red-500/30
+                                  text-red-300 text-xs">
+                    <span>{subErr}</span>
+                    <button onClick={() => setSubErr(null)}
+                      className="opacity-50 hover:opacity-100 text-lg leading-none">×</button>
+                  </div>
                 )}
-              </div>
 
-              {/* Quality */}
-              {videoInfo?.qualities?.length > 1 && (
-                <div className="relative" onClick={e=>e.stopPropagation()}>
-                  <Tip label="Kualitas Video">
-                    <button onClick={()=>{closeMenus(); setShowQualM(s=>!s)}}
-                      className="h-10 px-2.5 rounded-full text-[12px] font-bold text-white/70
-                                 hover:bg-white/10 hover:text-white active:scale-95 transition-all">
-                      {quality?.label || 'HD'}
+                {/* Translation progress */}
+                {translating && (
+                  <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-white/8 border border-white/10">
+                    <div className="flex justify-between text-white/60 text-[11px] mb-1.5">
+                      <span>Menerjemahkan subtitle…</span><span>{transP}%</span>
+                    </div>
+                    <div className="h-[3px] rounded-full bg-white/10">
+                      <div className="h-full bg-[#f00] rounded-full transition-all"
+                        style={{ width: `${transP}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── PROGRESS BAR ──────────────────────────────────────── */}
+                <div className="px-4 mb-1">
+                  <div className="flex items-center justify-between mb-1.5 px-px">
+                    <span className="text-white/80 text-[12px] font-medium tabular-nums">{fmt(currentTime)}</span>
+                    <span className="text-white/40 text-[12px] tabular-nums">{duration > 0 ? fmt(duration) : ''}</span>
+                  </div>
+
+                  <div
+                    ref={progressRef}
+                    className="relative cursor-pointer group/bar"
+                    style={{ height: '20px' }}
+                    onMouseDown={onProgDown}
+                    onMouseMove={onProgHover}
+                    onMouseLeave={() => !seeking && setHoverT(h => ({ ...h, on: false }))}
+                  >
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 rounded-full overflow-hidden"
+                      style={{ height: seeking ? '5px' : '3px', transition: 'height 0.12s' }}>
+                      <div className="absolute inset-0 bg-white/25" />
+                      <div className="absolute top-0 left-0 h-full bg-white/40 rounded-full transition-all"
+                        style={{ width: `${bufPct}%` }} />
+                      <div className="absolute top-0 left-0 h-full bg-[#f00] rounded-full transition-none"
+                        style={{ width: `${progress}%` }} />
+                    </div>
+
+                    <div className={`absolute top-1/2 -translate-y-1/2 w-[14px] h-[14px]
+                                     rounded-full bg-white shadow-md transition-opacity duration-100
+                                     ${seeking
+                                       ? 'opacity-100 scale-[1.4]'
+                                       : 'opacity-0 group-hover/bar:opacity-100 group-hover/bar:scale-125'}`}
+                      style={{ left: `calc(${progress}% - 7px)`, transitionProperty: 'opacity,transform' }} />
+
+                    {(hoverT.on || seeking) && (
+                      <div className="absolute bottom-6 pointer-events-none -translate-x-1/2 z-50"
+                        style={{ left: `${hoverT.pct}%` }}>
+                        <div className="px-2 py-1 rounded-lg bg-[#161616] border border-white/10
+                                        text-white text-[11px] font-medium tabular-nums whitespace-nowrap shadow-xl">
+                          {fmt(hoverT.t)}
+                        </div>
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full
+                                        w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px]
+                                        border-l-transparent border-r-transparent border-t-[#161616]" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── CONTROL ROW ───────────────────────────────────────── */}
+                <div className="px-2 pb-4 sm:pb-5 flex items-center gap-0.5">
+
+                  {/* Play/Pause */}
+                  <Tip label={playing ? 'Jeda (K)' : 'Putar (K)'}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); closeMenus(); togglePlay() }}
+                      className="w-11 h-11 flex items-center justify-center text-white
+                                 rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                      {playing ? <Icons.Pause /> : <Icons.Play />}
                     </button>
                   </Tip>
-                  {showQualM && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={()=>setShowQualM(false)} />
-                      <div className="absolute right-0 bottom-14 z-50 w-44 rounded-2xl overflow-hidden
-                                      bg-[#1a1a1a] border border-white/10 shadow-2xl py-1.5">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 py-1.5">
-                          Kualitas
-                        </p>
-                        {[...videoInfo.qualities].sort((a,b)=>(b.width||0)-(a.width||0)).map((q,i)=>(
-                          <button key={i} onClick={()=>changeQuality(q)}
-                            className={`w-full flex items-center justify-between px-4 py-2
-                                        text-sm hover:bg-white/8 transition-colors
-                                        ${quality?.label===q.label?'text-white font-semibold':'text-white/50'}`}>
-                            <div>
-                              <div>{q.label}</div>
-                              <div className="text-[10px] text-white/30">{q.width}×{q.height}</div>
-                            </div>
-                            {quality?.label===q.label && <Icons.Check />}
-                          </button>
-                        ))}
+
+                  {/* Skip back */}
+                  <Tip label="−10 detik (←)">
+                    <button onClick={skipBack}
+                      className="w-10 h-10 flex items-center justify-center text-white
+                                 rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                      <Icons.Replay10 />
+                    </button>
+                  </Tip>
+
+                  {/* Skip forward */}
+                  <Tip label="+10 detik (→)">
+                    <button onClick={skipForward}
+                      className="w-10 h-10 flex items-center justify-center text-white
+                                 rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                      <Icons.Forward10 />
+                    </button>
+                  </Tip>
+
+                  {/* Volume */}
+                  <div className="flex items-center group/vol ml-0.5"
+                    onClick={e => e.stopPropagation()}>
+                    <Tip label={muted ? 'Suarakan (M)' : 'Bisukan (M)'}>
+                      <button
+                        onClick={() => { if (videoRef.current) videoRef.current.muted = !videoRef.current.muted }}
+                        className="w-10 h-10 flex items-center justify-center text-white
+                                   rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                        <VolIcon />
+                      </button>
+                    </Tip>
+                    <div className="overflow-hidden transition-all duration-200 w-0 group-hover/vol:w-[90px]">
+                      <div ref={volumeRef}
+                        className="relative w-[90px] h-4 flex items-center cursor-pointer ml-1"
+                        style={{ touchAction: 'none' }}
+                        onMouseDown={(e) => { e.preventDefault(); setVolDrag(true); applyVol(e.clientX) }}>
+                        <div className="absolute inset-y-0 left-0 right-0 my-auto rounded-full bg-white/20 overflow-hidden"
+                          style={{ height: '3px' }}>
+                          <div className="h-full bg-white rounded-full transition-none"
+                            style={{ width: `${muted ? 0 : volume * 100}%` }} />
+                        </div>
+                        <div className="absolute w-3 h-3 rounded-full bg-white shadow -translate-x-1/2
+                                        opacity-0 group-hover/vol:opacity-100 transition-opacity"
+                          style={{ left: `${muted ? 0 : volume * 100}%` }} />
                       </div>
-                    </>
+                    </div>
+                  </div>
+
+                  <div className="flex-1" />
+
+                  {/* Subtitle */}
+                  {subtitleUrl && (
+                    <div className="relative" onClick={e => e.stopPropagation()}>
+                      <Tip label="Subtitle (C)">
+                        <button onClick={() => { closeMenus(); setShowSubM(s => !s) }}
+                          className={`w-10 h-10 flex items-center justify-center rounded-full
+                                     hover:bg-white/10 active:scale-95 transition-all
+                                     ${subOn ? 'text-white' : 'text-white/30'}`}>
+                          <Icons.CC />
+                        </button>
+                      </Tip>
+                      {showSubM && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowSubM(false)} />
+                          <div className="absolute right-0 bottom-14 z-50 w-48 rounded-2xl overflow-hidden
+                                          bg-[#1a1a1a] border border-white/10 shadow-2xl py-1.5">
+                            <div className="px-3 pt-0.5 pb-2">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Subtitle</p>
+                              <button onClick={() => setSubOn(s => !s)}
+                                className="w-full flex items-center justify-between py-1.5 px-1 rounded-lg
+                                           hover:bg-white/5 text-white text-sm transition-colors">
+                                <span className="text-white/80">{subOn ? 'Aktif' : 'Nonaktif'}</span>
+                                <div className={`w-9 h-5 rounded-full relative transition-colors
+                                                 ${subOn ? 'bg-[#f00]' : 'bg-white/20'}`}>
+                                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all
+                                                   ${subOn ? 'left-4' : 'left-0.5'}`} />
+                                </div>
+                              </button>
+                            </div>
+                            <div className="h-px bg-white/8 mx-3 mb-1" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 py-1.5">Bahasa</p>
+                            <button onClick={switchToEn}
+                              className={`w-full flex items-center justify-between px-4 py-2
+                                          hover:bg-white/8 transition-colors text-sm
+                                          ${subLang === 'en' ? 'text-white font-medium' : 'text-white/50'}`}>
+                              English {subLang === 'en' && <Icons.Check />}
+                            </button>
+                            <button onClick={doTranslate} disabled={translating}
+                              className={`w-full flex items-center justify-between px-4 py-2
+                                          hover:bg-white/8 transition-colors text-sm
+                                          ${subLang === 'id' ? 'text-white font-medium' : 'text-white/50'}
+                                          ${translating ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              <span className="flex items-center gap-2">
+                                Indonesia
+                                {translating && <span className="text-[#f00] text-xs">{transP}%</span>}
+                              </span>
+                              {subLang === 'id' && !translating && <Icons.Check />}
+                              {translating && (
+                                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
+
+                  {/* Speed */}
+                  <div className="relative" onClick={e => e.stopPropagation()}>
+                    <Tip label="Kecepatan (< >)">
+                      <button onClick={() => { closeMenus(); setShowSpeedM(s => !s) }}
+                        className={`h-10 px-2.5 rounded-full text-[13px] font-bold
+                                   hover:bg-white/10 active:scale-95 transition-all
+                                   ${speed !== 1 ? 'text-[#f00]' : 'text-white'}`}>
+                        {speed === 1 ? '1×' : `${speed}×`}
+                      </button>
+                    </Tip>
+                    {showSpeedM && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowSpeedM(false)} />
+                        <div className="absolute right-0 bottom-14 z-50 w-36 rounded-2xl overflow-hidden
+                                        bg-[#1a1a1a] border border-white/10 shadow-2xl py-1.5">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 py-1.5">
+                            Kecepatan
+                          </p>
+                          {SPEEDS.map(s => (
+                            <button key={s} onClick={() => { setSpeed(s); setShowSpeedM(false) }}
+                              className={`w-full flex items-center justify-between px-4 py-2
+                                          text-sm hover:bg-white/8 transition-colors
+                                          ${speed === s ? 'text-white font-semibold' : 'text-white/50'}`}>
+                              {s === 1 ? 'Normal' : `${s}×`}
+                              {speed === s && <Icons.Check />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Quality */}
+                  {videoInfo?.qualities?.length > 1 && (
+                    <div className="relative" onClick={e => e.stopPropagation()}>
+                      <Tip label="Kualitas Video">
+                        <button onClick={() => { closeMenus(); setShowQualM(s => !s) }}
+                          className="h-10 px-2.5 rounded-full text-[12px] font-bold text-white/70
+                                     hover:bg-white/10 hover:text-white active:scale-95 transition-all">
+                          {quality?.label || 'HD'}
+                        </button>
+                      </Tip>
+                      {showQualM && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowQualM(false)} />
+                          <div className="absolute right-0 bottom-14 z-50 w-44 rounded-2xl overflow-hidden
+                                          bg-[#1a1a1a] border border-white/10 shadow-2xl py-1.5">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 py-1.5">
+                              Kualitas
+                            </p>
+                            {[...videoInfo.qualities].sort((a, b) => (b.width || 0) - (a.width || 0)).map((q, i) => (
+                              <button key={i} onClick={() => changeQuality(q)}
+                                className={`w-full flex items-center justify-between px-4 py-2
+                                            text-sm hover:bg-white/8 transition-colors
+                                            ${quality?.label === q.label ? 'text-white font-semibold' : 'text-white/50'}`}>
+                                <div>
+                                  <div>{q.label}</div>
+                                  <div className="text-[10px] text-white/30">{q.width}×{q.height}</div>
+                                </div>
+                                {quality?.label === q.label && <Icons.Check />}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* PiP */}
+                  {document.pictureInPictureEnabled && (
+                    <Tip label="Picture-in-Picture">
+                      <button onClick={(e) => { e.stopPropagation(); togglePiP() }}
+                        className={`w-10 h-10 flex items-center justify-center rounded-full
+                                   hover:bg-white/10 active:scale-95 transition-all
+                                   ${pip ? 'text-[#f00]' : 'text-white/60 hover:text-white'}`}>
+                        <Icons.PiP />
+                      </button>
+                    </Tip>
+                  )}
+
+                  {/* Fullscreen */}
+                  <Tip label={fullscreen ? 'Keluar Layar Penuh (F)' : 'Layar Penuh (F)'}>
+                    <button onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
+                      className="w-10 h-10 flex items-center justify-center text-white
+                                 rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                      {fullscreen ? <Icons.ExitFullscreen /> : <Icons.Fullscreen />}
+                    </button>
+                  </Tip>
                 </div>
-              )}
-
-              {/* PiP */}
-              {document.pictureInPictureEnabled && (
-                <Tip label="Picture-in-Picture">
-                  <button onClick={(e)=>{e.stopPropagation();togglePiP()}}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full
-                               hover:bg-white/10 active:scale-95 transition-all
-                               ${pip?'text-[#f00]':'text-white/60 hover:text-white'}`}>
-                    <Icons.PiP />
-                  </button>
-                </Tip>
-              )}
-
-              {/* Fullscreen */}
-              <Tip label={fullscreen ? 'Keluar Layar Penuh (F)' : 'Layar Penuh (F)'}>
-                <button onClick={(e)=>{e.stopPropagation();toggleFullscreen()}}
-                  className="w-10 h-10 flex items-center justify-center text-white
-                             rounded-full hover:bg-white/10 active:scale-90 transition-all">
-                  {fullscreen ? <Icons.ExitFullscreen /> : <Icons.Fullscreen />}
-                </button>
-              </Tip>
-            </div>
-          </div>
-        </div>
-
-        {/* ── BIG CENTER PLAY (paused, no animation active) ──────────── */}
-        {/* FIX: cek langsung dari video element via ref, bukan state */}
-        {!playing && !buffering && !centerFlash && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-            <div className={`transition-all duration-300
-                            ${showCtrl ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
-              <div className="w-[72px] h-[72px] rounded-full bg-black/60 backdrop-blur-sm
-                              border border-white/20 flex items-center justify-center text-white shadow-2xl
-                              hover:bg-black/80 transition-colors">
-                <Icons.Play />
               </div>
             </div>
-          </div>
+
+            {/* ── BIG CENTER PLAY ───────────────────────────────────────── */}
+            {!playing && !buffering && !centerFlash && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className={`transition-all duration-300
+                                 ${showCtrl ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
+                  <div className="w-[72px] h-[72px] rounded-full bg-black/60 backdrop-blur-sm
+                                  border border-white/20 flex items-center justify-center
+                                  text-white shadow-2xl">
+                    <Icons.Play />
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
       </div>

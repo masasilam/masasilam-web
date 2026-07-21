@@ -1,9 +1,3 @@
-// ============================================
-// src/pages/NewspaperArticleDetailPage.jsx
-// LIGHT: bg-stone-50, surface=white, border=stone-200, accent=violet
-// DARK:  bg-slate-950, surface=slate-900, border=slate-700, accent=violet
-// Reader mode uses inline styles for full color control
-// ============================================
 import '../styles/epub-styles.css'
 
 import { useState, useEffect, useRef, useCallback } from 'react'

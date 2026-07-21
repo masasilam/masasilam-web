@@ -1,5 +1,3 @@
-// src/pages/social/SocialProfileSettingsPage.jsx
-// Embedded inside /dasbor/pengaturan or accessible at /sosial/pengaturan-profil
 import { useState, useEffect } from 'react'
 import { profileService } from '../../services/socialService'
 import { useAuth } from '../../hooks/useAuth'

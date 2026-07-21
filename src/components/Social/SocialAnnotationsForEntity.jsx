@@ -1,7 +1,3 @@
-// src/components/Social/SocialAnnotationsForEntity.jsx
-// Menampilkan kutipan/anotasi sosial yang dipublikasikan untuk entitas tertentu
-// (buku, zine, film, koran) di halaman detail mereka
-
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Quote, Heart, MessageCircle, ChevronDown, Loader2, RefreshCw } from 'lucide-react'

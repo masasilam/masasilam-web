@@ -1,6 +1,3 @@
-// ============================================
-// FILE: src/components/Reader/AnnotationPanel.jsx - COMPLETE FIXED
-// ============================================
 import { X, Bookmark, Highlighter, StickyNote } from 'lucide-react'
 
 const AnnotationPanel = ({
@@ -12,7 +9,6 @@ const AnnotationPanel = ({
   onDeleteHighlight,
   onDeleteNote
 }) => {
-  // Helper function to get chapter label from API data
   const getChapterLabel = (annotation) => {
     if (annotation.chapterTitle) {
       return annotation.chapterTitle

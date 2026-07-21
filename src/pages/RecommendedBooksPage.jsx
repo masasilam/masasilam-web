@@ -1,7 +1,3 @@
-// ============================================
-// src/pages/RecommendedBooksPage.jsx - WITH COMPLETE SEO
-// ============================================
-
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import bookService from '../services/bookService'

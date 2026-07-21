@@ -1,15 +1,8 @@
-// ============================================
-// src/pages/HomePage.jsx
-// FIXES: CLS, LCP, INP — Core Web Vitals
-//   CLS  → card index prop → eager/lazy split; content-visibility pada seksi bawah fold
-//   LCP  → fetchPriority="high" + loading="eager" untuk kartu pertama
-//   INP  → useCallback pada semua handler; startTransition untuk update data fetch
-// ============================================
 import {
   useState, useEffect, memo, useCallback, useRef, useTransition
 } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, ChevronLeft, ChevronRight, Film, Newspaper, Layers } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, Film, Newspaper, Layers, Sprout } from 'lucide-react'
 import bookService from '../services/bookService'
 import { filmService } from '../services/filmService'
 import zineService from '../services/zineService'
@@ -23,7 +16,7 @@ import {
 } from '../utils/seoHelpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers (module-level → tidak pernah dibuat ulang)
+// Helpers — module-level, tidak pernah dibuat ulang
 // ─────────────────────────────────────────────────────────────────────────────
 const getWikimediaThumb = (url, w = 300) => {
   if (!url) return null
@@ -40,8 +33,12 @@ const getWikimediaThumb = (url, w = 300) => {
 
 const getFilmPoster = (film) => {
   if (!film) return null
+  const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
+  const mainThumb    = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
+  const trailerThumb = videoSources.find(v => v.isTrailer)?.thumbnailUrl
   return (
     film.posterUrl || film.poster_url || film.poster ||
+    mainThumb || trailerThumb ||
     film.thumbnailUrl || film.thumbnail || film.coverUrl ||
     film.imageUrl || film.image ||
     (typeof film.imageUrls === 'string' && film.imageUrls
@@ -50,9 +47,7 @@ const getFilmPoster = (film) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Newspaper fallback — module-level agar tidak dibuat ulang tiap render
-// ─────────────────────────────────────────────────────────────────────────────
+// Newspaper fallback — module-level
 const fetchArticlesFromCategories = async (limit = 10) => {
   const catRes = await api.get('/newspapers/categories')
   const categories = (catRes.data?.data || []).filter(c => (c.articleCount || 0) > 0)
@@ -72,21 +67,89 @@ const fetchArticlesFromCategories = async (limit = 10) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Accent configs — satu sumber kebenaran untuk semua warna
+// ─────────────────────────────────────────────────────────────────────────────
+const ACCENTS = {
+  book: {
+    text:   'text-amber-600 dark:text-amber-400',
+    bg:     'bg-amber-50 dark:bg-amber-500/10',
+    border: 'border-amber-500 dark:border-amber-400',
+    btn:    'hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400',
+    badge:  'bg-amber-500',
+  },
+  zine: {
+    text:   'text-emerald-600 dark:text-emerald-400',
+    bg:     'bg-emerald-50 dark:bg-emerald-500/10',
+    border: 'border-emerald-500 dark:border-emerald-400',
+    btn:    'hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400',
+    badge:  'bg-emerald-500',
+  },
+  film: {
+    text:   'text-blue-600 dark:text-blue-400',
+    bg:     'bg-blue-50 dark:bg-blue-500/10',
+    border: 'border-blue-500 dark:border-blue-400',
+    btn:    'hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400',
+    badge:  'bg-blue-500',
+  },
+  newspaper: {
+    text:   'text-violet-600 dark:text-violet-400',
+    bg:     'bg-violet-50 dark:bg-violet-500/10',
+    border: 'border-violet-500 dark:border-violet-400',
+    btn:    'hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500 dark:hover:text-violet-400',
+    badge:  'bg-violet-500',
+  },
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Skeletons — dimensi IDENTIK dengan kartu asli untuk mencegah CLS
+// ─────────────────────────────────────────────────────────────────────────────
+const SkeletonCard = memo(() => (
+  <div className="flex-shrink-0 w-36 sm:w-44 animate-pulse" aria-hidden="true">
+    {/* aspect-[2/3] identik dengan BookCard / ZineCard / FilmCard */}
+    <div className="aspect-[2/3] rounded-xl mb-3 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
+    <div className="h-3 rounded-full w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-2.5 rounded-full w-2/3 bg-stone-200 dark:bg-slate-700" />
+  </div>
+))
+SkeletonCard.displayName = 'SkeletonCard'
+
+const SkeletonNewspaper = memo(() => (
+  <div
+    className="flex-shrink-0 w-64 sm:w-72 animate-pulse rounded-xl p-5 border
+                bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700"
+    aria-hidden="true">
+    <div className="flex items-center justify-between mb-3">
+      <div className="h-3 rounded-full w-1/3 bg-stone-200 dark:bg-slate-700" />
+      <div className="h-2.5 rounded-full w-1/4 bg-stone-200 dark:bg-slate-700" />
+    </div>
+    <div className="h-px rounded mb-3 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-4 rounded-full w-full mb-2 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-4 rounded-full w-4/5 mb-2 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-4 rounded-full w-3/5 mb-3 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-2.5 rounded-full w-1/2 bg-stone-200 dark:bg-slate-700" />
+  </div>
+))
+SkeletonNewspaper.displayName = 'SkeletonNewspaper'
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BookCard — amber accent
-// FIX LCP: terima prop `priority` → eager + fetchPriority high untuk kartu pertama
+// LCP: priority prop → eager + fetchPriority high untuk 2 kartu pertama
 // ─────────────────────────────────────────────────────────────────────────────
 const BookCard = memo(({ book, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
   const thumbUrl = getWikimediaThumb(book.cover_image, 300)
-
-  // FIX INP: handler stabil, tidak butuh useCallback karena tidak ada deps
-  const handleLoad = () => setLoaded(true)
+  const handleLoad = useCallback(() => setLoaded(true), [])
 
   return (
-    <Link to={`/buku/${book.slug || book.id}`} className="group flex-shrink-0 w-36 sm:w-44">
+    <Link
+      to={`/buku/${book.slug || book.id}`}
+      className="group flex-shrink-0 w-36 sm:w-44 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-xl"
+    >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl mb-3 shadow-md border transition-all duration-300
-                      bg-stone-100 border-stone-200 group-hover:shadow-amber-200/60 group-hover:border-amber-400/60
-                      dark:bg-slate-800 dark:border-slate-700 dark:shadow-black/30 dark:group-hover:shadow-amber-900/40 dark:group-hover:border-amber-500/50">
+                      bg-stone-100 border-stone-200
+                      group-hover:shadow-amber-200/60 group-hover:border-amber-400/60
+                      dark:bg-slate-800 dark:border-slate-700
+                      dark:shadow-black/30 dark:group-hover:shadow-amber-900/40 dark:group-hover:border-amber-500/50">
         {!loaded && thumbUrl && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
         )}
@@ -94,7 +157,6 @@ const BookCard = memo(({ book, priority = false }) => {
           <img
             src={thumbUrl}
             alt={book.title}
-            // FIX LCP: 2 kartu pertama di-eager + priority high; sisanya lazy
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : 'auto'}
             decoding={priority ? 'sync' : 'async'}
@@ -115,7 +177,8 @@ const BookCard = memo(({ book, priority = false }) => {
           </span>
         </div>
       </div>
-      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 mb-0.5 leading-snug transition-colors text-stone-800 group-hover:text-amber-600 dark:text-slate-100 dark:group-hover:text-amber-400">
+      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 mb-0.5 leading-snug transition-colors
+                     text-stone-800 group-hover:text-amber-600 dark:text-slate-100 dark:group-hover:text-amber-400">
         {book.title}
       </h3>
       <p className="text-[10px] sm:text-xs text-stone-400 dark:text-slate-500 line-clamp-1">
@@ -128,15 +191,18 @@ BookCard.displayName = 'BookCard'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ZineCard — emerald accent
-// FIX LCP: sama dengan BookCard, terima prop `priority`
+// BUG-1 FIX: rendering dikontrol dari parent (loadingZines guard)
 // ─────────────────────────────────────────────────────────────────────────────
 const ZineCard = memo(({ zine, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
   const thumbUrl = getWikimediaThumb(zine.coverImageUrl, 300)
-  const handleLoad = () => setLoaded(true)
+  const handleLoad = useCallback(() => setLoaded(true), [])
 
   return (
-    <Link to={`/zine/${zine.slug || zine.id}`} className="group flex-shrink-0 w-36 sm:w-44">
+    <Link
+      to={`/zine/${zine.slug || zine.id}`}
+      className="group flex-shrink-0 w-36 sm:w-44 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl"
+    >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl mb-3 shadow-md border transition-all duration-300
                       bg-stone-100 border-stone-200
                       group-hover:shadow-emerald-200/60 group-hover:border-emerald-400/60
@@ -163,22 +229,18 @@ const ZineCard = memo(({ zine, priority = false }) => {
             <p className="text-[9px] text-center px-2 line-clamp-3 text-stone-500 dark:text-slate-400">{zine.title}</p>
           </div>
         )}
-        {zine.volume && (
-          <div className="absolute top-2 right-2 bg-black/50 dark:bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
-            Vol.{zine.volume}
-          </div>
-        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-500 text-white px-2 py-1 rounded-full shadow-sm">
             <Layers className="w-2.5 h-2.5" /> Baca
           </span>
         </div>
       </div>
-      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 mb-0.5 leading-snug transition-colors text-stone-800 group-hover:text-emerald-600 dark:text-slate-100 dark:group-hover:text-emerald-400">
-        {zine.title}
+      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 mb-0.5 leading-snug transition-colors
+                     text-stone-800 group-hover:text-emerald-600 dark:text-slate-100 dark:group-hover:text-emerald-400">
+        {zine.subtitle ? `${zine.title} ${zine.subtitle}` : zine.title}
       </h3>
       <p className="text-[10px] sm:text-xs text-stone-400 dark:text-slate-500 line-clamp-1">
-        {zine.authorNames || zine.author || zine.publisher || 'Anonim'}
+        {zine.authorNames || zine.author || zine.firstPublisher || zine.publisher || 'Anonim'}
       </p>
     </Link>
   )
@@ -187,7 +249,6 @@ ZineCard.displayName = 'ZineCard'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FilmCard — blue accent
-// FIX LCP: terima prop `priority`
 // ─────────────────────────────────────────────────────────────────────────────
 const FilmCard = memo(({ film, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
@@ -209,10 +270,15 @@ const FilmCard = memo(({ film, priority = false }) => {
   const handleLoad = useCallback(() => setLoaded(true), [])
 
   return (
-    <Link to={`/film/${film.slug || film.id}`} className="group flex-shrink-0 w-36 sm:w-44">
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl mb-3 shadow-md border transition-all duration-300
-                      bg-stone-100 border-stone-200 group-hover:shadow-blue-200/60 group-hover:border-blue-300
-                      dark:bg-slate-800 dark:border-slate-700 dark:shadow-black/30 dark:group-hover:shadow-blue-900/40 dark:group-hover:border-blue-700/60">
+    <Link
+      to={`/film/${film.slug || film.id}`}
+      className="group flex-shrink-0 w-56 sm:w-64 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-xl"
+    >
+      <div className="relative aspect-video overflow-hidden rounded-xl mb-3 shadow-md border transition-all duration-300
+                      bg-stone-100 border-stone-200
+                      group-hover:shadow-blue-200/60 group-hover:border-blue-300
+                      dark:bg-slate-800 dark:border-slate-700
+                      dark:shadow-black/30 dark:group-hover:shadow-blue-900/40 dark:group-hover:border-blue-700/60">
         {showImage && !loaded && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
         )}
@@ -246,7 +312,8 @@ const FilmCard = memo(({ film, priority = false }) => {
           </span>
         </div>
       </div>
-      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 mb-0.5 leading-snug transition-colors text-stone-800 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400">
+      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 mb-0.5 leading-snug transition-colors
+                     text-stone-800 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400">
         {film.judul}
       </h3>
       <p className="text-[10px] sm:text-xs text-stone-400 dark:text-slate-500">{year || '—'}</p>
@@ -265,8 +332,12 @@ const NewspaperCard = memo(({ article }) => {
     <Link
       to={`/koran/${article.category}/${article.publishDate}/${article.slug}`}
       className="group flex-shrink-0 w-64 sm:w-72 rounded-xl p-5 border transition-all duration-300
-                 bg-white border-stone-200 shadow-sm hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/80
-                 dark:bg-slate-900 dark:border-slate-700 dark:shadow-none dark:hover:border-violet-500/60 dark:hover:shadow-violet-900/20">
+                 bg-white border-stone-200 shadow-sm
+                 hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/80
+                 dark:bg-slate-900 dark:border-slate-700 dark:shadow-none
+                 dark:hover:border-violet-500/60 dark:hover:shadow-violet-900/20
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+    >
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full
                          text-violet-600 bg-violet-50 border border-violet-200
@@ -279,13 +350,14 @@ const NewspaperCard = memo(({ article }) => {
       </div>
       <div className="w-full h-px mb-3 bg-gradient-to-r from-violet-300 to-transparent dark:from-violet-500/40" />
       <h3
-        className="text-sm font-bold line-clamp-3 leading-relaxed mb-3 transition-colors text-stone-800 group-hover:text-violet-700 dark:text-slate-200 dark:group-hover:text-violet-300"
+        className="text-sm font-bold line-clamp-3 leading-relaxed mb-3 transition-colors
+                   text-stone-800 group-hover:text-violet-700 dark:text-slate-200 dark:group-hover:text-violet-300"
         style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
         {article.title}
       </h3>
       {sourceName && (
         <p className="text-[10px] flex items-center gap-1 text-stone-400 dark:text-slate-500">
-          <Newspaper className="w-3 h-3" />{sourceName}
+          <Newspaper className="w-3 h-3 flex-shrink-0" />{sourceName}
         </p>
       )}
     </Link>
@@ -294,33 +366,25 @@ const NewspaperCard = memo(({ article }) => {
 NewspaperCard.displayName = 'NewspaperCard'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Skeletons
-// FIX CLS: dimensi skeleton harus persis sama dengan kartu asli
+// EmptyState — komponen generik untuk semua seksi kosong
 // ─────────────────────────────────────────────────────────────────────────────
-const SkeletonCard = memo(() => (
-  <div className="flex-shrink-0 w-36 sm:w-44 animate-pulse">
-    {/* aspect-[2/3] = 66.67% height of width → identik dengan kartu asli */}
-    <div className="aspect-[2/3] rounded-xl mb-3 bg-stone-200 dark:bg-slate-800" />
-    <div className="h-3 rounded w-full mb-1.5 bg-stone-200 dark:bg-slate-800" />
-    <div className="h-2.5 rounded w-2/3 bg-stone-200 dark:bg-slate-800" />
+const EmptyState = memo(({ icon: Icon, color, message, linkTo, linkLabel }) => (
+  <div className="flex-1 flex flex-col items-center justify-center py-14 text-center min-w-[200px]">
+    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 ${color.bg}`}>
+      <Icon className={`w-7 h-7 opacity-40 ${color.text}`} />
+    </div>
+    <p className="text-sm text-stone-400 dark:text-slate-500 mb-3">{message}</p>
+    {linkTo && (
+      <Link to={linkTo} className={`text-xs font-semibold hover:underline ${color.text}`}>
+        {linkLabel} →
+      </Link>
+    )}
   </div>
 ))
-SkeletonCard.displayName = 'SkeletonCard'
-
-const SkeletonNewspaper = memo(() => (
-  <div className="flex-shrink-0 w-64 sm:w-72 animate-pulse rounded-xl p-5 border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
-    <div className="h-3 rounded w-1/3 mb-3 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-px rounded mb-3 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-4 rounded w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-4 rounded w-4/5 mb-1.5 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-3 rounded w-1/2 mt-3 bg-stone-200 dark:bg-slate-700" />
-  </div>
-))
-SkeletonNewspaper.displayName = 'SkeletonNewspaper'
+EmptyState.displayName = 'EmptyState'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SectionHeader
-// FIX INP: scroll handler sudah pakai useCallback — pertahankan pola ini
+// SectionHeader — INP: scroll handler pakai useCallback
 // ─────────────────────────────────────────────────────────────────────────────
 const SectionHeader = memo(({
   icon: Icon, title, subtitle,
@@ -356,12 +420,15 @@ const SectionHeader = memo(({
         )}
         {scrollRef && (
           <div className="hidden lg:flex gap-1.5">
-            {['left', 'right'].map(dir => (
+            {(['left', 'right'] ).map(dir => (
               <button
                 key={dir}
                 onClick={() => scroll(dir)}
-                aria-label={`Scroll ${dir}`}
-                className={`p-1.5 rounded-lg border transition-all bg-white border-stone-200 text-stone-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 ${accentBtn}`}>
+                aria-label={`Geser ${dir === 'left' ? 'kiri' : 'kanan'}`}
+                className={`p-1.5 rounded-lg border transition-all
+                            bg-white border-stone-200 text-stone-500
+                            dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400
+                            ${accentBtn}`}>
                 {dir === 'left' ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
             ))}
@@ -373,46 +440,18 @@ const SectionHeader = memo(({
 })
 SectionHeader.displayName = 'SectionHeader'
 
-// FIX INP: tambah will-change agar browser siapkan compositing layer untuk scroll
-const ScrollRow = memo(({ children, scrollRef }) => (
+// INP: will-change agar browser siapkan compositing layer
+const ScrollRow = memo(({ children, scrollRef, label }) => (
   <div
     ref={scrollRef}
-    className="flex gap-4 sm:gap-5 overflow-x-auto pb-3"
+    role="list"
+    aria-label={label}
+    className="flex gap-4 sm:gap-5 overflow-x-auto pb-3 snap-x snap-mandatory"
     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', willChange: 'scroll-position' }}>
     {children}
   </div>
 ))
 ScrollRow.displayName = 'ScrollRow'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Accent configs
-// ─────────────────────────────────────────────────────────────────────────────
-const ACCENTS = {
-  book: {
-    text:   'text-amber-600 dark:text-amber-400',
-    bg:     'bg-amber-50 dark:bg-amber-500/10',
-    border: 'border-amber-500 dark:border-amber-400',
-    btn:    'hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400',
-  },
-  zine: {
-    text:   'text-emerald-600 dark:text-emerald-400',
-    bg:     'bg-emerald-50 dark:bg-emerald-500/10',
-    border: 'border-emerald-500 dark:border-emerald-400',
-    btn:    'hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400',
-  },
-  film: {
-    text:   'text-blue-600 dark:text-blue-400',
-    bg:     'bg-blue-50 dark:bg-blue-500/10',
-    border: 'border-blue-500 dark:border-blue-400',
-    btn:    'hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400',
-  },
-  newspaper: {
-    text:   'text-violet-600 dark:text-violet-400',
-    bg:     'bg-violet-50 dark:bg-violet-500/10',
-    border: 'border-violet-500 dark:border-violet-400',
-    btn:    'hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500 dark:hover:text-violet-400',
-  },
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
@@ -428,7 +467,7 @@ const HomePage = () => {
   const [loadingFilms,     setLoadingFilms]     = useState(true)
   const [loadingNewspaper, setLoadingNewspaper] = useState(true)
 
-  // FIX INP: startTransition agar update data dari fetch tidak blok interaksi user
+  // INP: startTransition agar update data dari fetch tidak blok frame interaksi
   const [, startTransition] = useTransition()
 
   const newBooksRef = useRef(null)
@@ -448,10 +487,7 @@ const HomePage = () => {
         const map = (r) => (r.data?.list || r.data?.data || []).map(b => ({
           ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image
         }))
-        // FIX INP: bungkus setState dalam startTransition agar tidak blok frame interaksi
-        startTransition(() => {
-          setBooks({ popular: map(pop), new: map(nw) })
-        })
+        startTransition(() => setBooks({ popular: map(pop), new: map(nw) }))
       } catch (err) { console.error('Error fetching books:', err) }
       finally { setLoadingBooks(false) }
     }
@@ -460,9 +496,7 @@ const HomePage = () => {
     const fetchZines = async () => {
       try {
         const res = await zineService.getZines({ page: 1, limit: 16, sortField: 'updateAt', sortOrder: 'DESC' })
-        startTransition(() => {
-          setZines({ latest: res.data?.data || [] })
-        })
+        startTransition(() => setZines({ latest: res.data?.data || [] }))
       } catch (err) { console.error('Error fetching zines:', err) }
       finally { setLoadingZines(false) }
     }
@@ -471,9 +505,7 @@ const HomePage = () => {
     const fetchFilms = async () => {
       try {
         const res = await filmService.getFilms({ page: 0, size: 16, sortField: 'tahunRilis', sortOrder: 'DESC' })
-        startTransition(() => {
-          setFilms({ popular: res.data?.data || [] })
-        })
+        startTransition(() => setFilms({ popular: res.data?.data || [] }))
       } catch (err) { console.error('Error fetching films:', err) }
       finally { setLoadingFilms(false) }
     }
@@ -484,13 +516,11 @@ const HomePage = () => {
         const res = await api.get('/newspapers/trending', { params: { days: 30, limit: 10 } })
         let trending = res.data?.data || []
         if (!trending.length) trending = await fetchArticlesFromCategories(10)
-        startTransition(() => {
-          setNewspaper({ trending })
-        })
+        startTransition(() => setNewspaper({ trending }))
       } catch {
         try {
           const trending = await fetchArticlesFromCategories(10)
-          startTransition(() => { setNewspaper({ trending }) })
+          startTransition(() => setNewspaper({ trending }))
         } catch (err2) { console.error('Error fetching newspaper:', err2) }
       } finally { setLoadingNewspaper(false) }
     }
@@ -501,25 +531,26 @@ const HomePage = () => {
     fetchNewspaper()
   }, []) // eslint-disable-line
 
-  const websiteSchema      = generateWebsiteStructuredData()
-  const organizationSchema = generateOrganizationStructuredData()
-  const structuredData     = combineStructuredData(websiteSchema, organizationSchema)
+  const structuredData = combineStructuredData(
+    generateWebsiteStructuredData(),
+    generateOrganizationStructuredData()
+  )
 
   return (
     <>
       <SEO
-        title="MasasilaM — Perpustakaan Digital Buku, Zine & Film Domain Publik"
-        description="Perpustakaan digital gratis untuk buku, zine, dan film klasik domain publik. Akses dengan fitur smart reading, bookmark, dan highlight."
+        title="Perpustakaan Digital — Perpustakaan Domain Publik dan yang Terbengkalai dan yang Terdegradasi"
+        description="Temukan buku, koran, majalah, zine dan film domain publik dan yang terbengkalai dan yang terdegradasi. Masa silaM menghadirkan kembali semuanya."
         url="/"
         type="website"
-        keywords="buku gratis, zine, majalah digital, domain publik, perpustakaan digital, buku klasik indonesia, literasi digital"
+        keywords="buku gratis, zine, majalah digital, domain publik, perpustakaan digital, buku klasik indonesia, literasi digital, arsip koran"
         structuredData={structuredData}
         image="/og-image.jpg"
       />
 
       <div className="min-h-screen transition-colors duration-300 bg-stone-50 dark:bg-slate-950">
 
-        {/* ── Featured Banner — LCP element utama ─────────────────────── */}
+        {/* ── Featured Banner ───────────────────────────────────────────── */}
         <FeaturedBanner
           books={books.popular}
           films={films.popular}
@@ -528,105 +559,147 @@ const HomePage = () => {
         />
 
         {/* ════════════════════════════════════════════════════════════
-            BUKU TERBARU — amber  (above fold → NO content-visibility)
+            BUKU TERBARU — amber  (above fold, no content-visibility)
         ════════════════════════════════════════════════════════════ */}
-        <section className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2">
+        <section
+          aria-labelledby="section-buku-terbaru"
+          className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
+        >
           <SectionHeader
-            icon={BookOpen} title="Buku Terbaru dan Terupdate"
-            accentText={ACCENTS.book.text} accentBg={ACCENTS.book.bg}
-            accentBorder={ACCENTS.book.border} accentBtn={ACCENTS.book.btn}
-            actionPath="/buku?sortField=updateAt&sortOrder=DESC" scrollRef={newBooksRef}
+            icon={BookOpen}
+            title="Buku Terbaru dan Terupdate"
+            accentText={ACCENTS.book.text}
+            accentBg={ACCENTS.book.bg}
+            accentBorder={ACCENTS.book.border}
+            accentBtn={ACCENTS.book.btn}
+            actionPath="/buku?sortField=updateAt&sortOrder=DESC"
+            scrollRef={newBooksRef}
           />
-          <ScrollRow scrollRef={newBooksRef}>
+          <ScrollRow scrollRef={newBooksRef} label="Daftar buku terbaru">
             {loadingBooks
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
-              : books.new.map((b, i) => (
-                  <BookCard
-                    key={b.id || i}
-                    book={b}
-                    // FIX LCP: 2 kartu pertama eager + priority high
-                    priority={i < 2}
+              : books.new.length > 0
+                ? books.new.map((b, i) => (
+                    <BookCard key={b.id || i} book={b} priority={i < 2} />
+                  ))
+                : <EmptyState
+                    icon={BookOpen}
+                    color={ACCENTS.book}
+                    message="Belum ada buku tersedia"
+                    linkTo="/buku"
+                    linkLabel="Jelajahi Koleksi Buku"
                   />
-                ))
             }
           </ScrollRow>
         </section>
 
         {/* ════════════════════════════════════════════════════════════
             BUKU TERPOPULER — amber
-            FIX LCP: section ini biasanya masih dalam viewport mobile
         ════════════════════════════════════════════════════════════ */}
-        <section className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2">
+        <section
+          aria-labelledby="section-buku-populer"
+          className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
+        >
           <SectionHeader
-            icon={BookOpen} title="Buku Terpopuler"
-            accentText={ACCENTS.book.text} accentBg={ACCENTS.book.bg}
-            accentBorder={ACCENTS.book.border} accentBtn={ACCENTS.book.btn}
-            actionPath="/buku?sortField=viewCount&sortOrder=DESC" scrollRef={popBooksRef}
+            icon={BookOpen}
+            title="Buku Terpopuler"
+            accentText={ACCENTS.book.text}
+            accentBg={ACCENTS.book.bg}
+            accentBorder={ACCENTS.book.border}
+            accentBtn={ACCENTS.book.btn}
+            actionPath="/buku?sortField=viewCount&sortOrder=DESC"
+            scrollRef={popBooksRef}
           />
-          <ScrollRow scrollRef={popBooksRef}>
+          <ScrollRow scrollRef={popBooksRef} label="Daftar buku terpopuler">
             {loadingBooks
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
-              : books.popular.map((b, i) => (
-                  <BookCard key={b.id || i} book={b} priority={i < 2} />
-                ))
+              : books.popular.length > 0
+                ? books.popular.map((b, i) => (
+                    <BookCard key={b.id || i} book={b} priority={i < 2} />
+                  ))
+                : <EmptyState
+                    icon={BookOpen}
+                    color={ACCENTS.book}
+                    message="Belum ada buku tersedia"
+                    linkTo="/buku"
+                    linkLabel="Jelajahi Koleksi Buku"
+                  />
             }
           </ScrollRow>
         </section>
 
         {/* ════════════════════════════════════════════════════════════
             ZINE — emerald
-            FIX LCP/INP: content-visibility:auto → browser skip rendering
-            saat di luar viewport; contain-intrinsic-size reservasi tinggi
+            BUG-1 FIX: guard loadingZines SEBELUM cek .length
+            Tanpa guard ini, saat loading array masih [] sehingga
+            `zines.latest.length > 0` false → empty state muncul.
         ════════════════════════════════════════════════════════════ */}
         <section
+          aria-labelledby="section-zine"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
-          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}>
+          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}
+        >
           <SectionHeader
-            icon={Layers} title="Zine & Magazine"
-            accentText={ACCENTS.zine.text} accentBg={ACCENTS.zine.bg}
-            accentBorder={ACCENTS.zine.border} accentBtn={ACCENTS.zine.btn}
-            actionPath="/zine" scrollRef={zinesRef}
+            icon={Layers}
+            title="Zine & Magazine"
+            accentText={ACCENTS.zine.text}
+            accentBg={ACCENTS.zine.bg}
+            accentBorder={ACCENTS.zine.border}
+            accentBtn={ACCENTS.zine.btn}
+            actionPath="/zine"
+            scrollRef={zinesRef}
           />
-          <ScrollRow scrollRef={zinesRef}>
+          <ScrollRow scrollRef={zinesRef} label="Daftar zine dan magazine">
+            {/* ▼ FIX: loadingZines dicek PERTAMA — baru cek isi array */}
             {loadingZines
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
               : zines.latest.length > 0
                 ? zines.latest.map((z, i) => (
                     <ZineCard key={z.id || i} zine={z} priority={i < 2} />
                   ))
-                : (
-                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-3">
-                      <Layers className="w-7 h-7 text-emerald-300 dark:text-emerald-700" />
-                    </div>
-                    <p className="text-sm text-stone-400 dark:text-slate-500 mb-3">Belum ada zine tersedia</p>
-                    <Link to="/zine" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                      Jelajahi Koleksi Zine →
-                    </Link>
-                  </div>
-                )
+                : <EmptyState
+                    icon={Layers}
+                    color={ACCENTS.zine}
+                    message="Belum ada zine tersedia"
+                    linkTo="/zine"
+                    linkLabel="Jelajahi Koleksi Zine"
+                  />
             }
           </ScrollRow>
         </section>
 
         {/* ════════════════════════════════════════════════════════════
-            FILM — blue  (content-visibility untuk seksi jauh di bawah fold)
+            FILM — blue
         ════════════════════════════════════════════════════════════ */}
         <section
+          aria-labelledby="section-film"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
-          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}>
+          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}
+        >
           <SectionHeader
-            icon={Film} title="Film Klasik"
-            accentText={ACCENTS.film.text} accentBg={ACCENTS.film.bg}
-            accentBorder={ACCENTS.film.border} accentBtn={ACCENTS.film.btn}
-            actionPath="/film" scrollRef={filmsRef}
+            icon={Film}
+            title="Film"
+            accentText={ACCENTS.film.text}
+            accentBg={ACCENTS.film.bg}
+            accentBorder={ACCENTS.film.border}
+            accentBtn={ACCENTS.film.btn}
+            actionPath="/film"
+            scrollRef={filmsRef}
           />
-          <ScrollRow scrollRef={filmsRef}>
+          <ScrollRow scrollRef={filmsRef} label="Daftar film">
             {loadingFilms
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
-              : films.popular.map((f, i) => (
-                  <FilmCard key={f.id || i} film={f} priority={i < 2} />
-                ))
+              : films.popular.length > 0
+                ? films.popular.map((f, i) => (
+                    <FilmCard key={f.id || i} film={f} priority={i < 2} />
+                  ))
+                : <EmptyState
+                    icon={Film}
+                    color={ACCENTS.film}
+                    message="Belum ada film tersedia"
+                    linkTo="/film"
+                    linkLabel="Jelajahi Kumpulan Film"
+                  />
             }
           </ScrollRow>
         </section>
@@ -635,33 +708,40 @@ const HomePage = () => {
             KORAN — violet  (paling jauh di bawah fold)
         ════════════════════════════════════════════════════════════ */}
         <section
+          aria-labelledby="section-koran"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
-          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}>
+          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}
+        >
           <SectionHeader
-            icon={Newspaper} title="Arsip Koran"
-            accentText={ACCENTS.newspaper.text} accentBg={ACCENTS.newspaper.bg}
-            accentBorder={ACCENTS.newspaper.border} accentBtn={ACCENTS.newspaper.btn}
-            actionPath="/koran" scrollRef={koranRef}
+            icon={Newspaper}
+            title="Arsip Koran"
+            accentText={ACCENTS.newspaper.text}
+            accentBg={ACCENTS.newspaper.bg}
+            accentBorder={ACCENTS.newspaper.border}
+            accentBtn={ACCENTS.newspaper.btn}
+            actionPath="/koran"
+            scrollRef={koranRef}
           />
-          <ScrollRow scrollRef={koranRef}>
+          <ScrollRow scrollRef={koranRef} label="Arsip artikel koran">
             {loadingNewspaper
               ? Array.from({ length: 5 }, (_, i) => <SkeletonNewspaper key={i} />)
               : newspaper.trending.length > 0
                 ? newspaper.trending.map((art, i) => (
                     <NewspaperCard key={art.id || i} article={art} />
                   ))
-                : (
-                  <div className="flex-1 text-center py-12">
-                    <Newspaper className="w-12 h-12 mx-auto mb-3 opacity-30 text-stone-400 dark:text-slate-600" />
-                    <p className="text-sm text-stone-400 dark:text-slate-500">Belum ada artikel koran</p>
-                  </div>
-                )
+                : <EmptyState
+                    icon={Newspaper}
+                    color={ACCENTS.newspaper}
+                    message="Belum ada artikel koran"
+                    linkTo="/koran"
+                    linkLabel="Jelajahi Arsip Koran"
+                  />
             }
           </ScrollRow>
         </section>
 
         {/* Bottom spacer */}
-        <div className="pb-10" />
+        <div className="pb-12 sm:pb-16" />
       </div>
     </>
   )

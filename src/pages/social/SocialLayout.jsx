@@ -1,10 +1,3 @@
-// ============================================
-// FILE: src/pages/social/SocialLayout.jsx
-//
-// FIX: Mobile fixed header dihapus — Header utama (PublicLayout)
-// sudah menangani navigasi & hamburger menu.
-// Diganti dengan tab bar horizontal scroll di bagian atas konten mobile.
-// ============================================
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {

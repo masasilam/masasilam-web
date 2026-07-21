@@ -1,4 +1,3 @@
-// src/components/Reader/ChapterRating.jsx
 import { useState, useEffect } from 'react'
 import { Star, TrendingUp, Lock } from 'lucide-react'
 import { chapterService } from '../../services/chapterService'

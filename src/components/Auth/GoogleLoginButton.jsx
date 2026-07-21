@@ -1,7 +1,3 @@
-// ============================================
-// src/components/Auth/GoogleLoginButton.jsx - FINAL VERSION
-// ============================================
-
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { authService } from '../../services/authService'
@@ -168,10 +164,7 @@ const GoogleLoginButton = ({
           status: error.response?.status
         })
 
-        const errorMessage = error.response?.data?.detail ||
-                           error.response?.data?.message ||
-                           error.message ||
-                           'Gagal login dengan Google. Silakan coba lagi.'
+        const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Gagal login dengan Google. Silakan coba lagi.'
 
         if (onError) {
           onError(errorMessage)

@@ -1,12 +1,7 @@
-// src/components/Reader/TTSControlPanel.jsx
 import { Volume2, VolumeX, Pause, Play, SkipForward, SkipBack, Settings, HelpCircle, Lightbulb } from 'lucide-react'
 import { useState } from 'react'
 import TTSMobileSupportInfo from './TTSMobileSupportInfo'
 
-/**
- * TTS Control Panel Component
- * Displays floating control panel for Text-to-Speech
- */
 const TTSControlPanel = ({
   isPlaying,
   progress,
@@ -26,16 +21,14 @@ const TTSControlPanel = ({
   onApplySettings,
   hasPrevChapter,
   hasNextChapter,
-  onMinimize // ✅ NEW: Callback untuk minimize panel
+  onMinimize
 }) => {
   const [showSupportInfo, setShowSupportInfo] = useState(false)
   const [showMobileTips, setShowMobileTips] = useState(() => {
-    // Auto show tips on first time for mobile
     const hasSeenTips = localStorage.getItem('tts-mobile-tips-seen')
     return !hasSeenTips
   })
 
-  // Check if Indonesian voice is available
   const hasIndonesianVoice = availableVoices.some(v => {
     const lang = v.lang.toLowerCase()
     const name = v.name.toLowerCase()
@@ -69,7 +62,6 @@ const TTSControlPanel = ({
                 Text to Speech
               </h4>
               <div className="flex items-center gap-1">
-                {/* ✅ Minimize Button */}
                 <button
                   onClick={onMinimize}
                   className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"

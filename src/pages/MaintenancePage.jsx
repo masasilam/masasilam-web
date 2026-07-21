@@ -1,7 +1,3 @@
-// ============================================
-// src/pages/MaintenancePage.jsx
-// ============================================
-
 import { Wrench } from 'lucide-react'
 
 const MaintenancePage = () => {

@@ -1,7 +1,3 @@
-// src/components/Social/ShareAnnotationModal.jsx
-// Modal untuk mempublikasikan kutipan/highlight dari EPUB reader ke sosial
-// Dipanggil saat user highlight teks lalu klik "Bagikan Kutipan"
-
 import { useState } from 'react'
 import { X, Quote, Loader2, Globe, Users, Lock } from 'lucide-react'
 import { annotationService } from '../../services/socialService'

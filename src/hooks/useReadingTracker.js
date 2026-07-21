@@ -1,8 +1,6 @@
-// src/hooks/useReadingTracker.js
 import { useEffect, useRef, useState } from 'react'
 import { chapterService } from '../services/chapterService'
 
-// Simple UUID generator without external dependency
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0

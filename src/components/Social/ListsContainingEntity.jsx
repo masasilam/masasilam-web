@@ -1,7 +1,3 @@
-// src/components/Social/ListsContainingEntity.jsx
-// Menampilkan daftar baca publik yang mengandung entitas tertentu
-// Tampil di halaman detail buku/zine/film
-
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {

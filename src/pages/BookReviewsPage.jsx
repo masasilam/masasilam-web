@@ -1,7 +1,3 @@
-// ============================================
-// src/pages/BookReviewsPage.jsx
-// ============================================
-
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import bookService from '../services/bookService'

@@ -1,9 +1,3 @@
-// src/pages/NewspaperOnThisDayPage.jsx
-// ============================================
-// LIGHT: bg-stone-50, surface=white, border=stone-200, accent=amber (sejarah)
-// DARK:  bg-slate-950, surface=slate-900, border=slate-700, accent=amber
-// ============================================
-
 import { useState, useEffect, useCallback, memo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Clock, ChevronRight, ChevronLeft, Calendar } from 'lucide-react'

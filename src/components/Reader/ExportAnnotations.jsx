@@ -1,4 +1,3 @@
-// src/components/Reader/ExportAnnotations.jsx
 import { useState } from 'react'
 import { Download, FileText, Check, X } from 'lucide-react'
 import { chapterService } from '../../services/chapterService'

@@ -1,12 +1,6 @@
-// ============================================
-// FILE: src/services/chapterService.js
-// ============================================
 import api from './api'
 
 export const chapterService = {
-  // ============================================
-  // CHAPTER READING
-  // ============================================
   readChapterByPath: async (bookSlug, chapterPath) => {
     const response = await api.get(`/books/${bookSlug}/chapters/${chapterPath}`)
     return response.data?.data || response.data
@@ -24,9 +18,6 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // CHAPTER ANNOTATIONS
-  // ============================================
   getAllBookAnnotations: async (slug) => {
     const response = await api.get(`/books/${slug}/my-annotations`)
     const data = response.data?.data || response.data
@@ -61,9 +52,6 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // CHAPTER REVIEWS & SOCIAL
-  // ============================================
   getChapterReviews: async (slug, chapterNumber, page = 1, limit = 10) => {
     const response = await api.get(`/books/${slug}/chapters/${chapterNumber}/reviews`, { params: { page, limit } })
     return response.data
@@ -85,9 +73,6 @@ export const chapterService = {
     return response.data
   },
 
-  // ============================================
-  // CHAPTER RATING
-  // ============================================
   rateChapter: async (slug, chapterNumber, rating) => {
     const response = await api.post(`/books/${slug}/chapters/${chapterNumber}/rating`, { rating })
     return response.data?.data || response.data
@@ -101,11 +86,6 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // CHAPTER READING ACTIVITY TRACKING
-  // Dipakai oleh chapter reader (bukan EPUB reader)
-  // Endpoint: /books/{slug}/chapters/reading/...
-  // ============================================
   startReading: async (slug, sessionData) => {
     const response = await api.post(`/books/${slug}/chapters/reading/start`, sessionData)
     return response.data?.data || response.data
@@ -127,34 +107,22 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // EPUB READING ACTIVITY TRACKING
-  // Dipakai oleh EpubReaderPage — endpoint berbeda dari chapter reader.
-  // Endpoint: /books/{slug}/reading/... (tanpa /chapters/)
-  //           → EpubAnnotationController
-  // ============================================
+  epubStartReading: async (slug, sessionData, isZine = false) => {
+    const base = isZine ? `/zines/${slug}` : `/books/${slug}`
+    const response = await api.post(`${base}/reading/start`, sessionData)
+    return response.data?.data || response.data
+  },
+  epubEndReading: async (slug, sessionData, isZine = false) => {
+    const base = isZine ? `/zines/${slug}` : `/books/${slug}`
+    const response = await api.post(`${base}/reading/end`, sessionData)
+    return response.data?.data || response.data
+  },
+  recordEpubSession: async (slug, sessionData, isZine = false) => {
+    const base = isZine ? `/zines/${slug}` : `/books/${slug}`
+    const response = await api.post(`${base}/reading/epub-session`, sessionData)
+    return response.data?.data || response.data
+  },
 
-    epubStartReading: async (slug, sessionData, isZine = false) => {
-      const base = isZine ? `/zines/${slug}` : `/books/${slug}`
-      const response = await api.post(`${base}/reading/start`, sessionData)
-      return response.data?.data || response.data
-    },
-
-    epubEndReading: async (slug, sessionData, isZine = false) => {
-      const base = isZine ? `/zines/${slug}` : `/books/${slug}`
-      const response = await api.post(`${base}/reading/end`, sessionData)
-      return response.data?.data || response.data
-    },
-
-    recordEpubSession: async (slug, sessionData, isZine = false) => {
-      const base = isZine ? `/zines/${slug}` : `/books/${slug}`
-      const response = await api.post(`${base}/reading/epub-session`, sessionData)
-      return response.data?.data || response.data
-    },
-
-  // ============================================
-  // SEARCH IN BOOK
-  // ============================================
   searchInBook: async (slug, query, page = 1, limit = 10) => {
     const response = await api.post(`/books/${slug}/chapters/search`, { query, page, limit })
     return response.data?.data || response.data
@@ -164,9 +132,6 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // EXPORT ANNOTATIONS
-  // ============================================
   exportAnnotations: async (slug, exportOptions) => {
     const response = await api.post(`/books/${slug}/chapters/annotations/export`, exportOptions)
     return response.data?.data || response.data
@@ -187,17 +152,11 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // BULK USER DATA
-  // ============================================
   getMyBookData: async (slug) => {
     const response = await api.get(`/books/${slug}/chapters/me`)
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // ANALYTICS
-  // ============================================
   getBookAnalytics: async (slug, dateFrom, dateTo) => {
     const params = {}
     if (dateFrom) params.dateFrom = dateFrom
@@ -210,9 +169,6 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // CHAPTER AUDIO & TEXT
-  // ============================================
   getChapterText: async (slug, chapterNumber) => {
     const response = await api.get(`/books/${slug}/chapters/${chapterNumber}/text`)
     return response.data?.data || response.data
@@ -222,17 +178,11 @@ export const chapterService = {
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // CHAPTER STATISTICS
-  // ============================================
   getChapterStats: async (slug, chapterNumber) => {
     const response = await api.get(`/books/${slug}/chapters/${chapterNumber}/stats`)
     return response.data?.data || response.data
   },
 
-  // ============================================
-  // CONTENT CORRECTIONS (Lapor Typo)
-  // ============================================
   submitCorrection: async (slug, chapterNumber, correctionData) => {
     const response = await api.post(
       `/books/${slug}/chapters/${chapterNumber}/corrections`,
@@ -245,6 +195,15 @@ export const chapterService = {
       `/books/${slug}/chapters/${chapterNumber}/corrections/pending-positions`
     )
     return response.data?.data || []
+  },
+
+  submitEpubCorrection: async (slug, correctionData, isZine = false) => {
+    // Zine belum tentu punya endpoint corrections, fallback ke books
+    const response = await api.post(
+      `/books/${slug}/chapters/1/corrections`,
+      correctionData
+    )
+    return response.data?.data || response.data
   },
 }
 

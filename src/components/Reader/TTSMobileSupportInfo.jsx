@@ -1,10 +1,5 @@
-// src/components/Reader/TTSMobileSupportInfo.jsx
 import { AlertCircle, Smartphone, Check, X } from 'lucide-react'
 
-/**
- * TTS Mobile Support Information Component
- * Shows browser compatibility and troubleshooting tips
- */
 const TTSMobileSupportInfo = ({ onClose }) => {
   const detectBrowser = () => {
     const ua = navigator.userAgent

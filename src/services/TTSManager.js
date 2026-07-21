@@ -1,9 +1,3 @@
-// src/utils/TTSManager.js
-/**
- * Text-to-Speech Manager - MOBILE COMPATIBLE VERSION WITH WAKE LOCK
- * Handles chunked reading with mobile browser quirks fixed
- * ✅ ADVANCED FIX: Mobile pause/resume now continues from last word position
- */
 class TTSManager {
   constructor() {
     this.synth = window.speechSynthesis

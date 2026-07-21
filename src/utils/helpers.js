@@ -1,10 +1,3 @@
-// ============================================
-// src/utils/helpers.js
-// ============================================
-
-/**
- * Format tanggal ke format Indonesia
- */
 export const formatDate = (date, format = 'long') => {
   if (!date) return ''
   

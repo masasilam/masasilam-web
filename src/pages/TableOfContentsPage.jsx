@@ -7,7 +7,6 @@ import SEO from '../components/Common/SEO'
 import { generateTableOfContentsStructuredData, generateBreadcrumbStructuredData } from '../utils/seoHelpers'
 import { BookOpen, Check, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 
-// ✅ FIXED: Gunakan fullPath langsung dari data API
 const buildChapterPath = (chapter) => {
   if (chapter.fullPath) return chapter.fullPath
   return chapter.slug || String(chapter.chapterNumber)
@@ -16,7 +15,6 @@ const buildChapterPath = (chapter) => {
 const ChapterItem = ({ chapter, bookSlug, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(true)
   const hasSubChapters = chapter.subChapters && chapter.subChapters.length > 0
-  // ✅ FIXED: Tidak perlu parentChapter prop lagi
   const chapterPath = buildChapterPath(chapter)
 
   return (

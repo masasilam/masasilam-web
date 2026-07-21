@@ -1,9 +1,3 @@
-// ============================================
-// src/pages/BooksPage.jsx
-// LIGHT: Warm cream/parchment — perpustakaan klasik siang hari
-// DARK:  Deep navy/slate — reading room malam hari yang elegan
-// ============================================
-
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import bookService from '../services/bookService'

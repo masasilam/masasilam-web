@@ -1,8 +1,3 @@
-// ============================================
-// src/pages/dashboard/ZineLibraryPage.jsx
-// Dashboard: Perpustakaan Zine
-// Mirrors MyLibraryPage.jsx — Emerald accent
-// ============================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'

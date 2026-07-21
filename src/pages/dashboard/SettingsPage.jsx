@@ -1,5 +1,3 @@
-// src/pages/dashboard/SettingsPage.jsx
-
 import { useState, useEffect, useContext } from 'react'
 import {
   User, Mail, Lock, Bell, Eye, Globe, Palette,

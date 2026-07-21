@@ -1,102 +1,120 @@
-// ============================================
-// src/components/Zine/ZineGrid.jsx
-// Grid zine — dua mode:
-//   grouped=false  → tampilkan ZineCard per volume (default lama)
-//   grouped=true   → tampilkan ZineSeriesCard per seri (baru)
-//   autoGroup=true → otomatis group dari flat data (recommended)
-// LIGHT: skeleton warm stone tones
-// DARK:  skeleton cool slate tones
-// ============================================
 import ZineCard from './ZineCard.jsx'
 import ZineSeriesCard from './ZineSeriesCard.jsx'
 import { Layers } from 'lucide-react'
 
-// ── Helper: normalisasi judul jadi key grouping ───────────────────────────────
-const normalizeTitleKey = (title) =>
-  title
+// ── Helper: slugify collectionName jadi key seri ──────────────────────────────
+const slugifyCollection = (name) =>
+  name
     ?.toLowerCase()
-    .replace(/[·:].*/g, '')        // buang subtitle setelah · atau :
-    .replace(/[^a-z0-9\s]/g, '')   // buang karakter non-alfanumerik
+    .replace(/[^a-z0-9\s]/g, '')
     .trim()
     .replace(/\s+/g, '-') || 'unknown'
 
-// ── Helper: group flat volume list → series list ──────────────────────────────
 export const groupZinesBySeries = (zines) => {
   if (!zines?.length) return []
 
   const map = new Map()
 
   zines.forEach((zine) => {
-    // Kunci grouping: seriesSlug dari backend (ideal) atau judul ternormalisasi.
-    // JANGAN pakai slug — tiap volume punya slug berbeda meski judulnya sama.
-    const key = zine.seriesSlug || normalizeTitleKey(zine.seriesTitle || zine.title)
+    // Gunakan collectionName sebagai kunci seri — jauh lebih reliable
+    // daripada normalisasi judul yang rawan typo/subtitle
+    const collectionName = zine.collectionName || zine.title
+    const key = zine.seriesSlug || slugifyCollection(collectionName)
 
     if (!map.has(key)) {
       map.set(key, {
         id:             key,
-        slug:           zine.seriesSlug || zine.slug,
-        title:          zine.seriesTitle || zine.title,
+        seriesSlug:     key,
+        title:          collectionName,
         publisher:      zine.publisher,
         category:       zine.category,
         isFeatured:     zine.isFeatured || false,
         totalViews:     0,
         totalDownloads: 0,
-        volumes:        [],
+        // volumes: Map<volumeNumber, { meta, issues[] }>
+        // akan dikonversi ke array sebelum return
+        _volumeMap:     new Map(),
       })
     }
 
     const s = map.get(key)
+    const volNum = zine.volume ?? 0
 
-    // Cek apakah volume number yang sama sudah ada
-    const existingVolIdx =
-      zine.volume != null
-        ? s.volumes.findIndex((v) => v.volume === zine.volume)
-        : -1
-
-    if (existingVolIdx === -1) {
-      // Volume belum ada — tambahkan baru
-      s.volumes.push({
-        slug:            zine.slug,
-        _sourceId:       zine.id,
+    if (!s._volumeMap.has(volNum)) {
+      s._volumeMap.set(volNum, {
+        volume:          volNum,
         volumeLabel:     zine.volumeLabel || (zine.volume ? `Vol.${zine.volume}` : null),
-        volume:          zine.volume,
         publicationYear: zine.publicationYear,
+        // Cover volume = cover issue pertama (nomor terkecil) dalam volume ini
+        // akan di-update saat iterasi issue
         coverImageUrl:   zine.coverImageUrl,
-        viewCount:       zine.viewCount     || 0,
-        downloadCount:   zine.downloadCount || 0,
-        // issueCount hanya dari field issueCount asli — JANGAN fallback ke totalPages
-        // karena totalPages = jumlah chapter EPUB, bukan jumlah edisi majalah
-        issueCount:      zine.issueCount    || null,
+        _coverIssueNum:  zine.issueNumber ?? '0',
+        issues:          [],
+        totalViewCount:     0,
+        totalDownloadCount: 0,
         averageRating:   zine.averageRating || null,
       })
+    }
 
-      s.totalViews     += zine.viewCount     || 0
-      s.totalDownloads += zine.downloadCount || 0
-      if (zine.isFeatured) s.isFeatured = true
+    const vol = s._volumeMap.get(volNum)
 
-    } else {
-      // Volume duplikat — update cover jika record ini lebih baru
-      const existing = s.volumes[existingVolIdx]
-      const isNewer  = (zine.id || 0) > (existing._sourceId || 0)
+    // Tambahkan issue ke volume ini
+    const issueExists = vol.issues.some(
+      (i) => i.slug === zine.slug || i.issueNumber === zine.issueNumber
+    )
 
-      if (isNewer && zine.coverImageUrl && zine.coverImageUrl !== existing.coverImageUrl) {
-        s.volumes[existingVolIdx] = {
-          ...existing,
-          coverImageUrl: zine.coverImageUrl,
-          slug:          zine.slug,
-          _sourceId:     zine.id,
-        }
+    if (!issueExists) {
+      vol.issues.push({
+        slug:        zine.slug,
+        issueNumber: zine.issueNumber,
+        issueLabel:  zine.issueNumber ? `No.${zine.issueNumber}` : zine.subtitle || zine.slug,
+        subtitle:    zine.subtitle,
+        coverImageUrl: zine.coverImageUrl,
+        viewCount:   zine.viewCount    || 0,
+        downloadCount: zine.downloadCount || 0,
+        readCount:   zine.readCount    || 0,
+        estimatedReadTime: zine.estimatedReadTime || null,
+        publicationYear: zine.publicationYear,
+        averageRating: zine.averageRating || null,
+        publishedAt: zine.publishedAt,
+      })
+
+      vol.totalViewCount     += zine.viewCount    || 0
+      vol.totalDownloadCount += zine.downloadCount || 0
+
+      // Cover volume pakai issue dengan nomor terkecil (issue pertama)
+      const thisNum = parseInt(zine.issueNumber || '9999', 10)
+      const curNum  = parseInt(vol._coverIssueNum   || '9999', 10)
+      if (thisNum < curNum) {
+        vol.coverImageUrl    = zine.coverImageUrl
+        vol._coverIssueNum   = zine.issueNumber
       }
     }
+
+    s.totalViews     += zine.viewCount    || 0
+    s.totalDownloads += zine.downloadCount || 0
+    if (zine.isFeatured) s.isFeatured = true
   })
 
-  // Sort volumes: terbaru (nomor terbesar) di depan
-  map.forEach((s) => {
-    s.volumes.sort((a, b) => (b.volume || 0) - (a.volume || 0))
-    s.volumes.forEach((v) => { delete v._sourceId })
-  })
+  // Konversi _volumeMap → array, sort, bersihkan field internal
+  return Array.from(map.values()).map((s) => {
+    const volumes = Array.from(s._volumeMap.values())
+      .map((vol) => {
+        // Sort issues ASC (No.1 dulu, No.2 dst.)
+        vol.issues.sort((a, b) => {
+          const na = parseInt(a.issueNumber || '0', 10)
+          const nb = parseInt(b.issueNumber || '0', 10)
+          return na - nb
+        })
+        delete vol._coverIssueNum
+        return vol
+      })
+      // Sort volumes DESC (terbaru di depan)
+      .sort((a, b) => (b.volume || 0) - (a.volume || 0))
 
-  return Array.from(map.values())
+    const { _volumeMap, ...rest } = s
+    return { ...rest, volumes }
+  })
 }
 
 // ── Skeleton untuk ZineSeriesCard ─────────────────────────────────────────────

@@ -1,4 +1,3 @@
-// src/components/Social/FilmDetailSocialSection.jsx
 import { Quote, ListChecks } from 'lucide-react'
 import AddToListButton             from './AddToListButton'
 import SocialAnnotationsForEntity  from './SocialAnnotationsForEntity'

@@ -1,4 +1,3 @@
-// src/hooks/useDarkMode.js
 import { useSyncExternalStore } from 'react'
 
 function subscribe(cb) {

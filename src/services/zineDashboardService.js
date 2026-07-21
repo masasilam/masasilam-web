@@ -1,8 +1,3 @@
-// ============================================
-// src/services/zineDashboardService.js
-// Dashboard service untuk Zine
-// Mirrors dashboardService.js pattern
-// ============================================
 import api from './api'
 
 const normalize = (res, isArray = false) => {

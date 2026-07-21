@@ -1,5 +1,3 @@
-// src/pages/dashboard/NewspaperEditorPage.jsx
-
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {

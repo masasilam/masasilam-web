@@ -1,6 +1,3 @@
-// src/pages/social/SocialHubPage.jsx
-// Landing page shown at /sosial – redirects authenticated users to feed,
-// shows a public overview for guests.
 import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {

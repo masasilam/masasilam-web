@@ -1,12 +1,5 @@
-// src/hooks/useLocalStorage.js - Custom hook for localStorage persistence
 import { useState, useEffect } from 'react'
 
-/**
- * Custom hook for managing state with localStorage persistence
- * @param {string} key - localStorage key
- * @param {any} initialValue - default value if localStorage is empty
- * @returns {[value, setValue]} - state value and setter function
- */
 export const useLocalStorage = (key, initialValue) => {
   // Initialize state with value from localStorage or initialValue
   const [storedValue, setStoredValue] = useState(() => {

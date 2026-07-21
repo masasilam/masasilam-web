@@ -1,4 +1,3 @@
-// src/components/Layout/ReaderLayout.jsx - MOBILE RESPONSIVE TOC FIXED + PERSISTENT SETTINGS
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, List, Moon, Settings, Sun, X, Clock, Check, Type, Volume2, Pause, Play, LayoutDashboard, ChevronDown, ChevronRight } from 'lucide-react'
@@ -6,7 +5,6 @@ import { useTheme } from '../../hooks/useTheme'
 import { chapterService } from '../../services/chapterService'
 import logoSvg from '/masasilam-logo.svg'
 
-// ✅ FIXED: Recursive TocItem untuk support h1, h2, h3, dst.
 const TocItem = ({ chapter, bookSlug, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(true)
   const hasSubChapters = chapter.subChapters && chapter.subChapters.length > 0
@@ -59,7 +57,6 @@ const TocItem = ({ chapter, bookSlug, onClose }) => {
         </Link>
       </div>
 
-      {/* ✅ Rekursi: render subChapters dengan indentasi */}
       {hasSubChapters && isExpanded && (
         <div className="border-l-2 border-primary/20 ml-5">
           {chapter.subChapters.map((sub) => (
@@ -160,8 +157,6 @@ const ReaderLayout = ({
     localStorage.setItem('reader-content-width', 'normal')
   }
 
-  // ✅ Hanya ambil top-level chapters (parentChapterId === null)
-  // subChapters sudah di-nest di dalam masing-masing chapter dari API
   const topLevelChapters = chapters.filter(ch => ch.parentChapterId === null)
 
   return (

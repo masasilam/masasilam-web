@@ -1,31 +1,9 @@
-// ============================================
-// FILE: src/pages/ChapterReaderPage.jsx
-//
-// PERUBAHAN dari versi sebelumnya:
-//   - HAPUS: useReadingTracker (reading session tracking bukan domain chapter)
-//   - HAPUS: import useReadingTracker
-//   - HAPUS: isTracking dari destructuring (tidak dipakai)
-//   - SEMUA fitur chapter tetap utuh:
-//     ✓ Koreksi typo (CorrectionModal + TypoSelectionPopup)
-//     ✓ Reviews & liking & reply
-//     ✓ TTS (Text-to-Speech)
-//     ✓ Search in book
-//     ✓ Footnote handler
-//     ✓ Keyboard shortcuts
-//     ✓ Breadcrumb navigasi
-//     ✓ SEO + structured data
-//     ✓ Reading mode toggle
-//     ✓ Chapter navigation (prev/next)
-//     ✓ Chapter rating
-//     ✓ Scroll progress tracking (hanya untuk progress bar UI)
-// ============================================
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { chapterService } from '../services/chapterService'
 import { useTTS } from '../hooks/useTTS'
 import useChapterNavigation from '../hooks/useChapterNavigation'
 import useFootnoteHandler from '../hooks/useFootnoteHandler'
-import useTextSelection from '../hooks/useTextSelection'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import SEO from '../components/Common/SEO'
@@ -42,7 +20,6 @@ import SearchInBook from '../components/Reader/SearchInBook'
 import FootnotePopup from '../components/Reader/FootnotePopup'
 import ChapterContent from '../components/Reader/ChapterContent'
 import ReviewsSection from '../components/Reader/ReviewsSection'
-import CorrectionModal from '../components/Reader/CorrectionModal'
 import { Volume2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import '../styles/epub-styles.css'
 
@@ -71,56 +48,6 @@ const hideScrollbarStyle = `
     text-align: justify !important; text-justify: inter-word !important;
   }`
 
-// ── Slug yang tidak bisa dikoreksi ────────────────────────────────────────────
-const NON_CORRECTABLE_SLUGS = ['judul', 'kolofon', 'uncopyright']
-
-const isCorrectableChapter = (path) => {
-  if (!path) return false
-  const slug = path.split('/').pop().toLowerCase()
-  return !NON_CORRECTABLE_SLUGS.includes(slug)
-}
-
-// ── Popup khusus typo ─────────────────────────────────────────────────────────
-const TypoSelectionPopup = ({ selectedText, coords, onReport, onClose, onMouseDown, onTouchStart }) => (
-  <div
-    className="fixed z-[100] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-amber-300 dark:border-amber-700"
-    style={{
-      top: `${coords.top}px`,
-      left: `${coords.left}px`,
-      transform: 'translateX(-50%)',
-      maxWidth: '90vw',
-      width: '260px',
-    }}
-    onMouseDown={onMouseDown}
-    onTouchStart={onTouchStart}
-  >
-    <div className="p-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          Teks dipilih
-        </span>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition text-sm leading-none"
-        >
-          ✕
-        </button>
-      </div>
-      <p className="mb-3 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs italic text-gray-700 dark:text-gray-300 line-clamp-2">
-        "{selectedText.substring(0, 100)}{selectedText.length > 100 ? '…' : ''}"
-      </p>
-      <button
-        onClick={onReport}
-        className="w-full py-2 flex items-center justify-center gap-2
-          bg-amber-500 hover:bg-amber-600 text-white
-          rounded-lg text-sm font-medium transition"
-      >
-        ⚠ Laporkan Typo
-      </button>
-    </div>
-  </div>
-)
-
 // ═════════════════════════════════════════════════════════════════════════════
 const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const { bookSlug } = useParams()
@@ -136,67 +63,17 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
   const [reviews, setReviews] = useState([])
 
   const [showSearchModal, setShowSearchModal] = useState(false)
-  const [isInteractingWithPopup, setIsInteractingWithPopup] = useState(false)
   const [showTTSPanel, setShowTTSPanel] = useState(true)
   const [readingMode, setReadingMode] = useState(() => localStorage.getItem('readingMode') === 'true')
 
-  const [showCorrectionModal, setShowCorrectionModal] = useState(false)
-  const [correctionContext, setCorrectionContext] = useState(null)
-
   const fullChapterPath = chapterPath || ''
   const stopTTSOnUnmount = useRef(true)
-  const canCorrect = isCorrectableChapter(fullChapterPath)
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
-  // useReadingTracker DIHAPUS — reading session tracking adalah domain EpubReaderPage
   const { handleNextChapter, handlePrevChapter } = useChapterNavigation(bookSlug, chapter, () => {
     if (isAuthenticated) { stopTTSOnUnmount.current = true; tts.stop() }
   })
   const { footnotePopup, setFootnotePopup, handleGoToFootnote } = useFootnoteHandler(contentRef, chapter, bookSlug)
-  const { selectedText, selectionRange, selectionCoords, clearSelection } = useTextSelection(contentRef, isInteractingWithPopup)
-
-  // ── Reset selection saat chapter berganti ──────────────────────────────────
-  useEffect(() => {
-    setIsInteractingWithPopup(false)
-    clearSelection()
-  }, [fullChapterPath, chapter?.chapterNumber])
-
-  useEffect(() => {
-    if (!selectedText) setIsInteractingWithPopup(false)
-  }, [selectedText])
-
-  // ── Typo correction ────────────────────────────────────────────────────────
-  const handleOpenCorrection = () => {
-    if (!canCorrect || !selectedText || !selectionRange) return
-
-    let contextBefore = ''
-    let contextAfter  = ''
-    let startPosition = selectionRange.startOffset || 0
-    let endPosition   = selectionRange.endOffset   || 0
-
-    try {
-      const anchorNode = window.getSelection()?.anchorNode
-      if (anchorNode?.nodeType === Node.TEXT_NODE) {
-        const fullText = anchorNode.textContent || ''
-        const selStart = selectionRange.startOffset
-        const selEnd   = selectionRange.endOffset
-        contextBefore = fullText.slice(Math.max(0, selStart - 50), selStart)
-        contextAfter  = fullText.slice(selEnd, Math.min(fullText.length, selEnd + 50))
-        startPosition = selStart
-        endPosition   = selEnd
-      }
-    } catch {}
-
-    setCorrectionContext({ selectedText, contextBefore, contextAfter, startPosition, endPosition })
-    clearSelection()
-    setIsInteractingWithPopup(false)
-    setShowCorrectionModal(true)
-  }
-
-  const handleSubmitCorrection = async (correctionData) => {
-    if (!chapter?.chapterNumber) throw new Error('Chapter tidak ditemukan')
-    await chapterService.submitCorrection(bookSlug, parseInt(chapter.chapterNumber), correctionData)
-  }
 
   // ── TTS ────────────────────────────────────────────────────────────────────
   const handleTTSToggle = () => {
@@ -489,24 +366,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
           />
         )}
 
-        {/* ── Correction modal ── */}
-        {canCorrect && showCorrectionModal && correctionContext && (
-          <CorrectionModal
-            selectedText={correctionContext.selectedText}
-            contextBefore={correctionContext.contextBefore}
-            contextAfter={correctionContext.contextAfter}
-            startPosition={correctionContext.startPosition}
-            endPosition={correctionContext.endPosition}
-            onSave={handleSubmitCorrection}
-            onClose={() => { setShowCorrectionModal(false); setCorrectionContext(null) }}
-            onNavigateToLogin={() => {
-              setShowCorrectionModal(false)
-              setCorrectionContext(null)
-              navigate('/masuk', { state: { from: location.pathname } })
-            }}
-          />
-        )}
-
         {/* ── Breadcrumb ── */}
         {chapter.breadcrumbs && chapter.breadcrumbs.length > 0 && (
           <nav className="mb-6 text-sm" aria-label="Breadcrumb">
@@ -560,46 +419,6 @@ const ChapterReaderPage = ({ fontSize, setReadingProgress, chapterPath }) => {
             hasPrevChapter={!!chapter?.previousChapter}
             hasNextChapter={!!chapter?.nextChapter}
             onMinimize={() => setShowTTSPanel(false)}
-          />
-        )}
-
-        {/* ── Banner kontribusi typo ── */}
-        {canCorrect && (
-          <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-            <div className="flex items-stretch">
-              <div className="w-1 bg-amber-500 flex-shrink-0 rounded-l-xl" />
-              <div className="px-4 py-3.5 flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#BA7517" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#BA7517" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">
-                    Bantu kami menjaga kualitas teks
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Menemukan typo atau kesalahan ketik?{' '}
-                    <strong className="text-gray-700 dark:text-gray-300 font-medium">Pilih teksnya</strong>, lalu klik{' '}
-                    <strong className="text-gray-700 dark:text-gray-300 font-medium">Laporkan Typo</strong>{' '}
-                    — MasasilaM mengandalkan partisipasi pembaca untuk melaporkan kesalahan ketik, koreksi, dan perbaikan lainnya.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Typo selection popup ── */}
-        {canCorrect && selectedText && selectionCoords && (
-          <TypoSelectionPopup
-            selectedText={selectedText}
-            coords={selectionCoords}
-            onReport={handleOpenCorrection}
-            onClose={() => { clearSelection(); setIsInteractingWithPopup(false) }}
-            onMouseDown={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true) }}
-            onTouchStart={(e) => { e.stopPropagation(); setIsInteractingWithPopup(true) }}
           />
         )}
 

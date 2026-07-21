@@ -1,7 +1,3 @@
-// ============================================
-// src/pages/auth/VerifyEmailPage.jsx
-// ============================================
-
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { authService } from '../../services/authService'

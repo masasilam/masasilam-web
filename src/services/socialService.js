@@ -1,6 +1,3 @@
-// src/services/socialService.js
-// Covers all /api/social/* endpoints
-
 import api from './api'
 
 // ── FEED ──────────────────────────────────────────────────────────────────────

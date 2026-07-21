@@ -1,6 +1,3 @@
-// ============================================
-// FILE: src/components/Reader/ChapterContent.jsx - ALLOW ADJACENT MARKS
-// ============================================
 import { memo, useEffect, useRef } from 'react'
 
 const ChapterContent = memo(({ htmlContent, fontSize, readingMode, highlights = [], notes = [] }) => {

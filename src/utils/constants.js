@@ -1,7 +1,3 @@
-// ============================================
-// src/utils/constants.js
-// ============================================
-
 import config from '../config/env'
 
 // Use centralized config instead of direct import.meta.env

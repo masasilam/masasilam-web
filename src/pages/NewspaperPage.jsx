@@ -1,27 +1,3 @@
-// src/pages/NewspaperPage.jsx
-// ============================================
-// LIGHT: Warm cream/parchment — editorial siang
-// DARK:  Deep navy/slate      — reading room malam
-//
-// LIGHT MODE PALETTE (selaras BooksPage & FilmsPage):
-//   Background  : stone-50    (#fafaf9)
-//   Surface     : white       (#ffffff)
-//   Border      : stone-200   (#e7e5e4)
-//   Text primary: stone-900   (#1c1917)
-//   Text muted  : stone-500   (#78716c)
-//   Accent bg   : violet-50   (#f5f3ff)
-//   CTA/accent  : violet-600  (#7c3aed)
-//
-// DARK MODE PALETTE:
-//   Background  : slate-950   (#020617)
-//   Surface     : slate-900   (#0f172a)
-//   Border      : slate-700   (#334155)
-//   Text primary: slate-50    (#f8fafc)
-//   Text muted  : slate-400   (#94a3b8)
-//   Accent bg   : violet-500/10
-//   CTA/accent  : violet-400  (#a78bfa)
-// ============================================
-
 import { useState, useEffect, memo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {

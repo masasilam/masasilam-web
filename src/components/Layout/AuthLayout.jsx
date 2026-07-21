@@ -1,7 +1,3 @@
-// ============================================
-// src/components/Layout/AuthLayout.jsx
-// ============================================
-
 import { Link } from 'react-router-dom'
 import MasasilamLogo from '/masasilam-logo.svg'
 

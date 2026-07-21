@@ -1,8 +1,3 @@
-// ============================================
-// src/config/env.js
-// Centralized environment configuration
-// ============================================
-
 const config = {
   // API Configuration
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,

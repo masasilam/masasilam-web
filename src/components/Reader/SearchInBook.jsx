@@ -1,4 +1,3 @@
-// src/components/Reader/SearchInBook.jsx
 import { useState, useEffect, useRef } from 'react'
 import { Search, X, Clock, ExternalLink } from 'lucide-react'
 import { chapterService } from '../../services/chapterService'

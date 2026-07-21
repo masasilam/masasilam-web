@@ -1,7 +1,3 @@
-// ============================================
-// src/services/authService.js - FIXED ERROR HANDLING
-// ============================================
-
 import api from './api';
 
 const authService = {

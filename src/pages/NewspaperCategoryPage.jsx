@@ -1,9 +1,3 @@
-// src/pages/NewspaperCategoryPage.jsx
-// ============================================
-// LIGHT: bg-stone-50, surface=white, border=stone-200, accent=violet
-// DARK:  bg-slate-950, surface=slate-900, border=slate-700, accent=violet
-// ============================================
-
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import {

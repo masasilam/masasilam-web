@@ -1,11 +1,3 @@
-// ============================================
-// src/utils/validation.js
-// ============================================
-
-/**
- * Validation rules and functions
- */
-
 export const VALIDATION_RULES = {
   USERNAME: {
     minLength: 3,

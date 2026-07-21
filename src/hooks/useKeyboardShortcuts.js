@@ -1,6 +1,3 @@
-// ============================================
-// FILE 14: src/hooks/useKeyboardShortcuts.js
-// ============================================
 import { useEffect } from 'react'
 
 const useKeyboardShortcuts = ({

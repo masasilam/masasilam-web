@@ -1,398 +1,418 @@
-import { useState, useEffect } from 'react'
-import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Github, Instagram, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Book, Heart, Users, Globe, Target, Zap, Award, TrendingUp, Lock, Mail, Instagram, X, BookOpen, CheckCircle2, Film, Layers, Newspaper } from 'lucide-react'
 import bookService from '../services/bookService'
 import userService from '../services/userService'
+import { filmService } from '../services/filmService'
+import zineService from '../services/zineService'
+import api from '../services/api'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import SEO from '../components/Common/SEO'
 import { generateOrganizationStructuredData, generateFAQStructuredData, generateArticleStructuredData } from '../utils/seoHelpers'
 
+// ─── StatCard — animasi counter sederhana, mirip kode asli ─────────────────
+// Tidak perlu trigger/flag — cukup jalankan animasi saat value > 0 pertama kali
+const StatCard = ({ icon: Icon, value, label, color }) => {
+  const [count, setCount] = useState(0)
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (!value || started.current) return
+    started.current = true
+    const duration = 1600
+    let startTs = null
+    const tick = (ts) => {
+      if (!startTs) startTs = ts
+      const p = Math.min((ts - startTs) / duration, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setCount(Math.floor(eased * value))
+      if (p < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [value])
+
+  return (
+    <div className="flex flex-col items-center justify-center py-6 px-3 text-center">
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${color.bg}`}>
+        <Icon className={`w-5 h-5 ${color.text}`} aria-hidden="true" />
+      </div>
+      <span className="font-serif text-2xl sm:text-3xl font-bold text-amber-400 leading-none mb-1 tabular-nums">
+        {count.toLocaleString('id-ID')}
+      </span>
+      <span className="text-[10px] font-medium uppercase tracking-widest text-stone-500 dark:text-white/40 mt-1 leading-tight">
+        {label}
+      </span>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 const AboutPage = () => {
   const [stats, setStats] = useState({
-    totalBooks: 0,
-    totalUsers: 0,
-    totalGenres: 0,
-    totalAuthors: 0
+    totalBooks: 0, totalZines: 0, totalFilms: 0,
+    totalArticles: 0, totalUsers: 0, totalAuthors: 0,
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [booksRes, genresRes, usersRes, authorsRes] = await Promise.all([
-          bookService.getBooks({ page: 1, limit: 1 }),
-          bookService.getGenres(true),
-          userService.getAllUsers(),
-          bookService.getAuthors(1, 1)
+        const results = await Promise.allSettled([
+          bookService.getBooks({ page: 1, limit: 1 }),          // [0] books
+          bookService.getAuthors(1, 1),                          // [1] authors
+          userService.getAllUsers(),                              // [2] users
+          zineService.getZines({ page: 1, limit: 1 }),           // [3] zines
+          filmService.getFilms({ page: 0, size: 1 }),            // [4] films
+          api.get('/newspapers/stats'),                          // [5] newspaper stats
         ])
 
-        const totalBooks = booksRes.data?.total || 0
-        const genresWithBooks = (genresRes.data || []).filter(g => (g.bookCount || 0) >= 1)
-        const totalUsers = usersRes.data?.length || 0
-        const totalAuthors = authorsRes.data?.total || 0
+        const safe = (r, fn, fallback = 0) => {
+          try { return r.status === 'fulfilled' ? fn(r.value) : fallback }
+          catch { return fallback }
+        }
 
-        setStats({
-          totalBooks,
-          totalUsers,
-          totalGenres: genresWithBooks.length,
-          totalAuthors
-        })
+        const totalBooks    = safe(results[0], r => r.data?.total || r.data?.data?.total || 0)
+        const totalAuthors  = safe(results[1], r => r.data?.total || r.data?.data?.total || 0)
+        const totalUsers    = safe(results[2], r => r.data?.length || r.data?.data?.length || 0)
+        const totalZines    = safe(results[3], r => r.data?.total || r.data?.data?.total || 0)
+        const totalFilms    = safe(results[4], r => r.data?.total || r.data?.data?.total || 0)
+        // /newspapers/stats returns { data: { data: { totalArticles, totalSources, ... } } }
+        const totalArticles = safe(results[5], r =>
+          r.data?.data?.totalArticles || r.data?.totalArticles || 0
+        )
+
+        setStats({ totalBooks, totalZines, totalFilms, totalArticles, totalUsers, totalAuthors })
       } catch (error) {
         console.error('Error fetching stats:', error)
       } finally {
         setLoading(false)
       }
     }
-
     fetchStats()
   }, [])
 
-  if (loading) {
-    return <LoadingSpinner fullScreen />
-  }
+  if (loading) return <LoadingSpinner fullScreen />
 
   const displayStats = [
-    { icon: Book, value: stats.totalBooks.toLocaleString('id-ID'), label: "Koleksi Buku", color: "text-blue-600" },
-    { icon: Users, value: stats.totalUsers.toLocaleString('id-ID'), label: "Pengguna Terdaftar", color: "text-green-600" },
-    { icon: Globe, value: stats.totalGenres.toString(), label: "Genre Berbeda", color: "text-purple-600" },
-    { icon: Heart, value: stats.totalAuthors.toLocaleString('id-ID'), label: "Penulis", color: "text-red-600" }
+    { icon: Book,      value: stats.totalBooks,    label: 'Buku',       color: { text: 'text-amber-400',   bg: 'bg-amber-400/10'   } },
+    { icon: Layers,    value: stats.totalZines,    label: 'Zine & Magazine',     color: { text: 'text-emerald-400', bg: 'bg-emerald-400/10' } },
+    { icon: Film,      value: stats.totalFilms,    label: 'Film',        color: { text: 'text-blue-400',    bg: 'bg-blue-400/10'    } },
+    { icon: Newspaper, value: stats.totalArticles, label: 'Arsip Koran',        color: { text: 'text-violet-400',  bg: 'bg-violet-400/10'  } },
+    { icon: Users,     value: stats.totalUsers,    label: 'Kawan yang Mendaftar', color: { text: 'text-pink-400',    bg: 'bg-pink-400/10'    } },
+    { icon: Heart,     value: stats.totalAuthors,  label: 'Penulis',            color: { text: 'text-rose-400',    bg: 'bg-rose-400/10'    } },
   ]
 
   const values = [
-    { icon: Target, title: "User-Centric", description: "Keputusan berdasarkan kebutuhan user" },
-    { icon: Award, title: "Quality Over Quantity", description: "Fokus pada kualitas fitur dan konten" },
-    { icon: Lock, title: "Privacy & Security", description: "Data user adalah prioritas tertinggi" },
-    { icon: Users, title: "Inclusivity", description: "Platform untuk semua orang tanpa diskriminasi" },
-    { icon: TrendingUp, title: "Continuous Improvement", description: "Selalu belajar dan berkembang" },
-    { icon: Heart, title: "Community-Driven", description: "Mendengarkan dan kolaborasi dengan komunitas" }
+    { icon: Target, title: 'User-Centric', description: 'Interface yang nyaman berdasarkan kebutuhan kawan-kawan' },
+    { icon: Award, title: 'Quality Over Quantity', description: 'Fokus pada kualitas fitur dan konten' },
+    { icon: Lock, title: 'Privacy & Security', description: 'Data kawan-kawan adalah prioritas tertinggi' },
+    { icon: Users, title: 'Inclusivity', description: 'Platform untuk semua orang tanpa diskriminasi' },
+    { icon: TrendingUp, title: 'Continuous Improvement', description: 'Selalu belajar dan berkembang' },
+    { icon: Heart, title: 'Community-Driven', description: 'Mendengarkan dan kolaborasi dengan komunitas' },
+  ]
+
+  const missions = [
+    'Preservasi: Merevitalisasi karya literasi dan sinema Indonesia masa lalu bebas hak cipta ke dalam format digital modern.',
+    'Aksesibilitas: Menyajikan pengalaman eksplorasi media masa silam yang mulus, nyaman, dan ramah pengguna.',
+    'Konektivitas: Membuka gerbang warisan masa lalu untuk audiens masa kini, melampaui batas ruang dan waktu.',
   ]
 
   const features = [
-    "✅ Unlimited reading dengan 0 ads",
-    "✅ Smart bookmark, highlight, dan notes",
-    "✅ Reading analytics & pattern recognition",
-    "✅ Achievement & gamification",
-    "✅ Personalized recommendations",
-    "✅ Reading calendar & streak tracking",
-    "✅ Export annotations dalam berbagai format",
-    "✅ Search in book dengan context preview",
-    "✅ Social features (review, rating, diskusi)"
+    'Baca tanpa batas tanpa iklan',
+    'Bookmark, highlight, dan note',
+    'Analisis dan pola membaca',
+    'Pencapaian dan gamifikasi',
+    'Rekomendasi yang dipersonalisasi',
+    'Kalender membaca dan pelacakan streak',
+    'Perbaikan typo pada teks buku',
+    'Pencarian dalam buku dengan pratinjau konteks',
+    'Fitur sosial (ulasan, penilaian, diskusi)',
   ]
 
-  // Social media links - sama dengan yang di Footer
   const socialLinks = [
-    {
-      icon: X,
-      label: 'X',
-      url: 'https://x.com/masasilamdotcom',
-      bgColor: 'bg-gray-900 dark:bg-gray-700',
-      hoverColor: 'hover:bg-gray-800 dark:hover:bg-gray-600'
-    },
-    {
-      icon: Instagram,
-      label: 'Instagram',
-      url: 'https://instagram.com/masasilamdotcom',
-      bgColor: 'bg-gradient-to-br from-purple-600 to-pink-600',
-      hoverColor: 'hover:from-purple-700 hover:to-pink-700'
-    },
-    {
-      icon: Mail,
-      label: 'Email',
-      url: 'mailto:support@masasilam.com',
-      bgColor: 'bg-primary',
-      hoverColor: 'hover:bg-amber-600'
-    }
+    { icon: X, label: 'X', url: 'https://x.com/masasilamdotcom' },
+    { icon: Instagram, label: 'Instagram', url: 'https://instagram.com/masasilamdotcom' },
+    { icon: Mail, label: 'Email', url: 'mailto:info@masa-silam.com' },
   ]
 
-  // Generate SEO data
   const organizationSchema = generateOrganizationStructuredData()
-
   const faqData = [
-    {
-      question: "Apa itu MasasilaM?",
-      answer: "MasasilaM adalah perpustakaan digital gratis untuk buku-buku domain publik. Kami menyediakan akses ke ribuan buku klasik dengan fitur smart reading, bookmark, highlight, dan banyak lagi."
-    },
-    {
-      question: "Apakah semua buku gratis?",
-      answer: "Ya! Semua buku di MasasilaM adalah domain publik dan dapat diakses secara gratis tanpa batas."
-    },
-    {
-      question: "Bagaimana cara menggunakan MasasilaM?",
-      answer: "Cukup daftar akun gratis, lalu Anda dapat mulai membaca, membuat bookmark, highlight, dan berinteraksi dengan komunitas pembaca lainnya."
-    },
-    {
-      question: "Apa itu domain publik?",
-      answer: "Domain publik adalah karya yang tidak lagi dilindungi hak cipta dan dapat digunakan, dibagikan, dan dimodifikasi secara bebas oleh siapa saja."
-    }
+    { question: 'Apa itu MasasilaM?', answer: 'MasasilaM adalah perpustakaan digital gratis untuk buku-buku domain publik. Kami menyediakan akses ke ribuan buku klasik dengan fitur smart reading, bookmark, highlight, dan banyak lagi.' },
+    { question: 'Apakah semua buku gratis?', answer: 'Ya! Semua buku di MasasilaM adalah domain publik dan dapat diakses secara gratis tanpa batas.' },
+    { question: 'Bagaimana cara menggunakan MasasilaM?', answer: 'Cukup daftar akun gratis, lalu Anda dapat mulai membaca, membuat bookmark, highlight, dan berinteraksi dengan komunitas pembaca lainnya.' },
+    { question: 'Apa itu domain publik?', answer: 'Domain publik adalah karya yang tidak lagi dilindungi hak cipta dan dapat digunakan, dibagikan, dan dimodifikasi secara bebas oleh siapa saja.' },
   ]
-
   const faqSchema = generateFAQStructuredData(faqData)
-
   const articleSchema = generateArticleStructuredData({
-    title: "Tentang MasasilaM - Perpustakaan Digital Buku Domain Publik",
-    description: "MasasilaM adalah perpustakaan digital gratis untuk buku-buku domain publik dengan fitur smart reading dan komunitas pembaca aktif.",
-    url: "/tentang",
-    publishedAt: "2025-01-01",
-    modifiedAt: new Date().toISOString()
+    title: 'Tentang MasasilaM - Perpustakaan Digital Domain Publik dan Yang Terbengkalai dan Yang Terdegradasi',
+    description: 'MasasilaM adalah perpustakaan digital gratis untuk buku-buku domain publik dan yang terbengkalai dan yang terdegradasi dengan fitur smart reading dan komunitas pembaca aktif.',
+    url: '/tentang',
+    publishedAt: '2025-01-01',
+    modifiedAt: new Date().toISOString(),
   })
 
   return (
     <>
       <SEO
         title="Tentang Kami - MasasilaM"
-        description="MasasilaM adalah perpustakaan digital gratis untuk buku-buku domain publik. Platform dengan fitur smart reading, komunitas aktif, dan komitmen pada literasi digital untuk semua."
+        description="MasasilaM adalah perpustakaan digital gratis untuk buku, majalah, koran, zine dan film domain publik dan yang terbengkalai dan yang terdegradasi. Platform perpustakaan digital dengan fitur smart reading, komunitas aktif, dan komitmen pada literasi digital untuk semua."
         url="/tentang"
         type="website"
-        keywords="tentang masasilam, perpustakaan digital, domain publik, literasi digital, buku gratis, visi misi, uncopyright"
+        keywords="tentang masasilam, perpustakaan digital, domain publik, literasi digital, buku gratis, majalah gratis, koran gratis, film, gratis, visi misi, uncopyright"
         structuredData={[organizationSchema, faqSchema, articleSchema]}
       />
 
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 sm:py-16">
-        <div className="container mx-auto px-4 max-w-6xl">
-          {/* Header */}
-          <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-flex items-center gap-3 mb-6">
-              <div className="w-20 h-20 sm:w-28 sm:h-28 bg-primary rounded-full flex items-center justify-center">
-                <Book className="w-10 h-10 sm:w-14 sm:h-14 text-white" />
-              </div>
-            </div>
-            <h1 className="font-serif text-4xl sm:text-6xl font-bold mb-4 text-gray-900 dark:text-white">
-              MasasilaM
-            </h1>
-            <p className="text-lg sm:text-2xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-              Perpustakaan digital untuk buku-buku domain publik yang terbengkalai dan terdegradasi
-            </p>
+      <div className="min-h-screen bg-stone-50 dark:bg-slate-950 pb-20 transition-colors duration-300 motion-reduce:transition-none">
+
+        {/* ── HERO ─────────────────────────────────────────────────────── */}
+        <section className="relative overflow-hidden bg-white dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800 py-20 sm:py-28 text-center px-4">
+          {/* Ambient glow */}
+          <div className="pointer-events-none absolute inset-0 flex items-start justify-center">
+            <div className="w-[700px] h-[400px] rounded-full bg-amber-100/60 dark:bg-amber-900/10 blur-3xl -translate-y-1/2" />
           </div>
+
+          {/* Logo */}
+          <div className="relative inline-flex flex-col items-center mb-8">
+            <div className="relative">
+              <div className="absolute -inset-4 rounded-3xl bg-amber-100/60 dark:bg-amber-900/15 blur-2xl" />
+              <img
+                src="/masasilam-logo.svg"
+                alt="MasasilaM"
+                className="relative h-24 sm:h-32 lg:h-40 w-auto object-contain dark:invert drop-shadow-sm"
+              />
+            </div>
+            <span className="mt-3 bg-emerald-500 text-white text-[10px] font-semibold px-3 py-1 rounded-full shadow-sm tracking-wide">
+              Domain Publik dan yang Terbengkalai dan yang Terdegradasi
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1 className="font-serif text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-none mb-5 text-stone-900 dark:text-white">
+            Masa<span className="text-amber-500 dark:text-amber-400">silaM</span>
+          </h1>
+
+          <p className="text-base sm:text-xl text-stone-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed mb-10 font-light">
+            PERPUSTAKAAN DIGITAL<br/>Domain Publik<br/>dan yang Terbengkalai dan yang Terdegradasi
+          </p>
+
+          <a
+            href="/buku"
+            className="inline-flex items-center gap-2.5 px-8 py-4 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full text-sm font-medium transition-all motion-reduce:transition-none hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-900/20 dark:hover:shadow-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+          >
+            <BookOpen className="w-4 h-4" aria-hidden="true" />
+            Mulai Membaca Sekarang
+          </a>
+        </section>
+
+        {/* ── STATS BAR ────────────────────────────────────────────────── */}
+        <div className="bg-stone-100 dark:bg-slate-900 border-y border-stone-200 dark:border-slate-800">
+          <div className="max-w-5xl mx-auto grid grid-cols-3 sm:grid-cols-6 divide-x divide-stone-200 dark:divide-white/5 divide-y sm:divide-y-0">
+            {displayStats.map((s, i) => (
+              <StatCard key={i} {...s} />
+            ))}
+          </div>
+        </div>
+
+        {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
 
           {/* Manifesto */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl px-6 py-6 sm:px-8 sm:py-10 mb-12 sm:mb-16 border-l-4 border-primary">
-            <div>
-              <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-                <strong className="text-primary text-xl">Bukan Kuil Budaya</strong>, lantaran memang tak sebanding dengan perpustakaan Alexandria yang pernah kesohor itu. Tapi di sini, siapa pun juga dapat menemukan buku-buku keren—<em className="text-primary">gratis!</em>
-              </p>
+          <section className="mt-16 sm:mt-20">
+            <div className="relative bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl overflow-hidden">
+              {/* Decorative quote mark */}
+              <span className="pointer-events-none absolute top-4 left-8 text-[140px] leading-none font-serif text-amber-400/10 select-none" aria-hidden="true">❝</span>
+              {/* Glow */}
+              <div className="pointer-events-none absolute top-0 right-0 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl" />
 
-              <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-                Biarpun didirikan dengan semen selundupan, <strong className="text-primary">MasasilaM</strong> diharapkan dapat menjadi perpustakaan umum dengan ruang baca yang nyaman.
-              </p>
+              <div className="relative z-10 p-8 sm:p-12 space-y-5">
+                <p className="text-base sm:text-lg leading-relaxed text-stone-600 dark:text-white/75">
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold text-xl">Bukan Kuil Budaya</span>, lantaran memang tak sebanding dengan perpustakaan Alexandria yang pernah kesohor itu. Tapi di sini, siapa pun juga dapat menemukan buku, film, majalah, zine, koran—<em className="text-amber-600 dark:text-amber-300">gratis!</em>
+                </p>
+                <p className="text-base sm:text-lg leading-relaxed text-stone-600 dark:text-white/75">
+                  Biarpun didirikan dengan semen selundupan, <span className="text-amber-600 dark:text-amber-400 font-semibold">MasasilaM</span> diharapkan dapat menjadi perpustakaan umum dan ruang pengarsipan dengan ruang baca yang nyaman.
+                </p>
+                <p className="text-base sm:text-lg leading-relaxed text-stone-600 dark:text-white/75">
+                  Di sini kami merakit, membikin, dan berbagi file; mengedarkan relik-relik yang kami pungut dari segara internet dan segala penjurunya, menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
+                </p>
 
-              <p className="text-base sm:text-lg leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-                Di sini kami merakit dan mengembangkan sistem untuk berbagi file, mengedarkan pamflet-pamflet yang kami pungut dari segara internet, menyuntingnya, sambil menyanyikan lagu-lagu rohani dan himne Indonesia Raya.
-              </p>
-
-              <p className="text-lg sm:text-xl leading-relaxed text-primary font-semibold italic mb-6 text-justify">
-                Pelaku vandalisme yang menggorok leher sendiri—meneror dengan hukuman yang patut dicontoh.
-              </p>
-
-              <p className="text-2xl sm:text-3xl font-bold text-center mt-8 text-gray-900 dark:text-white">
-                Selamat menikmati! 📚
-              </p>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16">
-            {displayStats.map((stat, index) => {
-              const Icon = stat.icon
-              return (
-                <div key={index} className="text-center bg-white dark:bg-gray-800 rounded-xl p-6 sm:p-8 shadow-lg hover:shadow-2xl hover:scale-105 transition-all">
-                  <div className={`w-14 h-14 sm:w-20 sm:h-20 ${stat.color} bg-opacity-10 dark:bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                    <Icon className={`w-7 h-7 sm:w-10 sm:h-10 ${stat.color}`} />
-                  </div>
-                  <h3 className="font-bold text-2xl sm:text-4xl mb-2 text-gray-900 dark:text-white">{stat.value}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-semibold">{stat.label}</p>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Mission & Vision */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-12 sm:mb-16">
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6 sm:p-8 border-2 border-blue-200 dark:border-blue-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Visi Kami</h2>
+                <p className="text-2xl sm:text-3xl font-bold text-center text-stone-900 dark:text-white pt-2">
+                  Bersenang-senanglah!
+                </p>
               </div>
-              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
-                Menjadikan literasi digital <strong>accessible</strong>, <strong>engaging</strong>, dan <strong>bermakna</strong> untuk semua orang.
-              </p>
             </div>
+          </section>
 
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6 sm:p-8 border-2 border-green-200 dark:border-green-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-white" />
+          {/* Vision & Mission */}
+          <section className="mt-16 sm:mt-20">
+            <SectionLabel emoji="🎯" text="Visi & Misi" />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl p-7 sm:p-8">
+                <div className="w-11 h-11 rounded-xl bg-emerald-600 flex items-center justify-center mb-5">
+                  <Target className="w-5 h-5 text-white" aria-hidden="true" />
                 </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Misi Kami</h2>
+                <h2 className="font-serif text-2xl font-bold text-stone-900 dark:text-white mb-3">Visi Kami</h2>
+                <p className="text-sm leading-relaxed text-stone-600 dark:text-slate-400">
+                  Menjadi perpustakaan digital abadi bagi warisan literasi dan sinema Indonesia..
+                </p>
               </div>
-              <ul className="space-y-2 text-sm sm:text-base text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-2 text-justify">
-                  <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                  <span>Menyediakan buku-buku berkualitas secara gratis</span>
-                </li>
-                <li className="flex items-start gap-2 text-justify">
-                  <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                  <span>Menghadirkan pengalaman membaca digital superior</span>
-                </li>
-                <li className="flex items-start gap-2 text-justify">
-                  <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                  <span>Membangun ekosistem pembaca yang aktif</span>
-                </li>
-              </ul>
-            </div>
-          </div>
 
-          {/* Features */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-10 mb-12 sm:mb-16">
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-900 dark:text-white">
-              Fitur Unggulan
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                  <span className="text-sm sm:text-base text-gray-700 dark:text-gray-300">{feature}</span>
+              <div className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/40 dark:to-slate-900 border border-blue-200 dark:border-blue-800/40 rounded-2xl p-7 sm:p-8">
+                <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center mb-5">
+                  <Zap className="w-5 h-5 text-white" aria-hidden="true" />
                 </div>
-              ))}
+                <h2 className="font-serif text-2xl font-bold text-stone-900 dark:text-white mb-3">Misi Kami</h2>
+                <ul className="space-y-3">
+                  {missions.map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm leading-relaxed text-stone-600 dark:text-slate-400">
+                      <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-          </div>
+          </section>
+
 
           {/* Values */}
-          <div className="mb-12 sm:mb-16">
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-8 text-center text-gray-900 dark:text-white">
+          <section className="mt-16 sm:mt-20">
+            <SectionLabel emoji="💎" text="Nilai-Nilai Kami" />
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white mb-8 text-center">
               Nilai-Nilai Kami
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {values.map((value, index) => {
-                const Icon = value.icon
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              {values.map((v, i) => {
+                const Icon = v.icon
                 return (
-                  <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                      <h3 className="font-bold text-lg text-gray-900 dark:text-white">{value.title}</h3>
+                  <div
+                    key={i}
+                    className="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 hover:border-amber-300 dark:hover:border-amber-700 hover:-translate-y-1 transition-all duration-200 motion-reduce:transition-none group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-4 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/40 transition-colors motion-reduce:transition-none">
+                      <Icon className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" aria-hidden="true" />
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 text-justify">{value.description}</p>
+                    <h3 className="text-sm font-semibold text-stone-800 dark:text-slate-200 mb-1.5">{v.title}</h3>
+                    <p className="text-xs text-stone-400 dark:text-slate-500 leading-relaxed">{v.description}</p>
                   </div>
                 )
               })}
             </div>
-          </div>
+          </section>
 
-          {/* Uncopyright Statement */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-10 mb-12 sm:mb-16 border-l-4 border-green-500">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          {/* Manifesto / Uncopyright */}
+          <section className="mt-16 sm:mt-20">
+            <div className="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center gap-4 px-7 sm:px-10 py-6 bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-900 border-b border-stone-200 dark:border-slate-800">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <Globe className="w-6 h-6 text-white" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-medium text-stone-400 dark:text-slate-500 mb-0.5">Pernyataan</p>
+                  <h2 className="font-serif text-2xl font-bold text-stone-900 dark:text-white">Manifesto</h2>
+                </div>
               </div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Manifesto
-              </h2>
+              {/* Body */}
+              <div className="px-7 sm:px-10 py-8 space-y-4">
+                {[
+                  <>Hak cipta biasanya memberitahu apa yang tidak boleh dilakukan. Sebaliknya, pernyataan ini hadir untuk <strong className="text-emerald-600 dark:text-emerald-400 font-medium">menegaskan kebebasan</strong>.</>,
+                  <>Teks dan karya seni yang termuat di MasasilaM diyakini telah berada dalam <strong className="font-medium text-stone-800 dark:text-slate-200">domain publik</strong> atau berlisensi <strong className="font-medium text-stone-800 dark:text-slate-200">Creative Commons</strong>. Kami meyakini bahwa segala aktivitas non-penulisan yang dilakukan atas karya domain publik—seperti digitalisasi, penyuntingan, atau penataan tipografi—tidak menciptakan hak cipta baru. Tidak seorang pun dapat mengklaim hak milik atas pekerjaan semacam itu.</>,
+                  <>Para kontributor MasasilaM—baik yang menyumbangkan teks, koreksi, kode, atau desain—secara sadar melepaskan hasil kerja mereka di bawah ketentuan{' '}<a href="https://creativecommons.org/publicdomain/zero/1.0/deed.id" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">CC0 1.0 Universal Public Domain Dedication</a> dan/atau <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.id" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">Creative Commons Atribusi-BerbagiSerupa 4.0 Internasional (CC BY-SA 4.0)</a>. Ini adalah penyerahan sepenuhnya segala upaya mereka ke ranah publik.</>,
+                  <>Pernyataan ini adalah perwujudan dari <em>produksi nonpasar</em>, sebuah langkah yang menolak &quot;hasrat bergelora untuk menyimpan dan mempertahankan&quot; kepemilikan.</>,
+                ].map((para, i) => (
+                  <p key={i} className="text-sm sm:text-base leading-relaxed text-stone-600 dark:text-slate-400">{para}</p>
+                ))}
+
+                <div className="pt-4 border-t border-stone-200 dark:border-slate-800">
+                  <p className="text-sm sm:text-base leading-relaxed font-medium text-stone-900 dark:text-white">
+                    Upaya ini dilakukan demi memperkaya khazanah literasi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese kepada ruang kebebasan yang telah memberi kami begitu banyak.
+                  </p>
+                </div>
+              </div>
             </div>
-
-            <div className="space-y-4 text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300">
-              <p className="text-justify">
-                Hak cipta biasanya hadir untuk memberitahu apa yang tidak boleh dilakukan. Sebaliknya, pernyataan uncopyright ini hadir untuk <strong className="text-green-600 dark:text-green-400">menegaskan kebebasan</strong>.
-              </p>
-
-              <p className="text-justify">
-                Teks dan karya seni di MasasilaM diyakini telah berada dalam <strong>domain publik</strong>. Kami meyakini bahwa segala aktivitas non-penulisan yang dilakukan atas karya domain publik—seperti digitalisasi, penyuntingan, atau penataan tipografi—tidak menciptakan hak cipta baru. Tidak seorang pun dapat mengklaim hak milik atas pekerjaan semacam itu.
-              </p>
-
-              <p className="text-justify">
-                Terlepas dari itu, para kontributor MasasilaM—baik yang menyumbangkan teks, koreksi, kode, atau desain—secara sadar melepaskan hasil kerja mereka di bawah ketentuan{' '}
-                <a
-                  href="https://creativecommons.org/publicdomain/zero/1.0/deed.id"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-green-600 dark:text-green-400 font-semibold hover:underline transition-all"
-                >
-                  CC0 1.0 Universal Public Domain Dedication
-                </a>
-                . Ini adalah penyerahan sepenuhnya segala upaya mereka ke ranah publik.
-              </p>
-
-              <p className="text-justify">
-                Pernyataan ini adalah perwujudan dari <em>produksi nonpasar</em>, sebuah langkah yang menolak &quot;hasrat bergelora untuk menyimpan dan mempertahankan&quot; kepemilikan.
-              </p>
-
-              <p className="text-justify font-semibold text-gray-900 dark:text-white">
-                Upaya ini dilakukan demi memperkaya khazanah literasi, untuk menumbuhkan kebudayaan bebas dan merdeka, serta mengembalikan privilese pengetahuan kepada ruang kebebasan yang telah memberi kami begitu banyak.
-              </p>
-            </div>
-          </div>
+          </section>
 
           {/* Copyright Complaint */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-10 mb-12 sm:mb-16 border-l-4 border-yellow-400">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                <Mail className="w-6 h-6 text-white" />
+          <section className="mt-6">
+            <div className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-slate-900 border border-amber-200 dark:border-amber-800/40 rounded-3xl p-7 sm:p-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-6 h-6 text-white" aria-hidden="true" />
+                </div>
+                <h2 className="font-serif text-2xl font-bold text-stone-900 dark:text-white">
+                  Pelanggaran Hak Cipta?
+                </h2>
               </div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Pelanggaran Hak Cipta?
-              </h2>
-            </div>
-            <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-4 text-justify">
-              Meskipun kami berupaya memastikan seluruh konten di MasasilaM berada dalam domain publik, kami menyadari kemungkinan adanya kekeliruan. Jika Anda meyakini bahwa suatu karya di sini melanggar hak cipta Anda atau pihak lain, mohon segera hubungi kami.
-            </p>
-            <p className="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 mb-6 text-justify">
-              Laporan akan kami tindaklanjuti sesegera mungkin, dan konten yang terbukti bermasalah akan segera diturunkan.
-            </p>
-            <a
-              href="mailto:support@masasilam.com"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg font-semibold transition-all hover:shadow-lg transform hover:scale-105"
-            >
-              <Mail className="w-5 h-5" />
-              Kirim Laporan ke support@masasilam.com
-            </a>
-          </div>
-
-          {/* CTA */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-8 sm:p-12 border-2 border-amber-200 dark:border-amber-700 shadow-2xl text-center">
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-6 text-gray-900 dark:text-white">
-              Bergabunglah dengan Kami
-            </h2>
-
-            {/* Primary CTA */}
-            <div className="mb-8">
+              <p className="text-sm sm:text-base leading-relaxed text-stone-600 dark:text-slate-400 mb-3">
+                Meskipun kami berupaya memastikan seluruh konten di MasasilaM berada dalam domain publik atau berlisensi Creative Commons, kami menyadari kemungkinan adanya kekeliruan. Jika Anda meyakini bahwa suatu karya di sini melanggar hak cipta Anda atau pihak lain, mohon segera hubungi kami.
+              </p>
+              <p className="text-sm sm:text-base leading-relaxed text-stone-600 dark:text-slate-400 mb-6">
+                Laporan akan kami tindaklanjuti sesegera mungkin, dan konten yang terbukti bermasalah akan segera diturunkan.
+              </p>
               <a
-                href="/buku"
-                className="inline-flex items-center justify-center gap-2 px-10 py-5 bg-primary hover:bg-amber-600 text-white rounded-xl font-bold transition-all hover:shadow-xl text-lg transform hover:scale-105"
+                href="mailto:info@masa-silam.com"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full text-sm font-medium transition-all motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
               >
-                <Book className="w-6 h-6" />
-                Mulai Membaca Sekarang
+                <Mail className="w-4 h-4" aria-hidden="true" />
+                Kirim Laporan ke info@masa-silam.com
               </a>
             </div>
+          </section>
 
-            {/* Social Media Links */}
-            <div className="border-t-2 border-amber-200 dark:border-amber-700 pt-8">
-              <p className="text-gray-700 dark:text-gray-300 mb-4 font-semibold">
-                Ikuti kami di sosial media
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {socialLinks.map((social, index) => {
-                  const Icon = social.icon
-                  return (
+          {/* CTA */}
+          <section className="mt-10">
+            <div className="relative bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl overflow-hidden px-8 sm:px-14 py-14 sm:py-16 text-center">
+              {/* Glow */}
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl" />
+              </div>
+
+              <h2 className="font-serif text-3xl sm:text-5xl font-bold text-stone-900 dark:text-white mb-8 relative">
+                Bergabunglah dengan Kami
+              </h2>
+
+              <a
+                href="/buku"
+                className="inline-flex items-center gap-2.5 px-10 py-4 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-stone-900 rounded-full font-semibold text-base transition-all motion-reduce:transition-none hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-400/30 mb-10 relative focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-100 dark:focus-visible:ring-offset-slate-900"
+              >
+                <Book className="w-5 h-5" aria-hidden="true" />
+                Mulai Membaca Sekarang
+              </a>
+
+              <div className="border-t border-stone-200 dark:border-white/10 pt-8 relative">
+                <p className="text-xs uppercase tracking-widest font-medium text-stone-500 dark:text-white/40 mb-5">
+                  Ikuti kami di sosial media
+                </p>
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {socialLinks.map(({ icon: Icon, label, url }, i) => (
                     <a
-                      key={index}
-                      href={social.url}
+                      key={i}
+                      href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`inline-flex items-center gap-2 px-6 py-3 ${social.bgColor} ${social.hoverColor} text-white rounded-lg font-semibold transition-all hover:shadow-lg transform hover:scale-105`}
-                      aria-label={social.label}
+                      aria-label={label}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900/5 hover:bg-stone-900/10 dark:bg-white/8 border border-stone-300 dark:border-white/12 text-stone-600 dark:text-white/70 hover:text-stone-900 dark:hover:bg-white/15 dark:hover:text-white text-sm transition-all motion-reduce:transition-none hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-100 dark:focus-visible:ring-offset-slate-900"
                     >
-                      <Icon className="w-5 h-5" />
-                      <span className="text-sm">{social.label}</span>
+                      <Icon className="w-4 h-4" aria-hidden="true" />
+                      {label}
                     </a>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </section>
+
         </div>
       </div>
     </>
   )
 }
+
+// ─── Small helper: section label pill ───────────────────────────────────────
+const SectionLabel = ({ emoji, text }) => (
+  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3.5 py-1.5 rounded-full w-fit mb-5">
+    <span aria-hidden="true">{emoji}</span>
+    <span>{text}</span>
+  </div>
+)
 
 export default AboutPage

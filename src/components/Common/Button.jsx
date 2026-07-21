@@ -1,13 +1,3 @@
-// ============================================
-// src/components/Common/Button.jsx
-// Palette selaras BooksPage & BookDetailPage:
-//
-// primary  : amber-500 bg (#f59e0b) — CTA utama
-// secondary: stone-100/slate-800 — netral
-// outline  : border amber-500, text amber-600 — ghost CTA
-// ghost    : transparent hover stone/slate
-// ============================================
-
 const Button = ({
   children,
   variant = 'primary',
@@ -23,11 +13,6 @@ const Button = ({
     'inline-flex items-center justify-center font-semibold rounded-xl transition-all ' +
     'disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]'
 
-  // ── Variants ──────────────────────────────────────────────────────────────
-  // primary  → amber-500 solid (selaras tombol "Cari" & CTA BooksPage)
-  // secondary→ stone-100 / slate-800 (selaras tombol "Reset" FilterPanel)
-  // outline  → border amber, text amber (selaras prev/next pagination)
-  // ghost    → transparent hover stone/slate
   const variants = {
     primary:
       'bg-amber-500 hover:bg-amber-400 text-white ' +

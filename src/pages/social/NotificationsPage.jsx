@@ -1,4 +1,3 @@
-// src/pages/social/NotificationsPage.jsx
 import { useState, useEffect, useCallback } from 'react'
 import {
   Bell, CheckCheck, UserPlus, Heart, MessageCircle,

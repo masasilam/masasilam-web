@@ -1,9 +1,3 @@
-// ============================================
-// src/pages/ZinesPage.jsx
-// LIGHT: Warm cream — stone-* tokens, emerald accent
-// DARK:  Deep navy  — slate-* tokens, emerald accent
-// Mirrors BooksPage.jsx pattern
-// ============================================
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import zineService from '../services/zineService'

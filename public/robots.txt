@@ -345,4 +345,4 @@ Disallow: /
 # 6. Pagination is explicitly allowed to prevent content loss
 # 7. Asset query parameters blocked to prevent duplicate indexing
 
-# For questions or concerns, contact: support@masasilam.com
+# For questions or concerns, contact: info@masa-silam.com

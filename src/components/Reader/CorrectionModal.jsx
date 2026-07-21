@@ -1,6 +1,3 @@
-// ============================================
-// FILE: src/components/Reader/CorrectionModal.jsx
-// ============================================
 import { useState } from 'react'
 import { X, AlertTriangle, CheckCircle, Loader, LogIn } from 'lucide-react'
 

@@ -1,8 +1,3 @@
-// ============================================
-// src/services/bookService.js
-// FIX: cleanParams kini convert tipe sesuai yang backend Java expect
-// (Boolean, Integer, Long, Double) agar filter tidak stuck loading
-// ============================================
 import api from './api';
 
 // ── FIX: Convert string values ke tipe yang backend expect ───────────────────
@@ -77,6 +72,24 @@ export const bookService = {
   getDownloadUrl: async (slug) => {
     const response = await api.get(`/books/${slug}/download`)
     return response.data // { downloadUrl, filename }
+  },
+
+  // Series
+  getBooksBySeries: async (seriesSlug, page = 1, limit = 50) => {
+    try {
+      const response = await api.get(`/books/series/${seriesSlug}`, {
+        params: { page, limit }
+      })
+      const data = response.data?.data
+      return {
+        data: data?.list || [],
+        total: data?.total || 0,
+        page: data?.page || 1,
+      }
+    } catch (error) {
+      console.error('getBooksBySeries error:', error)
+      return { data: [], total: 0, page: 1 }
+    }
   },
 
   // Rating operations

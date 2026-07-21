@@ -1,23 +1,3 @@
-// src/utils/videoHelpers.js
-/**
- * Video & Subtitle Helper Utilities
- * Untuk menangani URL parsing, validasi, dan formatting
- */
-
-/**
- * Parse Wikimedia subtitle URL to get raw file
- *
- * Wikimedia menyimpan subtitle di wiki page:
- * - Wiki URL: https://commons.wikimedia.org/wiki/TimedText:FileName.webm.en.srt
- * - Raw URL: https://commons.wikimedia.org/w/index.php?title=TimedText:FileName.webm.en.srt&action=raw
- *
- * @param {string} url - Original subtitle URL from API
- * @returns {string|null} - Parsed raw file URL or null
- *
- * @example
- * const rawUrl = parseSubtitleUrl(film.subtitleUrl)
- * // Returns: https://commons.wikimedia.org/w/index.php?title=TimedText:...&action=raw
- */
 export const parseSubtitleUrl = (url) => {
   if (!url) return null
 

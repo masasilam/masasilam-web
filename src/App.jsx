@@ -1,12 +1,11 @@
-// ============================================
-// FILE: src/App.jsx
-// ============================================
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme'
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 import { Toaster } from 'react-hot-toast'
 import './styles/index.css'
+
+import ScrollToTop from './components/Common/ScrollToTop'
 
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import GuestRoute from './components/Auth/GuestRoute'
@@ -18,6 +17,7 @@ import BooksPage from './pages/BooksPage'
 import BookDetailPage from './pages/BookDetailPage'
 import TableOfContentsPage from './pages/TableOfContentsPage'
 import BookReviewsPage from './pages/BookReviewsPage'
+import SeriesDetailPage from './pages/SeriesDetailPage' // ← TAMBAH
 
 import FilmsPage from './pages/FilmsPage'
 import FilmDetailPage from './pages/FilmDetailPage'
@@ -28,6 +28,7 @@ import CompanyDetailPage from './pages/CompanyDetailPage'
 // ── Zine routes ──────────────────────────────────────────────────────────────
 import ZinesPage from './pages/ZinesPage'
 import ZineDetailPage from './pages/ZineDetailPage'
+import ZineSeriesPage from './pages/ZineSeriesPage'
 import ZineReviewsPage from './pages/ZineReviewsPage'
 
 import GenresPage from './pages/GenresPage'
@@ -46,6 +47,7 @@ import FAQPage from './pages/FAQPage'
 import HowToReadPage from './pages/HowToReadPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
+import DMCAPage from './pages/DMCAPage'
 
 import ChapterReaderWrapper from './pages/ChapterReaderWrapper'
 
@@ -123,6 +125,8 @@ function App() {
 
   return (
     <div className="app">
+      <ScrollToTop />
+
       <Toaster
         position="top-right"
         toastOptions={{
@@ -137,18 +141,23 @@ function App() {
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
 
         {/* ── Book Routes ────────────────────────────────────────────── */}
+        <Route path="/buku/seri/:seriesSlug" element={<PublicLayout><SeriesDetailPage /></PublicLayout>} />
         <Route path="/buku" element={<PublicLayout><BooksPage /></PublicLayout>} />
         <Route path="/buku/terpopuler" element={<PublicLayout><PopularBooksPage /></PublicLayout>} />
         <Route path="/buku/terbaru" element={<PublicLayout><NewBooksPage /></PublicLayout>} />
         <Route path="/buku/rekomendasi" element={<PublicLayout><RecommendedBooksPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/daftar-isi" element={<PublicLayout><TableOfContentsPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/ulasan" element={<PublicLayout><BookReviewsPage /></PublicLayout>} />
+        <Route path="/buku/:bookSlug/baca" element={<EpubReaderPage />} />
         <Route path="/buku/:bookSlug" element={<PublicLayout><BookDetailPage /></PublicLayout>} />
         <Route path="/buku/:bookSlug/*" element={<ChapterReaderWrapper />} />
-        <Route path="/buku/:bookSlug/baca" element={<EpubReaderPage />} />
 
         {/* ── Zine Routes ────────────────────────────────────────────── */}
         <Route path="/zine" element={<PublicLayout><ZinesPage /></PublicLayout>} />
+
+        {/* ← TAMBAH INI, harus sebelum /zine/:zineSlug */}
+        <Route path="/zine/seri/:seriesSlug" element={<PublicLayout><ZineSeriesPage /></PublicLayout>} />
+
         <Route path="/zine/:zineSlug" element={<PublicLayout><ZineDetailPage /></PublicLayout>} />
         <Route path="/zine/:zineSlug/ulasan" element={<PublicLayout><ZineReviewsPage /></PublicLayout>} />
         <Route path="/zine/:zineSlug/baca" element={<EpubReaderPage mode="zine" />} />
@@ -189,6 +198,7 @@ function App() {
         <Route path="/kontak" element={<PublicLayout><ContactPage /></PublicLayout>} />
         <Route path="/privasi" element={<PublicLayout><PrivacyPolicyPage /></PublicLayout>} />
         <Route path="/syarat-ketentuan" element={<PublicLayout><TermsOfServicePage /></PublicLayout>} />
+        <Route path="/dmca" element={<PublicLayout><DMCAPage /></PublicLayout>} />
 
         {/* ── Auth ───────────────────────────────────────────────────── */}
         <Route path="/masuk" element={<AuthLayout><LoginPage /></AuthLayout>} />
@@ -233,10 +243,6 @@ function App() {
         </Route>
 
         {/* ── Social Routes ──────────────────────────────────────────── */}
-        {/*                                                               */}
-        {/* FIX: dibungkus PublicLayout agar Header utama (Buku, Film,   */}
-        {/* Koran, Blog, dll) tetap tampil di semua halaman /sosial/*.    */}
-        {/* SocialLayout hanya menyediakan sub-nav sidebar sosial.        */}
         <Route
           path="/sosial"
           element={

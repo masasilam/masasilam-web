@@ -1,16 +1,8 @@
-// ============================================
-// src/pages/ReadingEntryPage.jsx - FIXED
-// ============================================
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import bookService from '../services/bookService'
 
-/**
- * ✅ Smart entry point untuk mulai membaca
- * Redirect ke chapter terakhir yang dibaca atau chapter pertama
- * Menggunakan HIERARCHICAL SLUG PATHS, bukan /bab/number
- */
 const ReadingEntryPage = () => {
   const { bookSlug } = useParams()
   const navigate = useNavigate()

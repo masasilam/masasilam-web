@@ -1,4 +1,3 @@
-// src/components/Social/NewspaperSocialSection.jsx
 import { Quote, ListChecks } from 'lucide-react'
 import AddToListButton             from './AddToListButton'
 import SocialAnnotationsForEntity  from './SocialAnnotationsForEntity'

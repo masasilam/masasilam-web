@@ -1,7 +1,3 @@
-// ============================================
-// src/pages/PersonDetailPage.jsx - SEMPURNA SEPERTI BUKU
-// ============================================
-
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Helmet } from 'react-helmet-async'
@@ -72,7 +68,7 @@ export default function PersonDetailPage() {
               to="/film"
               className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
             >
-              Koleksi Film
+              Kumpulan Film
             </Link>
             <span className="text-gray-400 dark:text-gray-500">/</span>
             <span className="text-gray-900 dark:text-white font-medium truncate">

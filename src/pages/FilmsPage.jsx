@@ -1,9 +1,3 @@
-// ============================================
-// src/pages/FilmsPage.jsx
-// LIGHT: Cool slate/white — sinema siang bersih
-// DARK:  Deep navy/slate  — bioskop malam elegan
-// ============================================
-
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { filmService } from '../services/filmService'
@@ -298,11 +292,11 @@ const FilmsPage = () => {
 
   // ── SEO ────────────────────────────────────────────────────────────────────
   const pageTitle = appliedCrit.searchTitle
-    ? `${appliedCrit.searchTitle} - Koleksi Film`
-    : `Koleksi Film Digital - Halaman ${pageFromUrl}`
+    ? `${appliedCrit.searchTitle} - Kumpulan Film`
+    : `Kumpulan Film - Halaman ${pageFromUrl}`
   const pageDescription = appliedCrit.searchTitle
     ? `Hasil pencarian "${appliedCrit.searchTitle}" — Temukan film di koleksi kami`
-    : `Jelajahi ${totalFilms.toLocaleString('id-ID')} film klasik domain publik. Halaman ${pageFromUrl} dari ${totalPages}.`
+    : `Jelajahi ${totalFilms.toLocaleString('id-ID')} film domain publik. Halaman ${pageFromUrl} dari ${totalPages}.`
   const pageUrl = pageFromUrl > 1 ? `/film?page=${pageFromUrl}` : '/film'
   const prevUrl = pageFromUrl > 1
     ? (pageFromUrl === 2 ? '/film' : `/film?page=${pageFromUrl - 1}`)
@@ -328,7 +322,7 @@ const FilmsPage = () => {
         description={pageDescription}
         url={pageUrl}
         type="website"
-        keywords="film gratis, domain publik, film klasik, tonton film online, film vintage"
+        keywords="film gratis, domain publik, film, tonton film online, film vintage"
         prevUrl={prevUrl}
         nextUrl={nextUrl}
       />
@@ -374,7 +368,7 @@ const FilmsPage = () => {
               <div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1.5 transition-colors
                                text-slate-900 dark:text-slate-50">
-                  Koleksi Film Digital
+                  Kumpulan Film
                 </h1>
                 <p className="text-sm sm:text-base transition-colors
                               text-slate-500 dark:text-slate-400">

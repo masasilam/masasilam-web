@@ -1,6 +1,3 @@
-// ============================================
-// FILE 9: src/components/Reader/ReviewsSection.jsx
-// ============================================
 import { useState } from 'react'
 import { MessageSquare, ThumbsUp, Send } from 'lucide-react'
 import Button from '../Common/Button'

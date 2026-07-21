@@ -1,6 +1,3 @@
-// ============================================
-// FILE 11: src/hooks/useSwipeGesture.js
-// ============================================
 import { useState, useEffect } from 'react'
 
 const useSwipeGesture = (contentRef, chapter, onNextChapter, onPrevChapter) => {

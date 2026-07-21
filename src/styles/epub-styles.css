@@ -1,54 +1,39 @@
 /* ================================================================
-   EPUB READER STYLES FOR MasasilaM - OPTIMIZED SPACING VERSION
-   Path: src/styles/epub-styles.css
-
-   ✅ FIX: Optimasi spacing dengan max-width yang lebih besar untuk .chapter-content
-   ✅ Konsistensi lebar area buku antara mode normal dan mode baca
-   ================================================================ */
-
-/* ================================================================
-   1️⃣ CHAPTER CONTENT WRAPPER - HYPHENATION CORE
+   1️⃣ CHAPTER CONTENT WRAPPER
    ================================================================ */
 .chapter-content {
   font-family: "Minion Pro", "Adobe Garamond Pro", "Garamond", "Times New Roman", "Liberation Serif", serif;
   font-size: 1em;
   line-height: 1.5;
-  /* ✅ OPTIMIZED: Max-width diperbesar dari 38em ke 39.5em untuk mengurangi spacing kiri-kanan */
   max-width: 39.5em;
   margin: 0 auto;
   padding: 0;
   text-align: justify;
 
-  /* ✅ CRITICAL: Enhanced hyphenation support */
-  -webkit-hyphens: auto !important;
-  -moz-hyphens: auto !important;
-  -ms-hyphens: auto !important;
-  hyphens: auto !important;
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
 
-  /* Indonesian-friendly hyphenation limits */
-  -webkit-hyphenate-limit-before: 2;
+  -webkit-hyphenate-limit-before: 3;
   -webkit-hyphenate-limit-after: 3;
-  -webkit-hyphenate-limit-chars: 5 2 2;
-  -moz-hyphenate-limit-chars: 5 2 2;
-  hyphenate-limit-chars: 5 2 2;
+  -webkit-hyphenate-limit-chars: 6 3 3;
+  -moz-hyphenate-limit-chars: 6 3 3;
+  hyphenate-limit-chars: 6 3 3;
   hyphenate-limit-lines: 2;
   -webkit-hyphenate-limit-last: always;
   hyphenate-limit-last: always;
 
-  /* Better word breaking for long words */
-  word-wrap: break-word !important;
-  overflow-wrap: break-word !important;
-  word-break: normal !important;
-
-  /* Language hint for browser */
-  -webkit-locale: "id";
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 /* ================================================================
    2️⃣ STRUKTUR TEKS UTAMA
    ================================================================ */
 
-/* Judul dalam chapter - NO hyphenation */
+/* Judul - NO hyphenation */
 .chapter-content h1,
 .chapter-content h2,
 .chapter-content h3,
@@ -58,9 +43,9 @@
   font-family: inherit;
   text-align: center;
   margin: 2.5em 0 0.25em 0;
-  -webkit-hyphens: none !important;
-  -moz-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  hyphens: none;
   page-break-after: avoid;
 }
 
@@ -71,25 +56,29 @@
 .chapter-content h5 { font-size: 1.05em; font-weight: 500; }
 .chapter-content h6 { font-size: 1em; font-weight: 450; }
 
-/* Paragraf - WITH hyphenation */
+/* Paragraf - WITH hyphenation, WITH indent */
 .chapter-content p {
   margin: 0;
   text-align: justify;
   text-indent: 1.5em;
   orphans: 2;
   widows: 2;
-
-  /* ✅ CRITICAL: Force hyphenation on paragraphs */
-  -webkit-hyphens: auto !important;
-  -moz-hyphens: auto !important;
-  -ms-hyphens: auto !important;
-  hyphens: auto !important;
-
-  word-wrap: break-word !important;
-  overflow-wrap: break-word !important;
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
-/* Paragraf pertama setelah heading TIDAK ada indent */
+/* ── FIX INDENT ─────────────────────────────────────────────────
+   Paragraf yang TIDAK perlu indent:
+   1. Setelah heading (konvensi tipografi)
+   2. Class .first-paragraph
+   3. Paragraf pertama di section
+   4. Paragraf yang berdiri sebagai label/keterangan sebelum h1
+      (kasus "Surat Terbuka untuk Mas Emha Ainun Najib")
+   ─────────────────────────────────────────────────────────────── */
 .chapter-content h1 + p,
 .chapter-content h2 + p,
 .chapter-content h3 + p,
@@ -102,6 +91,17 @@
   margin-top: 2em;
 }
 
+/* Paragraf pertama langsung di dalam .chapter (sebelum ada heading) */
+.chapter-content .chapter > p:first-child,
+/* Paragraf pertama langsung di dalam .chapter-content sendiri */
+.chapter-content > p:first-child,
+/* Fallback: p yang tepat sebelum h1 (tidak bisa di CSS murni,
+   ditangani via injectSoftHyphens di JSX — lihat preprocessContent) */
+.chapter-content p.no-indent {
+  text-indent: 0 !important;
+  text-align: left;
+}
+
 /* Separator / Ornament */
 .chapter-content p.separator,
 .chapter-content p.ornament,
@@ -110,8 +110,8 @@
   text-indent: 0 !important;
   margin: 2em 0 !important;
   color: #666;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 .chapter-content p.ornament-flower {
@@ -119,8 +119,8 @@
   font-size: 1.1em;
   text-align: center;
   text-indent: 0;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 /* ================================================================
@@ -131,11 +131,9 @@
   text-align: left;
   text-indent: 0;
   line-height: 1.4;
-
-  /* ✅ Disable hyphenation for poetry */
-  -webkit-hyphens: none !important;
-  -moz-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  hyphens: none;
 }
 
 .chapter-content .poem p,
@@ -144,8 +142,8 @@
   text-align: left;
   text-indent: 0;
   margin: 0;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 .chapter-content .poem .note {
@@ -215,8 +213,6 @@
 /* ================================================================
    4️⃣ DAFTAR, KUTIPAN, DAN FORMAT TEKS LAINNYA
    ================================================================ */
-
-/* CRITICAL: Force override Tailwind/Prose dengan !important */
 .chapter-content ol,
 .chapter-content ul {
   margin: 0 !important;
@@ -228,30 +224,15 @@
   display: block !important;
 }
 
-/* Force list markers to show */
 .chapter-content ol {
   list-style-type: decimal !important;
 }
 
-.chapter-content ol[type="A"] {
-  list-style-type: upper-alpha !important;
-}
-
-.chapter-content ol[type="a"] {
-  list-style-type: lower-alpha !important;
-}
-
-.chapter-content ol[type="I"] {
-  list-style-type: upper-roman !important;
-}
-
-.chapter-content ol[type="i"] {
-  list-style-type: lower-roman !important;
-}
-
-.chapter-content ol[type="1"] {
-  list-style-type: decimal !important;
-}
+.chapter-content ol[type="A"] { list-style-type: upper-alpha !important; }
+.chapter-content ol[type="a"] { list-style-type: lower-alpha !important; }
+.chapter-content ol[type="I"] { list-style-type: upper-roman !important; }
+.chapter-content ol[type="i"] { list-style-type: lower-roman !important; }
+.chapter-content ol[type="1"] { list-style-type: decimal !important; }
 
 .chapter-content ul {
   list-style-type: disc !important;
@@ -263,14 +244,12 @@
   display: list-item !important;
 }
 
-/* Remove any ::before pseudo-elements from prose */
 .chapter-content ol > li::before,
 .chapter-content ul > li::before {
   content: none !important;
   display: none !important;
 }
 
-/* Dash list (custom style) */
 .chapter-content ul.dash-list {
   list-style: none !important;
   padding-left: 1.5em !important;
@@ -288,7 +267,6 @@
   display: inline !important;
 }
 
-/* Kutipan & teks */
 .chapter-content strong,
 .chapter-content b {
   font-weight: 600;
@@ -299,30 +277,20 @@
   font-style: italic;
 }
 
-.chapter-content q::before {
-  content: open-quote;
-}
-
-.chapter-content q::after {
-  content: close-quote;
-}
+.chapter-content q::before { content: open-quote; }
+.chapter-content q::after  { content: close-quote; }
 
 .chapter-content blockquote {
   margin: 0.25em 0;
   padding: 0 0.25em;
   border-left: 3px solid #ccc;
   font-style: italic;
-  -webkit-hyphens: auto !important;
-  hyphens: auto !important;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 
-.chapter-content blockquote p {
-  text-indent: 0;
-}
-
-.chapter-content blockquote p + p {
-  text-indent: 1.5em;
-}
+.chapter-content blockquote p { text-indent: 0; }
+.chapter-content blockquote p + p { text-indent: 1.5em; }
 
 .chapter-content blockquote .note {
   margin: 2.5em 0 1.5em 0 !important;
@@ -354,13 +322,11 @@
 
 .chapter-content a {
   text-decoration: underline;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
-.chapter-content a:hover {
-  opacity: 0.8;
-}
+.chapter-content a:hover { opacity: 0.8; }
 
 /* ================================================================
    5️⃣ NAVIGASI, HALAMAN ISI & HALAMAN KHUSUS
@@ -371,9 +337,7 @@
   margin: 0 auto;
 }
 
-.chapter-content nav h1 {
-  margin: 2.5em 0 0.25em 0;
-}
+.chapter-content nav h1 { margin: 2.5em 0 0.25em 0; }
 
 .chapter-content nav ol,
 .chapter-content nav li {
@@ -388,8 +352,8 @@
   display: block;
   line-height: 1.6;
   padding: 0.2em 0;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 .chapter-content nav a:hover {
@@ -397,7 +361,6 @@
   opacity: 0.8;
 }
 
-/* Titlepage */
 .chapter-content .titlepage {
   text-align: center;
   padding: 0;
@@ -415,7 +378,6 @@
   margin: 2.5em 0 0.25em 0;
 }
 
-/* Subtitle khusus untuk titlepage */
 .chapter-content .titlepage .subtitle {
   font-size: 1.4em;
   font-weight: 600;
@@ -435,7 +397,6 @@
   margin: 2.5em 0 0.25em 0;
 }
 
-/* Chapter, Colophon, Imprint, Uncopyright */
 .chapter-content .chapter,
 .chapter-content .colophon,
 .chapter-content .imprint,
@@ -445,14 +406,8 @@
   margin: 0 auto;
 }
 
-/* Colophon */
-.chapter-content .colophon p {
-  text-indent: 0;
-}
-
-.chapter-content .colophon > p:first-of-type {
-  text-align: center;
-}
+.chapter-content .colophon p { text-indent: 0; }
+.chapter-content .colophon > p:first-of-type { text-align: center; }
 
 .chapter-content .colophon,
 .chapter-content .imprint,
@@ -476,7 +431,6 @@
   margin: 0 auto;
 }
 
-/* Gambar inline di tengah teks */
 .chapter-content .image-inline {
   display: inline;
   vertical-align: middle;
@@ -485,15 +439,12 @@
   margin: 0 0.3em;
 }
 
-/* Gambar dengan caption */
 .chapter-content .image-with-caption {
   margin: 2em auto;
   text-align: center;
 }
 
-.chapter-content .image-with-caption img {
-  margin: 0 auto;
-}
+.chapter-content .image-with-caption img { margin: 0 auto; }
 
 .chapter-content .image-caption {
   text-align: center;
@@ -503,7 +454,6 @@
   line-height: 1.4;
 }
 
-/* Logo di colophon/imprint */
 .chapter-content section.colophon img,
 .chapter-content section.imprint img,
 .chapter-content .colophon img,
@@ -516,7 +466,6 @@
   object-fit: contain;
 }
 
-/* Gambar/ornamen di chapter */
 .chapter-content .image-small {
   max-width: 120px !important;
   max-height: 120px !important;
@@ -577,8 +526,8 @@
   background-color: #fdfcf8;
   max-width: 36em;
   line-height: 1.6;
-  -webkit-hyphens: auto !important;
-  hyphens: auto !important;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 
 .chapter-content .letter p {
@@ -665,8 +614,8 @@
   text-align: center;
   margin: 3em auto;
   max-width: 32em;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 .chapter-content .epigraph cite {
@@ -694,9 +643,7 @@
   padding-left: 1em;
 }
 
-.chapter-content .dialog .speaker {
-  font-weight: 600;
-}
+.chapter-content .dialog .speaker { font-weight: 600; }
 
 .chapter-content .dialog .note {
   margin: 2.5em 0 1.5em 0 !important;
@@ -730,15 +677,11 @@
   color: #666;
 }
 
-.chapter-content .scene-break::before {
-  content: "⁂";
-}
+.chapter-content .scene-break::before { content: "⁂"; }
 
 /* ================================================================
    🎯 NOTE & INFO-BOX
    ================================================================ */
-
-/* Info-box */
 .chapter-content .info-box {
   padding: 0.5em 1em;
   margin: 1.5em 0;
@@ -754,15 +697,9 @@
   margin: 0.5em 0 !important;
 }
 
-.chapter-content .info-box p:first-child {
-  margin-top: 0 !important;
-}
+.chapter-content .info-box p:first-child { margin-top: 0 !important; }
+.chapter-content .info-box p:last-child  { margin-bottom: 0 !important; }
 
-.chapter-content .info-box p:last-child {
-  margin-bottom: 0 !important;
-}
-
-/* Note/catatan kaki */
 .chapter-content .note {
   margin: 2.5em 0 1.5em 0;
   padding-top: 1em;
@@ -770,7 +707,6 @@
   font-size: 0.9em;
 }
 
-/* Garis pemisah otomatis di atas note */
 .chapter-content .note::before {
   content: "";
   position: absolute;
@@ -787,13 +723,8 @@
   margin: 0.5em 0 !important;
 }
 
-.chapter-content .note p:first-child {
-  margin-top: 0 !important;
-}
-
-.chapter-content .note p:last-child {
-  margin-bottom: 0 !important;
-}
+.chapter-content .note p:first-child { margin-top: 0 !important; }
+.chapter-content .note p:last-child  { margin-bottom: 0 !important; }
 
 /* ================================================================
    9️⃣ TABEL, KODE, DAN TEKS KHUSUS
@@ -810,8 +741,8 @@
   border: 1px solid #ccc;
   padding: 0.4em 0.6em;
   text-align: left;
-  -webkit-hyphens: none !important;
-  hyphens: none !important;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 .chapter-content th {
@@ -837,12 +768,10 @@
   letter-spacing: 0.05em;
 }
 
-.chapter-content .uppercase {
-  text-transform: uppercase;
-}
+.chapter-content .uppercase { text-transform: uppercase; }
 
 /* ================================================================
-   🎯 FORMULA LIST - RESPONSIVE
+   🎯 FORMULA LIST
    ================================================================ */
 .formula-list {
   margin-left: 2em;
@@ -857,10 +786,7 @@
 }
 
 @media screen and (max-width: 600px) {
-  .formula-list {
-    margin-left: 0.5em;
-  }
-
+  .formula-list { margin-left: 0.5em; }
   .formula-list p {
     grid-template-columns: auto auto 1fr;
     gap: 0.3em 0.5em;
@@ -871,31 +797,20 @@
 /* ================================================================
    🔟 MODE GELAP
    ================================================================ */
-.dark .chapter-content blockquote {
-  border-left-color: #666;
-}
+.dark .chapter-content blockquote { border-left-color: #666; }
 
 .dark .chapter-content .letter {
   background-color: #1e1e1e;
   border-color: #444;
 }
 
-.dark .chapter-content th {
-  background-color: #222;
-}
+.dark .chapter-content th { background-color: #222; }
 
 .dark .chapter-content td,
-.dark .chapter-content th {
-  border-color: #444;
-}
+.dark .chapter-content th { border-color: #444; }
 
-.dark .chapter-content pre {
-  background-color: #1e1e1e;
-}
-
-.dark .chapter-content code {
-  background-color: #1e1e1e;
-}
+.dark .chapter-content pre  { background-color: #1e1e1e; }
+.dark .chapter-content code { background-color: #1e1e1e; }
 
 .dark .chapter-content .info-box {
   background-color: #2d2d2d;
@@ -912,9 +827,7 @@
   border-top-color: #666;
 }
 
-.dark .chapter-content img {
-  filter: invert(1);
-}
+.dark .chapter-content img { filter: invert(1); }
 
 .dark .chapter-content .image-inline {
   filter: invert(1);
@@ -929,19 +842,13 @@
   opacity: 0.9;
 }
 
-.dark .chapter-content .image-caption {
-  color: #aaa;
-}
+.dark .chapter-content .image-caption { color: #aaa; }
 
 .dark .chapter-content p.separator,
 .dark .chapter-content p.ornament,
-.dark .chapter-content p.divider {
-  color: #999;
-}
+.dark .chapter-content p.divider { color: #999; }
 
-.dark .chapter-content .scene-break {
-  color: #999;
-}
+.dark .chapter-content .scene-break { color: #999; }
 
 /* ================================================================
    1️⃣1️⃣ RESPONSIVE ADJUSTMENTS
@@ -955,13 +862,11 @@
     max-width: 90%;
   }
 
-  .chapter-content .indent {
-    margin-left: 1em;
-  }
+  .chapter-content .indent { margin-left: 1em; }
 }
 
 /* ================================================================
-   1️⃣2️⃣ FOOTNOTE POPUP STYLES
+   1️⃣2️⃣ FOOTNOTE POPUP
    ================================================================ */
 .footnote-popup {
   position: fixed;
@@ -1004,13 +909,8 @@
   padding: 0.25rem;
 }
 
-.footnote-popup-close:hover {
-  color: #1f2937;
-}
-
-.dark .footnote-popup-close:hover {
-  color: #f3f4f6;
-}
+.footnote-popup-close:hover { color: #1f2937; }
+.dark .footnote-popup-close:hover { color: #f3f4f6; }
 
 .footnote-popup-goto {
   display: inline-block;
@@ -1024,22 +924,13 @@
   transition: background 0.2s;
 }
 
-.footnote-popup-goto:hover {
-  background: #2563eb;
-}
+.footnote-popup-goto:hover { background: #2563eb; }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Hide default footnote link underline on superscript */
 .chapter-content sup a {
   text-decoration: none;
   color: #3b82f6;
@@ -1047,59 +938,36 @@
   cursor: pointer;
 }
 
-.chapter-content sup a:hover {
-  text-decoration: underline;
-}
-
-.dark .chapter-content sup a {
-  color: #60a5fa;
-}
+.chapter-content sup a:hover { text-decoration: underline; }
+.dark .chapter-content sup a { color: #60a5fa; }
 
 /* ================================================================
-   1️⃣3️⃣ READING MODE FIXES
+   1️⃣3️⃣ READING MODE FIXES (sepia, dark override)
    ================================================================ */
+.reading-mode-bg { background-color: #FFF8DC !important; }
 
-/* Base reading mode styles */
-.reading-mode-bg {
-  background-color: #FFF8DC !important;
-}
+.reading-mode-bg .chapter-content { color: #2d2d2d !important; }
 
-/* Override all dark mode colors when reading mode is active */
-.reading-mode-bg .chapter-content {
-  color: #2d2d2d !important;
-}
-
-/* Headers in reading mode */
 .reading-mode-bg .chapter-content h1,
 .reading-mode-bg .chapter-content h2,
 .reading-mode-bg .chapter-content h3,
 .reading-mode-bg .chapter-content h4,
 .reading-mode-bg .chapter-content h5,
-.reading-mode-bg .chapter-content h6 {
-  color: #1a1a1a !important;
-}
+.reading-mode-bg .chapter-content h6 { color: #1a1a1a !important; }
 
-/* Paragraphs and text in reading mode */
 .reading-mode-bg .chapter-content p,
 .reading-mode-bg .chapter-content span,
 .reading-mode-bg .chapter-content div,
-.reading-mode-bg .chapter-content li {
-  color: #2d2d2d !important;
-}
+.reading-mode-bg .chapter-content li { color: #2d2d2d !important; }
 
-/* Links in reading mode */
-.reading-mode-bg .chapter-content a {
-  color: #0066cc !important;
-}
+.reading-mode-bg .chapter-content a { color: #0066cc !important; }
 
-/* Blockquotes in reading mode */
 .reading-mode-bg .chapter-content blockquote {
   background-color: #f9f6f0 !important;
   color: #444 !important;
   border-left-color: #999 !important;
 }
 
-/* Info boxes in reading mode */
 .reading-mode-bg .chapter-content .info-box {
   background-color: #f5f0e8 !important;
   border-color: #d4c5b0 !important;
@@ -1107,37 +975,23 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Notes in reading mode */
-.reading-mode-bg .chapter-content .note {
-  color: #555 !important;
-}
+.reading-mode-bg .chapter-content .note { color: #555 !important; }
+.reading-mode-bg .chapter-content .note::before { border-top-color: #999 !important; }
+.reading-mode-bg .chapter-content .note p { color: #555 !important; }
 
-.reading-mode-bg .chapter-content .note::before {
-  border-top-color: #999 !important;
-}
-
-.reading-mode-bg .chapter-content .note p {
-  color: #555 !important;
-}
-
-/* Letters in reading mode */
 .reading-mode-bg .chapter-content .letter {
   background-color: #f9f6f0 !important;
   border-color: #d4c5b0 !important;
   color: #2d2d2d !important;
 }
 
-/* Code and pre in reading mode */
 .reading-mode-bg .chapter-content pre,
 .reading-mode-bg .chapter-content code {
   background-color: #f5f0e8 !important;
   color: #2d2d2d !important;
 }
 
-/* Tables in reading mode */
-.reading-mode-bg .chapter-content table {
-  color: #2d2d2d !important;
-}
+.reading-mode-bg .chapter-content table { color: #2d2d2d !important; }
 
 .reading-mode-bg .chapter-content th {
   background-color: #f5f0e8 !important;
@@ -1150,55 +1004,26 @@
   color: #2d2d2d !important;
 }
 
-/* Separators and ornaments in reading mode */
 .reading-mode-bg .chapter-content p.separator,
 .reading-mode-bg .chapter-content p.ornament,
 .reading-mode-bg .chapter-content p.divider,
-.reading-mode-bg .chapter-content .scene-break {
-  color: #999 !important;
-}
+.reading-mode-bg .chapter-content .scene-break { color: #999 !important; }
 
-/* Image captions in reading mode */
-.reading-mode-bg .chapter-content .image-caption {
-  color: #666 !important;
-}
+.reading-mode-bg .chapter-content .image-caption { color: #666 !important; }
 
-/* Images in reading mode - NEVER invert */
 .reading-mode-bg .chapter-content img {
   filter: none !important;
   opacity: 1 !important;
 }
 
-/* Strong/emphasis in reading mode */
 .reading-mode-bg .chapter-content strong,
-.reading-mode-bg .chapter-content b {
-  color: #1a1a1a !important;
-}
+.reading-mode-bg .chapter-content b { color: #1a1a1a !important; }
 
 .reading-mode-bg .chapter-content em,
-.reading-mode-bg .chapter-content i {
-  color: #2d2d2d !important;
-}
+.reading-mode-bg .chapter-content i { color: #2d2d2d !important; }
 
-/* Dialog in reading mode */
-.reading-mode-bg .chapter-content .dialog .speaker {
-  color: #1a1a1a !important;
-}
-
-/* Poem in reading mode */
-.reading-mode-bg .chapter-content .poem {
-  color: #2d2d2d !important;
-}
-
-.reading-mode-bg .chapter-content .poem .author {
-  color: #1a1a1a !important;
-}
-
-/* Epigraph in reading mode */
-.reading-mode-bg .chapter-content .epigraph {
-  color: #444 !important;
-}
-
-.reading-mode-bg .chapter-content .epigraph cite {
-  color: #555 !important;
-}
+.reading-mode-bg .chapter-content .dialog .speaker { color: #1a1a1a !important; }
+.reading-mode-bg .chapter-content .poem { color: #2d2d2d !important; }
+.reading-mode-bg .chapter-content .poem .author { color: #1a1a1a !important; }
+.reading-mode-bg .chapter-content .epigraph { color: #444 !important; }
+.reading-mode-bg .chapter-content .epigraph cite { color: #555 !important; }

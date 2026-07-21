@@ -1,7 +1,3 @@
-// ============================================
-// src/components/Common/SEO.jsx - ENHANCED VERSION
-// Universal SEO Component with Full Features
-// ============================================
 import { Helmet } from 'react-helmet-async'
 import PropTypes from 'prop-types'
 
@@ -43,7 +39,7 @@ const SEO = ({
 }) => {
   const siteUrl = 'https://masasilam.com'
   const siteName = 'MasasilaM'
-  const defaultTitle = 'MasasilaM - Perpustakaan Digital Buku Domain Publik'
+  const defaultTitle = 'MasasilaM - Perpustakaan Digital Domain Publik dan Yang Terbengkalai dan Yang Terdegradasi'
   const defaultDescription = 'Perpustakaan digital gratis untuk buku klasik domain publik. Akses buku-buku dengan fitur smart reading, bookmark, dan highlight.'
   const defaultImage = `${siteUrl}/og-image.jpg`
 

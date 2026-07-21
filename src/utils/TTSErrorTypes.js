@@ -1,8 +1,3 @@
-/**
- * TTS Error Type Utilities
- * Helper functions to handle Speech Synthesis errors
- */
-
 export const isNormalInterruption = (error) => {
   if (!error) return false
   const errorStr = error.error || error.type || String(error)

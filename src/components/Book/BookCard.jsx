@@ -1,7 +1,3 @@
-// ============================================
-// src/components/Book/BookCard.jsx
-// ============================================
-
 import { Link } from 'react-router-dom'
 import {
   Clock, Eye, Download, BookOpen, MessageCircle, Zap, Award, Lock, Star,
@@ -204,39 +200,12 @@ const BookCard = ({ book }) => {
           )}
         </div>
 
-        {/* ── Copyright icon top-right — benar-benar di pojok ───────── */}
+        {/* ── Copyright icon top-right ───────────────────────────────── */}
         {book.copyrightStatus && (
           <div className="absolute top-0 right-0 z-10 p-1">
             <CopyrightIcon status={book.copyrightStatus} />
           </div>
         )}
-
-        {/* ── Rating + read time (bottom of cover) ──────────────────── */}
-        <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between">
-          {hasRating ? (
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
-                            bg-black/20 backdrop-blur-[2px]">
-              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 flex-shrink-0" />
-              <span className="text-white/90 text-[10px] font-semibold tabular-nums">{ratingStr}</span>
-              {ratingCount > 0 && (
-                <span className="text-white/50 text-[9px] tabular-nums">({ratingCount})</span>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
-                            bg-black/15 backdrop-blur-[2px]">
-              <Star className="w-2.5 h-2.5 text-white/40" />
-              <span className="text-white/40 text-[9px]">—</span>
-            </div>
-          )}
-          {readTime && (
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
-                            bg-black/20 backdrop-blur-[2px]">
-              <Clock className="w-2.5 h-2.5 text-white/60 flex-shrink-0" />
-              <span className="text-white/80 text-[9px] font-medium">{readTime}</span>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ── Info Panel ────────────────────────────────────────────────── */}
@@ -258,6 +227,33 @@ const BookCard = ({ book }) => {
             ))}
           </div>
         )}
+
+        {/* ── Rating + read time ─────────────────────────────────────── */}
+        <div className="flex items-center justify-between">
+          {hasRating ? (
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400 flex-shrink-0" />
+              <span className="text-xs font-semibold tabular-nums
+                               text-stone-700 dark:text-slate-300">{ratingStr}</span>
+              {ratingCount > 0 && (
+                <span className="text-[11px] tabular-nums
+                                 text-stone-400 dark:text-slate-600">({ratingCount})</span>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-stone-300 dark:text-slate-700" />
+              <span className="text-[11px] text-stone-300 dark:text-slate-700">—</span>
+            </div>
+          )}
+          {readTime && (
+            <div className="flex items-center gap-1
+                            text-stone-400 dark:text-slate-600">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              <span className="text-[11px]">{readTime}</span>
+            </div>
+          )}
+        </div>
 
         {/* Title */}
         <h3 className="font-semibold text-sm leading-snug line-clamp-2 hyphens-auto

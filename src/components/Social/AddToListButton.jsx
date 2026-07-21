@@ -1,7 +1,3 @@
-// src/components/Social/AddToListButton.jsx
-// Tombol "Tambah ke Daftar Baca" yang muncul di halaman detail buku/zine/film/koran
-// Menampilkan dropdown daftar baca milik user, atau buka modal buat baru
-
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ListPlus, ChevronDown, Check, Loader2, Plus, BookmarkCheck, X } from 'lucide-react'

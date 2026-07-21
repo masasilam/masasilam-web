@@ -1,4 +1,3 @@
-// src/pages/dashboard/BlogEditorPage.jsx
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -578,6 +577,8 @@ const BlogEditorPage = () => {
   const [cats,        setCats]        = useState([])
   const [featFile,    setFeatFile]    = useState(null)
   const [featPreview, setFeatPreview] = useState(null)
+  // ── Tambahan: field sumber ──────────────────────────────────────────────────
+  const [source,      setSource]      = useState('')
 
   const featRef = useRef()
 
@@ -630,6 +631,7 @@ const BlogEditorPage = () => {
     setTitle(post.title || '')
     setExcerpt(post.excerpt || '')
     setStatus(post.status || 'DRAFT')
+    setSource(post.source || '')  // ← load sumber saat edit
     if (post.content) setContent(post.content)
     if (post.featuredImage) setFeatPreview(post.featuredImage)
     if (post.tags) {
@@ -685,6 +687,7 @@ const BlogEditorPage = () => {
         title:       title.trim(),
         content,
         excerpt:     excerpt.trim() || undefined,
+        source:      source.trim() || undefined,  // ← sertakan source di payload
         status,
         tags,
         categoryIds: catIds,
@@ -929,6 +932,29 @@ const BlogEditorPage = () => {
                   </button>
                 </span>
               ))}
+            </div>
+          </div>
+
+          {/* ── Sumber ─────────────────────────────────────────────────────── */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+              <Newspaper className="w-4 h-4 text-primary" />Sumber
+            </h3>
+            <p className="text-xs text-gray-400 mb-3">
+              Opsional — cantumkan asal artikel jika bukan tulisan asli
+            </p>
+            <input
+              type="text"
+              value={source}
+              onChange={e => setSource(e.target.value)}
+              placeholder="Contoh: Kompas, https://..."
+              maxLength={500}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+            <div className="flex justify-end mt-1">
+              <span className={`text-xs font-medium ${source.length > 480 ? 'text-red-500' : 'text-gray-400'}`}>
+                {source.length}/500
+              </span>
             </div>
           </div>
 

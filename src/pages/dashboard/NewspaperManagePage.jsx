@@ -1,6 +1,3 @@
-// src/pages/dashboard/NewspaperManagePage.jsx
-// Halaman admin: manajemen artikel koran + analytics overview
-
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
