@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/Common/LoadingSpinner'
 import { Filter, SortAsc, BookOpen, Book, Layers } from 'lucide-react'
 import { useDarkMode } from '../../hooks/useDarkMode'
 
-const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap'
+const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap'
 
 // ── Color extraction ──────────────────────────────────────────────────────────
 function extractDominantColor(imgEl) {
@@ -104,7 +104,7 @@ const ZineTooltip = ({ zine, anchorRef, pct, badgeColor, statusLabel }) => {
           <img src={zine.coverImageUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
         </div>
       )}
-      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:12, fontWeight:700, color:titleClr, lineHeight:1.4, margin:'0 0 3px', wordBreak:'break-word' }}>
+      <p style={{ fontSize:12, fontWeight:700, color:titleClr, lineHeight:1.4, margin:'0 0 3px', wordBreak:'break-word' }}>
         {zine?.zineTitle}
       </p>
       <p style={{ fontSize:11, fontStyle:'italic', color:subtitleClr, margin:'0 0 5px' }}>{zine?.authorName}</p>
@@ -305,7 +305,7 @@ const ZineLibraryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-serif">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="mb-6 sm:mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -313,7 +313,7 @@ const ZineLibraryPage = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-200/60 dark:shadow-emerald-900/40">
               <Layers className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100" style={{ fontFamily:"'Playfair Display',serif" }}>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
               Perpustakaan Zine
             </h1>
           </div>
@@ -349,7 +349,7 @@ const ZineLibraryPage = () => {
             { num: countCompleted, lbl: 'Selesai' },
           ].map((s, i) => (
             <div key={i} className="text-center">
-              <span className="block text-xl font-bold text-gray-900 dark:text-gray-100" style={{ fontFamily:"'Playfair Display',serif" }}>{s.num}</span>
+              <span className="block text-xl font-bold text-gray-900 dark:text-gray-100">{s.num}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{s.lbl}</span>
             </div>
           ))}
@@ -371,7 +371,7 @@ const ZineLibraryPage = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="w-1 h-5 rounded-full bg-gradient-to-b from-emerald-400 to-teal-500" />
-          <p className="text-xs tracking-widest uppercase text-gray-400 dark:text-gray-500" style={{ fontFamily:"'Playfair Display',serif", letterSpacing:'0.2em' }}>
+          <p className="text-xs tracking-widest uppercase text-gray-400 dark:text-gray-500" style={{ letterSpacing:'0.2em' }}>
             — Koleksi Zine Anda —
           </p>
         </div>
