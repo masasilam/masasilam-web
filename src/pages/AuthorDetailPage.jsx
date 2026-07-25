@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import bookService from '../services/bookService'
 import BookCard from '../components/Book/BookCard'
+import ZineCard from '../components/Zine/ZineCard'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import SEO from '../components/Common/SEO'
 import {
@@ -32,6 +33,7 @@ const AuthorDetailPage = () => {
           bookService.getBooks({
             page: currentPage, limit: LIMIT,
             authorName: authorSlug,
+            contentType: 'ALL',
             sortField: 'publishedAt', sortOrder: 'DESC'
           })
         ])
@@ -107,7 +109,6 @@ const AuthorDetailPage = () => {
 
       <div className="min-h-screen bg-stone-50 dark:bg-slate-950 transition-colors duration-300">
 
-        {/* ── HERO / PROFILE HEADER ─────────────────────────────────── */}
         <section className="relative overflow-hidden bg-white dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800 py-14 sm:py-20">
           <div className="pointer-events-none absolute inset-0 flex items-start justify-center overflow-hidden">
             <div className="w-[500px] h-[400px] rounded-full bg-amber-100/40 dark:bg-amber-900/10 blur-3xl -translate-y-1/2" />
@@ -115,7 +116,6 @@ const AuthorDetailPage = () => {
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-amber-400 via-emerald-400 to-blue-400 opacity-60" />
 
           <div className="relative container mx-auto px-4 sm:px-6 max-w-5xl">
-            {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-xs text-stone-400 dark:text-slate-500 mb-8" aria-label="Breadcrumb">
               <Link to="/" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Beranda</Link>
               <ChevronRight className="w-3 h-3" />
@@ -124,9 +124,7 @@ const AuthorDetailPage = () => {
               <span className="text-stone-600 dark:text-slate-300 font-medium truncate">{author.name}</span>
             </nav>
 
-            {/* Profile card */}
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
-              {/* Avatar */}
               <div className="flex-shrink-0">
                 <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-slate-800 flex items-center justify-center border-2 border-amber-200/60 dark:border-amber-800/40 shadow-xl shadow-amber-100/40 dark:shadow-black/30">
                   {author.photoUrl ? (
@@ -137,7 +135,6 @@ const AuthorDetailPage = () => {
                 </div>
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0 text-center sm:text-left">
                 <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3.5 py-1.5 rounded-full mb-3 border border-amber-200 dark:border-amber-800/40">
                   <User className="w-3 h-3" /> Penulis
@@ -146,7 +143,6 @@ const AuthorDetailPage = () => {
                   {author.name}
                 </h1>
 
-                {/* Meta */}
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1.5 mb-4 text-xs sm:text-sm text-stone-400 dark:text-slate-500">
                   {author.birthDate && (
                     <span className="flex items-center gap-1.5">
@@ -174,14 +170,12 @@ const AuthorDetailPage = () => {
                   )}
                 </div>
 
-                {/* Biography */}
                 {author.biography && (
                   <p className="text-stone-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed mb-4 max-w-2xl">
                     {author.biography}
                   </p>
                 )}
 
-                {/* Book count badge */}
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-full text-amber-700 dark:text-amber-400 font-semibold text-sm">
                   <BookOpen className="w-4 h-4" />
                   {author.totalBooks || books.length} buku tersedia
@@ -191,7 +185,6 @@ const AuthorDetailPage = () => {
           </div>
         </section>
 
-        {/* ── BOOKS SECTION ─────────────────────────────────────────── */}
         <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
           <section className="mt-10 sm:mt-12">
             {books.length === 0 ? (
@@ -213,10 +206,13 @@ const AuthorDetailPage = () => {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
-                  {books.map((book) => <BookCard key={book.id} book={book} />)}
+                  {books.map((book) =>
+                    book.contentType === 'ZINE'
+                      ? <ZineCard key={book.id} zine={book} />
+                      : <BookCard key={book.id} book={book} />
+                  )}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <nav className="flex justify-center items-center gap-2 mt-10 mb-4 flex-wrap" aria-label="Navigasi halaman">
                     <button
