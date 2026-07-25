@@ -64,6 +64,15 @@ const isCorrectableEpubSection = (href = '') => {
   return !NON_CORRECTABLE_EPUB_HREFS.some(skip => base.includes(skip))
 }
 
+// ── Annotation type constant ────────────────────────────────────────────────
+// FIX: epub.js men-hash annotation berdasarkan `cfiRange + type`, dan method
+// `.highlight()` selalu memakai type internal "highlight" (parameter ke-4
+// yang dipakai di kode ini, mis. 'epub-highlight', itu HANYA className untuk
+// styling CSS — bukan type). Maka setiap panggilan annotations.remove() WAJIB
+// memakai type yang sama persis: 'highlight'. Disimpan sebagai konstanta agar
+// tidak typo lagi di refactor berikutnya.
+const EPUB_ANNOTATION_TYPE = 'highlight'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -245,7 +254,7 @@ const EpubReaderPage = () => {
         const newCfiSet  = new Set(withCfi.map(c => c.cfi))
         prevStored.forEach(old => {
           if (!newCfiSet.has(old.cfi)) {
-            try { renditionRef.current?.annotations.remove(old.cfi, 'epub-correction') } catch {}
+            try { renditionRef.current?.annotations.remove(old.cfi, EPUB_ANNOTATION_TYPE) } catch {}
           }
         })
 
@@ -726,6 +735,7 @@ const EpubReaderPage = () => {
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     annotations.forEach(ann => {
+      try { renditionRef.current.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch {}
       try {
         renditionRef.current.annotations.highlight(
           ann.cfi, {}, null, 'epub-highlight',
@@ -739,6 +749,7 @@ const EpubReaderPage = () => {
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     pendingCorrections.forEach(c => {
+      try { renditionRef.current.annotations.remove(c.cfi, EPUB_ANNOTATION_TYPE) } catch {}
       try {
         renditionRef.current.annotations.highlight(
           c.cfi, {}, null, 'epub-correction',
@@ -1228,7 +1239,10 @@ const EpubReaderPage = () => {
       // ── FIX: Cek apakah CFI ini sudah punya highlight lama → hapus dulu ──
       const existing = annotations.find(a => a.cfi === selection.cfi)
       if (existing) {
-        try { renditionRef.current?.annotations.remove(existing.cfi, 'highlight') } catch {}
+        // FIX: type yang di-pass ke remove() harus 'highlight' (type internal
+        // yang dipakai epub.js untuk method .highlight()), bukan className
+        // 'epub-highlight' — kalau tidak, remove() gagal menemukan mark-nya.
+        try { renditionRef.current?.annotations.remove(existing.cfi, EPUB_ANNOTATION_TYPE) } catch {}
         if (isAuthenticated && existing.id) {
           try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, existing.id) }
           catch (err) { console.warn('[Highlight] delete lama gagal:', err.message) }
@@ -1288,7 +1302,7 @@ const EpubReaderPage = () => {
 
   const handleDeleteAnnotation = async (idx) => {
     const ann = annotations[idx]
-    if (ann) { try { renditionRef.current?.annotations.remove(ann.cfi, 'highlight') } catch {} }
+    if (ann) { try { renditionRef.current?.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch {} }
     setAnnotations(prev => prev.filter((_, i) => i !== idx))
     if (isAuthenticated && ann?.id) {
       try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, ann.id) }
