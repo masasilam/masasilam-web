@@ -10,7 +10,6 @@ import ShareAnnotationModal from '../components/Social/ShareAnnotationModal'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 import epubAnnotationService from '../services/epubAnnotationService'
 
-// ── Sub-components ────────────────────────────────────────────────────────
 import FootnotePopup     from '../components/Reader/FootnotePopup'
 import NoteModal         from '../components/Reader/NoteModal'
 import SelectionPopup    from '../components/Reader/SelectionPopup'
@@ -19,17 +18,12 @@ import SidebarPanel      from '../components/Reader/SidebarPanel'
 import SettingsPanel     from '../components/Reader/SettingsPanel'
 import GuestNoticeBanner from '../components/Reader/GuestNoticeBanner'
 import CorrectionModal   from '../components/Reader/CorrectionModal'
-// import TTSPlayer         from '../components/Reader/TTSPlayer'  // TTS dinonaktifkan sementara
 
-// ── Hooks ─────────────────────────────────────────────────────────────────
 import { useEpubTheme }   from '../hooks/useEpubTheme'
 import { useEpubSession } from '../hooks/useEpubSession'
-// import { useTTS }         from '../hooks/useTTS'  // TTS dinonaktifkan sementara
 
-// ── Constants ─────────────────────────────────────────────────────────────
 import { COLOR_MODES, HIGHLIGHT_COLORS } from '../constants/readerConstants'
 
-// ── Utils ─────────────────────────────────────────────────────────────────
 import {
   generateSessionId,
   getDeviceType,
@@ -48,14 +42,11 @@ import {
 } from '../utils/epubUtils'
 import { injectZineDocStyles } from '../utils/zineTheme'
 
-// ── Icons ─────────────────────────────────────────────────────────────────
 import {
   ArrowLeft, BookOpen, Bookmark, BookmarkCheck,
   ChevronLeft, ChevronRight, Search, Settings, List,
-  // Headphones,  // TTS dinonaktifkan sementara
 } from 'lucide-react'
 
-// ── Correction helpers ────────────────────────────────────────────────────
 const NON_CORRECTABLE_EPUB_HREFS = ['toc', 'nav', 'ncx', 'colophon', 'copyright', 'cover']
 
 const isCorrectableEpubSection = (href = '') => {
@@ -64,18 +55,18 @@ const isCorrectableEpubSection = (href = '') => {
   return !NON_CORRECTABLE_EPUB_HREFS.some(skip => base.includes(skip))
 }
 
-// ── Annotation type constant ────────────────────────────────────────────────
-// FIX: epub.js men-hash annotation berdasarkan `cfiRange + type`, dan method
-// `.highlight()` selalu memakai type internal "highlight" (parameter ke-4
-// yang dipakai di kode ini, mis. 'epub-highlight', itu HANYA className untuk
-// styling CSS — bukan type). Maka setiap panggilan annotations.remove() WAJIB
-// memakai type yang sama persis: 'highlight'. Disimpan sebagai konstanta agar
-// tidak typo lagi di refactor berikutnya.
 const EPUB_ANNOTATION_TYPE = 'highlight'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Component
-// ─────────────────────────────────────────────────────────────────────────────
+const extractExternalUrl = (raw = '') => {
+  const matches = raw.match(/https?:\/\/[^\s()<>\]"']+/g)
+  if (!matches || matches.length === 0) return null
+  let url = matches[matches.length - 1]
+  const lastProtocolIdx = Math.max(url.lastIndexOf('https://'), url.lastIndexOf('http://'))
+  if (lastProtocolIdx > 0) url = url.slice(lastProtocolIdx)
+  url = url.replace(/[).,;:!?'"]+$/, '')
+  return url
+}
+
 const EpubReaderPage = () => {
   const { bookSlug, zineSlug } = useParams()
   const slug        = bookSlug || zineSlug
@@ -97,7 +88,6 @@ const EpubReaderPage = () => {
   const currentCfiRef   = useRef(null)
   const isNavigatingRef = useRef(false)
 
-  // ── FIX: Shared navigation lock — mencegah double-navigation dari semua sumber ──
   const navLockRef = useRef(false)
   const acquireNavLock = useCallback((ms = 700) => {
     if (navLockRef.current) return false
@@ -111,7 +101,6 @@ const EpubReaderPage = () => {
 
   const keys = localKeys(slug)
 
-  // ── Session refs ──────────────────────────────────────────────────────────
   const sessionIdRef          = useRef(generateSessionId())
   const sessionStartRef       = useRef(Date.now())
   const latestProgressRef     = useRef(0)
@@ -127,19 +116,16 @@ const EpubReaderPage = () => {
 
   const [currentChapterLabel, setCurrentChapterLabel] = useState('')
 
-  // ── Reader settings ───────────────────────────────────────────────────────
   const [colorMode,  setColorMode]  = useState(() => localStorage.getItem(keys.colorMode)  || 'light')
   const [fontSize,   setFontSize]   = useState(() => parseInt(localStorage.getItem(keys.fontSize) || '16'))
   const [fontFamily, setFontFamily] = useState(() => localStorage.getItem(keys.fontFamily) || "'Georgia', 'Times New Roman', serif")
 
   const isDark = colorMode === 'dark'
 
-  // Refs untuk nilai terkini agar tidak stale di dalam closure
   const colorModeRef  = useRef(colorMode)
   const fontSizeRef   = useRef(fontSize)
   const fontFamilyRef = useRef(fontFamily)
 
-  // ── UI state ──────────────────────────────────────────────────────────────
   const [showSidebar,  setShowSidebar]  = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showSearch,   setShowSearch]   = useState(false)
@@ -148,7 +134,6 @@ const EpubReaderPage = () => {
   const [epubError,    setEpubError]    = useState(null)
   const [isSyncing,    setIsSyncing]    = useState(false)
 
-  // ── Annotations & bookmarks ───────────────────────────────────────────────
   const [annotations, setAnnotations] = useState(() => {
     try { return JSON.parse(localStorage.getItem(keys.annotations) || '[]') } catch { return [] }
   })
@@ -156,12 +141,10 @@ const EpubReaderPage = () => {
     try { return JSON.parse(localStorage.getItem(keys.bookmarks) || '[]') } catch { return [] }
   })
 
-  // ── Pending corrections ───────────────────────────────────────────────────
   const [pendingCorrections, setPendingCorrections] = useState(() => {
     try { return JSON.parse(localStorage.getItem(keys.corrections) || '[]') } catch { return [] }
   })
 
-  // ── Modals / overlays ─────────────────────────────────────────────────────
   const [selection,       setSelection]       = useState(null)
   const [showNoteModal,   setShowNoteModal]   = useState(false)
   const [isBookmarked,    setIsBookmarked]    = useState(false)
@@ -169,13 +152,11 @@ const EpubReaderPage = () => {
   const [shareModal,      setShareModal]      = useState(null)
   const [footnotePopup,   setFootnotePopup]   = useState(null)
 
-  // ── Correction state ──────────────────────────────────────────────────────
   const [showCorrectionModal, setShowCorrectionModal] = useState(false)
   const [correctionContext,   setCorrectionContext]   = useState(null)
   const [currentSectionHref,  setCurrentSectionHref] = useState('')
   const currentSectionHrefRef = useRef('')
 
-  // ── Hooks ─────────────────────────────────────────────────────────────────
   const { applyTheme } = useEpubTheme()
 
   useEpubSession({
@@ -190,7 +171,6 @@ const EpubReaderPage = () => {
     },
   })
 
-  // ── Guest notice ──────────────────────────────────────────────────────────
   const triggerGuestNotice = useCallback(() => {
     if (isAuthenticated) return
     if (!localStorage.getItem(keys.guestNoticeSeen)) setShowGuestNotice(true)
@@ -203,7 +183,6 @@ const EpubReaderPage = () => {
 
   useEffect(() => { latestProgressRef.current = progress }, [progress])
 
-  // ── Fetch book / zine ──────────────────────────────────────────────────────
   useEffect(() => {
     const fetchBook = async () => {
       try {
@@ -221,7 +200,6 @@ const EpubReaderPage = () => {
     fetchBook()
   }, [slug, isZineMode])
 
-  // ── Load annotations & bookmarks dari server ───────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !slug) return
     const loadFromServer = async () => {
@@ -233,14 +211,11 @@ const EpubReaderPage = () => {
         setBookmarks(nb)
         localStorage.setItem(keys.annotations, JSON.stringify(na))
         localStorage.setItem(keys.bookmarks,   JSON.stringify(nb))
-      } catch (err) {
-        console.warn('[EpubReader] Fallback ke localStorage:', err.message)
-      }
+      } catch {}
     }
     loadFromServer()
   }, [slug, isAuthenticated]) // eslint-disable-line
 
-  // ── Load pending corrections dari server ──────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !slug) return
     const loadPendingCorrections = async () => {
@@ -260,14 +235,11 @@ const EpubReaderPage = () => {
 
         setPendingCorrections(withCfi)
         localStorage.setItem(keys.corrections, JSON.stringify(withCfi))
-      } catch (err) {
-        console.warn('[EpubReader] Gagal load pending corrections:', err.message)
-      }
+      } catch {}
     }
     loadPendingCorrections()
   }, [slug, isAuthenticated]) // eslint-disable-line
 
-  // ── Progress calculation helper ────────────────────────────────────────────
   const calcProgress = useCallback((cfi, epubBook) => {
     if (!cfi) return
     if (locationsReadyRef.current) {
@@ -289,7 +261,6 @@ const EpubReaderPage = () => {
     } catch {}
   }, [])
 
-  // ── Correction: open modal ─────────────────────────────────────────────────
   const handleOpenCorrection = useCallback(() => {
     if (!selection) return
     setCorrectionContext({
@@ -304,7 +275,6 @@ const EpubReaderPage = () => {
     setShowCorrectionModal(true)
   }, [selection])
 
-  // ── Submit correction ─────────────────────────────────────────────────────
   const handleSubmitCorrection = useCallback(async (correctionData) => {
     if (!slug) throw new Error('Slug tidak ditemukan')
     await chapterService.submitEpubCorrection(slug, {
@@ -330,7 +300,6 @@ const EpubReaderPage = () => {
     }
   }, [slug, isZineMode, keys.corrections])
 
-  // ── Init epub.js ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!book?.fileUrl || !viewerRef.current) return
 
@@ -355,7 +324,6 @@ const EpubReaderPage = () => {
 
     applyTheme(rendition, colorModeRef.current, fontSizeRef.current, fontFamilyRef.current)
 
-    // ── FIX: Guard navigation ─────────────────────────────────────────────
     const navigationPromise = (epubBook.loaded?.navigation
       ? epubBook.loaded.navigation
       : Promise.reject(new Error('navigation not available'))
@@ -376,8 +344,7 @@ const EpubReaderPage = () => {
       tocRef.current = flat
       totalChaptersRef.current = flat.filter(t => t.depth === 0).length
       return flat
-    }).catch(err => {
-      console.error('[EpubReader] Gagal parse TOC:', err)
+    }).catch(() => {
       setToc([])
       tocRef.current = []
       totalChaptersRef.current = 0
@@ -428,9 +395,7 @@ const EpubReaderPage = () => {
                 renditionRef.current?.display(serverCfi).catch(() => {})
               }
             }
-          } catch (err) {
-            console.warn('[EpubReader] epubStartReading gagal:', err.message)
-          }
+          } catch {}
         }
 
         try {
@@ -438,9 +403,7 @@ const EpubReaderPage = () => {
           if (epubBook.locations && linearItems.length > 0) {
             return epubBook.locations.generate(2000)
           }
-        } catch (locErr) {
-          console.warn('[EpubReader] locations.generate() gagal:', locErr.message)
-        }
+        } catch {}
         return Promise.resolve()
       })
       .then(() => {
@@ -451,13 +414,11 @@ const EpubReaderPage = () => {
           }
         } catch {}
       })
-      .catch(err => {
-        console.error('EPUB init error:', err)
+      .catch(() => {
         setEpubError('Gagal memuat konten buku. File EPUB mungkin rusak atau tidak didukung.')
         setIsReady(true)
       })
 
-    // ── locationChanged ────────────────────────────────────────────────────
     rendition.on('locationChanged', loc => {
       setFootnotePopup(null)
 
@@ -496,7 +457,6 @@ const EpubReaderPage = () => {
       }
     })
 
-    // ── selected ───────────────────────────────────────────────────────────
     rendition.on('selected', (cfiRange, contents) => {
       try {
         const selText = contents.window.getSelection()?.toString()?.trim()
@@ -515,12 +475,9 @@ const EpubReaderPage = () => {
             y: iframeRect.top  + rangeRect.top,
           },
         })
-      } catch (err) { console.warn('[Selection] Error:', err.message) }
+      } catch {}
     })
 
-    // ── FIX: Touch swipe di dalam iframe ──────────────────────────────────
-    // passive:false pada touchend agar stopPropagation bisa bekerja
-    // mencegah event naik ke touchWrapperRef (double-fire)
     const attachedDocs = new WeakSet()
     const attachToIframeDoc = (iframeDoc) => {
       if (!iframeDoc || attachedDocs.has(iframeDoc)) return
@@ -539,7 +496,6 @@ const EpubReaderPage = () => {
         const diffX = fbStartX - t.clientX
         const diffY = Math.abs(fbStartY - t.clientY)
         if (Math.abs(diffX) > 50 && Math.abs(diffX) > diffY * 1.5) {
-          // ── FIX: Stop propagation agar tidak double-fire ke outer handler ──
           e.stopPropagation()
           setSelection(null)
           if (diffX > 0) handleNextRef.current?.()
@@ -548,11 +504,9 @@ const EpubReaderPage = () => {
       }
 
       iframeDoc.addEventListener('touchstart', onStart, { passive: true })
-      // ── FIX: passive:false agar stopPropagation bisa dipanggil ──
       iframeDoc.addEventListener('touchend', onEnd, { passive: false })
     }
 
-    // ── rendered ───────────────────────────────────────────────────────────
     rendition.on('rendered', (_section, view) => {
       if (_section?.href) {
         currentSectionHrefRef.current = _section.href
@@ -570,10 +524,8 @@ const EpubReaderPage = () => {
         const doc = view?.contents?.document
         if (!doc) return
         attachToIframeDoc(doc)
-        injectDyslexicFont(doc)
         injectZineDocStyles(doc, colorModeRef.current)
 
-        // Link click handler
         doc.addEventListener('click', async (e) => {
           const anchor = e.target.closest('a')
           if (!anchor) return
@@ -619,6 +571,14 @@ const EpubReaderPage = () => {
           if (href.startsWith('mailto:') || href.startsWith('tel:')) {
             window.open(href)
             return
+          }
+
+          if (href.includes('http://') || href.includes('https://')) {
+            const extractedUrl = extractExternalUrl(href)
+            if (extractedUrl) {
+              window.open(extractedUrl, '_blank', 'noopener,noreferrer')
+              return
+            }
           }
 
           const renditionInner = renditionRef.current
@@ -670,9 +630,7 @@ const EpubReaderPage = () => {
                     }
                     if (targetSection.unload) targetSection.unload()
                   }
-                } catch (fnErr) {
-                  console.warn('[FootnoteCheck] cross-section gagal:', fnErr.message)
-                }
+                } catch {}
 
                 const { cfi } = await resolveAnchorToCfi(epubBookInner, canonical, anchorId)
                 if (cfi) {
@@ -688,8 +646,7 @@ const EpubReaderPage = () => {
                 await renditionInner.display(canonical)
               }
             }
-          } catch (err) {
-            console.warn('[LinkClick] Navigasi internal gagal:', err.message)
+          } catch {
             try { await renditionRef.current?.display(href) } catch {}
           }
         }, true)
@@ -699,8 +656,6 @@ const EpubReaderPage = () => {
     return () => { try { epubBook.destroy() } catch {} }
   }, [book]) // eslint-disable-line
 
-  // ── Touch handler (outer wrapper) ─────────────────────────────────────────
-  // Outer handler hanya sebagai fallback jika swipe tidak terjadi di atas iframe
   useEffect(() => {
     const el = touchWrapperRef.current
     if (!el) return
@@ -731,7 +686,6 @@ const EpubReaderPage = () => {
     }
   }, [])
 
-  // ── Re-render highlights (annotations) ────────────────────────────────────
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     annotations.forEach(ann => {
@@ -745,7 +699,6 @@ const EpubReaderPage = () => {
     })
   }, [isReady, annotations]) // eslint-disable-line
 
-  // ── Re-render pending corrections ─────────────────────────────────────────
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     pendingCorrections.forEach(c => {
@@ -759,7 +712,6 @@ const EpubReaderPage = () => {
     })
   }, [isReady, pendingCorrections]) // eslint-disable-line
 
-  // ── Apply theme when settings change ──────────────────────────────────────
   const prevFontSizeRef = useRef(fontSize)
   useEffect(() => {
     colorModeRef.current  = colorMode
@@ -785,11 +737,9 @@ const EpubReaderPage = () => {
     return () => clearTimeout(timer)
   }, [colorMode, fontSize, fontFamily, applyTheme]) // eslint-disable-line
 
-  // ── Persist state ─────────────────────────────────────────────────────────
   useEffect(() => { localStorage.setItem(keys.annotations, JSON.stringify(annotations)) }, [annotations]) // eslint-disable-line
   useEffect(() => { localStorage.setItem(keys.bookmarks,   JSON.stringify(bookmarks))   }, [bookmarks])   // eslint-disable-line
 
-  // ── Re-display setelah panel open/close ───────────────────────────────────
   useEffect(() => {
     if (!renditionRef.current || isNavigatingRef.current) return
     const cfi = currentCfiRef.current || localStorage.getItem(keys.progress)
@@ -805,9 +755,6 @@ const EpubReaderPage = () => {
     return () => clearTimeout(timer)
   }, [showSettings, showSidebar, showSearch]) // eslint-disable-line
 
-  // ── Navigation ────────────────────────────────────────────────────────────
-
-  // ── FIX: handleNext kini memakai navLockRef — mencegah swipe ganda / double-tap ──
   const handleNext = useCallback(() => {
     if (!acquireNavLock(700)) return
     setSelection(null)
@@ -815,7 +762,6 @@ const EpubReaderPage = () => {
     renditionRef.current?.next()
   }, [acquireNavLock])
 
-  // ── FIX: handlePrev memakai navLockRef yang sama + strategi 3-tier ──────
   const handlePrev = useCallback(async () => {
     if (!acquireNavLock(900)) return
 
@@ -831,13 +777,11 @@ const EpubReaderPage = () => {
     const pageBefore = locBefore?.start?.displayed?.page || 1
     const isMobile   = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
-    // Masih di halaman pertama dalam section → cukup prev()
     if (pageBefore > 1) {
       rendition.prev()
       return
     }
 
-    // Cari spine item sebelumnya
     const spineItems = epubBook.spine?.items || []
     const currentIdx = spineItems.findIndex(item => {
       const h = item.href || item.url || ''
@@ -858,7 +802,6 @@ const EpubReaderPage = () => {
     const prevSpineItem = spineItems[prevIdx]
     const prevHref      = prevSpineItem.href || prevSpineItem.url
 
-    // Helper: tunggu satu event rendered atau timeout
     const waitRender = (ms) => new Promise(resolve => {
       let done = false
       const finish = () => { if (!done) { done = true; resolve() } }
@@ -867,18 +810,15 @@ const EpubReaderPage = () => {
     })
 
     try {
-      // ── Strategi 1: pakai CFI akhir section dari locations.generate() ──
       if (locationsReadyRef.current && epubBook.locations?.total > 0) {
         const allCfis = JSON.parse(epubBook.locations.save())
 
-        // Coba match via spine number (paling reliable)
         const spineN = (prevIdx + 1) * 2
         let prevSectionCfis = allCfis.filter(c =>
           typeof c === 'string' &&
           (c.startsWith(`epubcfi(/6/${spineN}[`) || c.startsWith(`epubcfi(/6/${spineN}!`))
         )
 
-        // Fallback: match via cfiBase
         if (prevSectionCfis.length === 0) {
           try {
             const prevSection = epubBook.spine.get(prevHref)
@@ -895,7 +835,6 @@ const EpubReaderPage = () => {
           await rendition.display(lastCfi)
           await waitRender(isMobile ? 400 : 250)
 
-          // ── FIX: Loop advance ke halaman terakhir — lebih reliable ──
           let guard = 40
           while (guard-- > 0) {
             const loc            = rendition.currentLocation()
@@ -904,17 +843,14 @@ const EpubReaderPage = () => {
             const currentHrefNow = loc?.start?.href || ''
             const sameSection    = normalizeHref(currentHrefNow) === normalizeHref(prevHref)
 
-            // Nyasar ke section lain → balik satu halaman
             if (!sameSection) {
               await waitRender(isMobile ? 400 : 250).then(() => rendition.prev()).catch(() => {})
               await waitRender(isMobile ? 400 : 250)
               break
             }
 
-            // Sudah di halaman terakhir section → selesai
             if (page >= total) break
 
-            // Masih ada halaman berikutnya → maju
             rendition.next()
             await waitRender(isMobile ? 300 : 180)
           }
@@ -922,7 +858,6 @@ const EpubReaderPage = () => {
         }
       }
 
-      // ── Strategi 2: navigasi ke akhir section via DOM element terakhir ──
       try {
         const prevSection = epubBook.spine.get(prevHref)
         if (prevSection) {
@@ -930,7 +865,6 @@ const EpubReaderPage = () => {
           const body = sectionDoc?.body
 
           if (body) {
-            // Ambil node teks terakhir yang visible
             const walker  = sectionDoc.createTreeWalker(body, NodeFilter.SHOW_ELEMENT, null)
             let lastEl = null
             let node   = walker.nextNode()
@@ -950,18 +884,13 @@ const EpubReaderPage = () => {
             if (prevSection.unload) prevSection.unload()
           }
         }
-      } catch (domErr) {
-        console.warn('[handlePrev] DOM strategy gagal:', domErr.message)
-      }
+      } catch {}
 
-      // ── Strategi 3 (ultimate fallback): navigasi ke index spine ──────
       await rendition.display(prevIdx)
 
-    } catch (err) {
-      console.warn('[handlePrev] error, fallback prev():', err.message)
+    } catch {
       try { rendition.prev() } catch {}
     } finally {
-      // Lock dilepas sedikit lebih lama di mobile untuk anti double-tap
       setTimeout(() => { navLockRef.current = false }, isMobile ? 700 : 400)
     }
   }, [acquireNavLock, fontSize]) // eslint-disable-line
@@ -971,7 +900,6 @@ const EpubReaderPage = () => {
   useEffect(() => { handleNextRef.current = handleNext }, [handleNext])
   useEffect(() => { handlePrevRef.current = handlePrev }, [handlePrev])
 
-  // ── Search navigation ─────────────────────────────────────────────────────
   const handleSearchNavigate = useCallback(async (cfi, searchQuery) => {
     if (!cfi || !renditionRef.current) return
 
@@ -1074,12 +1002,9 @@ const EpubReaderPage = () => {
         } catch {}
       }, 5000)
 
-    } catch (err) {
-      console.warn('[SearchNavigate] highlight gagal:', err.message)
-    }
+    } catch {}
   }, [])
 
-  // ── TOC navigation ────────────────────────────────────────────────────────
   const handleTocClick = useCallback(async (href) => {
     const rendition = renditionRef.current
     const epubBook  = bookRef.current
@@ -1141,8 +1066,7 @@ const EpubReaderPage = () => {
           await rendition.display(canonical)
         }
       }
-    } catch (err) {
-      console.warn('[handleTocClick] navigasi gagal:', err.message)
+    } catch {
       try {
         const hashIndex   = href.indexOf('#')
         const sectionHref = hashIndex !== -1 ? href.slice(0, hashIndex) : href
@@ -1154,7 +1078,6 @@ const EpubReaderPage = () => {
     }
   }, [])
 
-  // ── Bookmark & annotation navigation ─────────────────────────────────────
   const collapseRangeCfi = (rawCfi) => {
     if (!rawCfi) return rawCfi
     const rangeMatch = rawCfi.match(/^epubcfi\((.+?),(.+?),(.+?)\)$/)
@@ -1168,9 +1091,7 @@ const EpubReaderPage = () => {
     setSelection(null)
     setFootnotePopup(null)
     await new Promise(r => setTimeout(r, 300))
-    renditionRef.current.display(collapseRangeCfi(cfi)).catch(err => {
-      console.warn('[BookmarkClick] display gagal:', err.message)
-    })
+    renditionRef.current.display(collapseRangeCfi(cfi)).catch(() => {})
   }, [])
 
   const handleAnnotationClick = useCallback(async (cfi) => {
@@ -1179,12 +1100,9 @@ const EpubReaderPage = () => {
     setSelection(null)
     setFootnotePopup(null)
     await new Promise(r => setTimeout(r, 300))
-    renditionRef.current.display(collapseRangeCfi(cfi)).catch(err => {
-      console.warn('[AnnotationClick] display gagal:', err.message)
-    })
+    renditionRef.current.display(collapseRangeCfi(cfi)).catch(() => {})
   }, [])
 
-  // ── Toggle bookmark ───────────────────────────────────────────────────────
   const handleToggleBookmark = async () => {
     const rendition = renditionRef.current
     if (!rendition) return
@@ -1203,7 +1121,7 @@ const EpubReaderPage = () => {
       setIsBookmarked(false)
       if (isAuthenticated && bm?.id) {
         try { await epubAnnotationService.deleteBookmark(slug, isZineMode, bm.id) }
-        catch (err) { console.warn('[Bookmark] delete failed:', err.message); setBookmarks(prev => [...prev, bm]); setIsBookmarked(true) }
+        catch { setBookmarks(prev => [...prev, bm]); setIsBookmarked(true) }
       }
     } else {
       const page = rendition.currentLocation()?.start?.displayed?.page
@@ -1217,7 +1135,7 @@ const EpubReaderPage = () => {
         try {
           const saved = await epubAnnotationService.addBookmark(slug, isZineMode, nb)
           setBookmarks(prev => prev.map(b => b.cfi === cfi && !b.id ? { ...b, id: saved?.id } : b))
-        } catch (err) { console.warn('[Bookmark] add failed:', err.message) }
+        } catch {}
         finally { setIsSyncing(false) }
       }
     }
@@ -1228,24 +1146,19 @@ const EpubReaderPage = () => {
     setBookmarks(prev => prev.filter((_, i) => i !== idx))
     if (isAuthenticated && bm?.id) {
       try { await epubAnnotationService.deleteBookmark(slug, isZineMode, bm.id) }
-      catch (err) { console.warn('[Bookmark] delete failed:', err.message) }
+      catch {}
     }
   }
 
-  // ── Highlight / note ──────────────────────────────────────────────────────
   const handleHighlight = async (color) => {
       if (!selection) return
 
-      // ── FIX: Cek apakah CFI ini sudah punya highlight lama → hapus dulu ──
       const existing = annotations.find(a => a.cfi === selection.cfi)
       if (existing) {
-        // FIX: type yang di-pass ke remove() harus 'highlight' (type internal
-        // yang dipakai epub.js untuk method .highlight()), bukan className
-        // 'epub-highlight' — kalau tidak, remove() gagal menemukan mark-nya.
         try { renditionRef.current?.annotations.remove(existing.cfi, EPUB_ANNOTATION_TYPE) } catch {}
         if (isAuthenticated && existing.id) {
           try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, existing.id) }
-          catch (err) { console.warn('[Highlight] delete lama gagal:', err.message) }
+          catch {}
         }
       }
 
@@ -1257,7 +1170,6 @@ const EpubReaderPage = () => {
       } catch {}
 
       const na = { cfi: selection.cfi, text: selection.text, color, note: existing?.note || '', createdAt: Date.now() }
-      // ── FIX: Ganti (bukan tambah) entry lama dengan yang baru ──
       setAnnotations(prev => [...prev.filter(a => a.cfi !== selection.cfi), na])
       setSelection(null)
       triggerGuestNotice()
@@ -1268,7 +1180,7 @@ const EpubReaderPage = () => {
           setAnnotations(prev => prev.map(a =>
             a.cfi === na.cfi && a.createdAt === na.createdAt && !a.id ? { ...a, id: saved?.id } : a
           ))
-        } catch (err) { console.warn('[Highlight] add failed:', err.message) }
+        } catch {}
         finally { setIsSyncing(false) }
       }
     }
@@ -1295,7 +1207,7 @@ const EpubReaderPage = () => {
         setAnnotations(prev => prev.map(a =>
           a.cfi === na.cfi && a.createdAt === na.createdAt && !a.id ? { ...a, id: saved?.id } : a
         ))
-      } catch (err) { console.warn('[Note] add failed:', err.message) }
+      } catch {}
       finally { setIsSyncing(false) }
     }
   }
@@ -1306,11 +1218,10 @@ const EpubReaderPage = () => {
     setAnnotations(prev => prev.filter((_, i) => i !== idx))
     if (isAuthenticated && ann?.id) {
       try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, ann.id) }
-      catch (err) { console.warn('[Annotation] delete failed:', err.message) }
+      catch {}
     }
   }
 
-  // ── Share selection ───────────────────────────────────────────────────────
   const handleShareSelection = useCallback(() => {
     if (!selection) return
     if (!isAuthenticated) {
@@ -1326,7 +1237,6 @@ const EpubReaderPage = () => {
     setSelection(null)
   }, [selection, isAuthenticated, navigate, location.pathname])
 
-  // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
@@ -1352,7 +1262,6 @@ const EpubReaderPage = () => {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleNext, handlePrev, footnotePopup, showCorrectionModal])
 
-  // ── Loading & Error states ─────────────────────────────────────────────────
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <LoadingSpinner />
@@ -1386,7 +1295,6 @@ const EpubReaderPage = () => {
   return (
     <div className={`flex flex-col h-screen select-none ${isDark ? 'dark bg-gray-950' : 'bg-gray-100'}`}>
 
-      {/* ── Header ── */}
       <header
         className="flex items-center justify-between px-4 py-2 z-20 flex-shrink-0"
         style={{ background: headerBg, borderBottom: `1px solid ${headerBorder}`, color: headerColor }}
@@ -1465,7 +1373,6 @@ const EpubReaderPage = () => {
         </div>
       </header>
 
-      {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 overflow-hidden relative">
 
@@ -1584,7 +1491,6 @@ const EpubReaderPage = () => {
         )}
       </div>
 
-      {/* ── Footer (mobile progress) ── */}
       <footer
         className="md:hidden flex items-center gap-3 px-5 py-2.5 flex-shrink-0"
         style={{ background: headerBg, borderTop: `1px solid ${headerBorder}` }}
@@ -1594,8 +1500,6 @@ const EpubReaderPage = () => {
         </div>
         <span className="text-xs flex-shrink-0 tabular-nums" style={{ color: '#9CA3AF' }}>{progress}%</span>
       </footer>
-
-      {/* ── Overlays & Modals ── */}
 
       {footnotePopup && (
         <FootnotePopup
