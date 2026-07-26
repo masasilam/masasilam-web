@@ -25,7 +25,6 @@ const SidebarPanel = ({
 
   return (
     <div className="flex flex-col h-full" style={{ background: cfg.bg, color: cfg.color }}>
-      {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3"
         style={{ borderBottom: `1px solid ${borderClr}` }}
@@ -36,7 +35,6 @@ const SidebarPanel = ({
         </button>
       </div>
 
-      {/* Tab bar */}
       <div className="flex" style={{ borderBottom: `1px solid ${borderClr}` }}>
         {tabs.map(t => (
           <button
@@ -53,9 +51,7 @@ const SidebarPanel = ({
         ))}
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* TOC */}
         {tab === 'toc' && (
           <div className="py-2">
             {toc.length === 0
@@ -79,7 +75,6 @@ const SidebarPanel = ({
           </div>
         )}
 
-        {/* Bookmarks */}
         {tab === 'bookmarks' && (
           <div className="py-2">
             {bookmarks.length === 0
@@ -107,8 +102,6 @@ const SidebarPanel = ({
           </div>
         )}
 
-        {/* Annotations */}
-        {/* Annotations */}
         {tab === 'annotations' && (
           <div className="py-2">
             {annotations.length === 0
@@ -118,40 +111,34 @@ const SidebarPanel = ({
                   <p className="text-sm">Belum ada anotasi</p>
                 </div>
               )
-              : annotations.map((ann, idx) => {
-                  console.log('[SidebarPanel] ann:', ann) // 👈 taruh di sini
-                  return (
-                    <div
-                      key={ann.id || idx}
-                      className={`px-4 py-3 group ${hoverBgCls}`}
-                      style={{ borderBottom: `1px solid ${borderClr}` }}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className="w-3 h-3 rounded-full mt-0.5 flex-shrink-0" style={{ backgroundColor: ann.color }} />
-                        <div className="flex-1 min-w-0">
-                          <button onClick={() => {
-                            console.log('[SidebarPanel] cfi diklik:', ann.cfi) // 👈 dan di sini
-                            onAnnotationClick(ann.cfi)
-                          }} className="text-left w-full">
-                            <p className="text-xs line-clamp-2 italic" style={{ color: cfg.color }}>
-                              "{ann.text || ann.selectedText}"
-                            </p>
-                            {ann.note && (
-                              <p className="text-xs mt-1" style={{ color: mutedClr }}>{ann.note}</p>
-                            )}
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => onDeleteAnnotation(idx)}
-                          className="opacity-0 group-hover:opacity-100 transition flex-shrink-0"
-                          style={{ color: '#F87171' }}
-                        >
-                          <Trash2 size={13} />
+              : annotations.map((ann, idx) => (
+                  <div
+                    key={ann.id || idx}
+                    className={`px-4 py-3 group ${hoverBgCls}`}
+                    style={{ borderBottom: `1px solid ${borderClr}` }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="w-3 h-3 rounded-full mt-0.5 flex-shrink-0" style={{ backgroundColor: ann.color }} />
+                      <div className="flex-1 min-w-0">
+                        <button onClick={() => onAnnotationClick(ann.cfi)} className="text-left w-full">
+                          <p className="text-xs line-clamp-2 italic" style={{ color: cfg.color }}>
+                            "{ann.text || ann.selectedText}"
+                          </p>
+                          {ann.note && (
+                            <p className="text-xs mt-1" style={{ color: mutedClr }}>{ann.note}</p>
+                          )}
                         </button>
                       </div>
+                      <button
+                        onClick={() => onDeleteAnnotation(idx)}
+                        className="opacity-0 group-hover:opacity-100 transition flex-shrink-0"
+                        style={{ color: '#F87171' }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
           </div>
         )}
       </div>
