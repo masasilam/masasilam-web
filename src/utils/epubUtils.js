@@ -42,7 +42,7 @@ export const extractSpineIndex = (cfi) => {
       const n = parseInt(match[1], 10)
       return Math.max(0, Math.floor(n / 2) - 1)
     }
-  } catch {}
+  } catch { }
   return 0
 }
 
@@ -99,19 +99,19 @@ export const resolveCanonicalHref = (epubBook, sectionHref) => {
   try {
     const section = epubBook.spine.get(sectionHref)
     if (section?.href) return section.href
-  } catch {}
+  } catch { }
 
   try {
     const withPrefix = 'Text/' + filename
     const section = epubBook.spine.get(withPrefix)
     if (section?.href) return section.href
-  } catch {}
+  } catch { }
 
   for (const prefix of ['OPS/', 'OEBPS/', 'ops/', 'oebps/']) {
     try {
       const section = epubBook.spine.get(prefix + filename)
       if (section?.href) return section.href
-    } catch {}
+    } catch { }
   }
 
   console.warn('[resolveCanonicalHref] ❌ tidak ditemukan untuk:', sectionHref,
@@ -132,7 +132,7 @@ export const resolveSpineItem = (epubBook, canonical) => {
   try {
     const s = epubBook.spine.get(canonical)
     if (s) return s
-  } catch {}
+  } catch { }
 
   return null
 }
@@ -140,10 +140,10 @@ export const resolveSpineItem = (epubBook, canonical) => {
 // ── Anchor / CFI resolution ────────────────────────────────────────────────
 export const findAnchorInDoc = (doc, anchor) => {
   if (!doc || !anchor) return null
-  try { for (const el of doc.querySelectorAll('[id]')) { if (el.getAttribute('id') === anchor) return el } } catch {}
-  try { const el = doc.getElementById?.(anchor); if (el) return el } catch {}
-  try { const el = doc.querySelector?.(`#${CSS.escape(anchor)}`); if (el) return el } catch {}
-  try { const el = doc.querySelector?.(`[name="${CSS.escape(anchor)}"]`); if (el) return el } catch {}
+  try { for (const el of doc.querySelectorAll('[id]')) { if (el.getAttribute('id') === anchor) return el } } catch { }
+  try { const el = doc.getElementById?.(anchor); if (el) return el } catch { }
+  try { const el = doc.querySelector?.(`#${CSS.escape(anchor)}`); if (el) return el } catch { }
+  try { const el = doc.querySelector?.(`[name="${CSS.escape(anchor)}"]`); if (el) return el } catch { }
   try {
     const walker = doc.createTreeWalker?.(doc.body || doc.documentElement, NodeFilter.SHOW_ELEMENT, null, false)
     if (walker) {
@@ -154,7 +154,7 @@ export const findAnchorInDoc = (doc, anchor) => {
         node = walker.nextNode()
       }
     }
-  } catch {}
+  } catch { }
   return null
 }
 
@@ -208,14 +208,14 @@ export const resolveAnchorToCfi = async (epubBook, canonicalHref, anchor) => {
 
 // ── Local storage keys ─────────────────────────────────────────────────────
 export const localKeys = (slug) => ({
-  annotations:     `epub_annotations_${slug}`,
-  bookmarks:       `epub_bookmarks_${slug}`,
-  corrections:     `epub_corrections_${slug}`,   // ← pending correction highlights merah
-  progress:        `epub_progress_${slug}`,
-  progressAt:      `epub_progress_at_${slug}`,
-  colorMode:       'epubColorMode',
-  fontSize:        'epubFontSize',
-  fontFamily:      'epubFontFamily',
+  annotations: `epub_annotations_${slug}`,
+  bookmarks: `epub_bookmarks_${slug}`,
+  corrections: `epub_corrections_${slug}`,   // ← pending correction highlights merah
+  progress: `epub_progress_${slug}`,
+  progressAt: `epub_progress_at_${slug}`,
+  colorMode: 'epubColorMode',
+  fontSize: 'epubFontSize',
+  fontFamily: 'epubFontFamily',
   guestNoticeSeen: 'epub_guest_notice_seen',
 })
 

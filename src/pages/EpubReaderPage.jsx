@@ -10,16 +10,16 @@ import ShareAnnotationModal from '../components/Social/ShareAnnotationModal'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 import epubAnnotationService from '../services/epubAnnotationService'
 
-import FootnotePopup     from '../components/Reader/FootnotePopup'
-import NoteModal         from '../components/Reader/NoteModal'
-import SelectionPopup    from '../components/Reader/SelectionPopup'
-import SearchPanel       from '../components/Reader/SearchPanel'
-import SidebarPanel      from '../components/Reader/SidebarPanel'
-import SettingsPanel     from '../components/Reader/SettingsPanel'
+import FootnotePopup from '../components/Reader/FootnotePopup'
+import NoteModal from '../components/Reader/NoteModal'
+import SelectionPopup from '../components/Reader/SelectionPopup'
+import SearchPanel from '../components/Reader/SearchPanel'
+import SidebarPanel from '../components/Reader/SidebarPanel'
+import SettingsPanel from '../components/Reader/SettingsPanel'
 import GuestNoticeBanner from '../components/Reader/GuestNoticeBanner'
-import CorrectionModal   from '../components/Reader/CorrectionModal'
+import CorrectionModal from '../components/Reader/CorrectionModal'
 
-import { useEpubTheme }   from '../hooks/useEpubTheme'
+import { useEpubTheme } from '../hooks/useEpubTheme'
 import { useEpubSession } from '../hooks/useEpubSession'
 
 import { COLOR_MODES, HIGHLIGHT_COLORS } from '../constants/readerConstants'
@@ -69,23 +69,23 @@ const extractExternalUrl = (raw = '') => {
 
 const EpubReaderPage = () => {
   const { bookSlug, zineSlug } = useParams()
-  const slug        = bookSlug || zineSlug
-  const isZineMode  = !!zineSlug
-  const navigate    = useNavigate()
-  const location    = useLocation()
+  const slug = bookSlug || zineSlug
+  const isZineMode = !!zineSlug
+  const navigate = useNavigate()
+  const location = useLocation()
   const isAuthenticated = !!localStorage.getItem('token')
 
-  const [book,    setBook]    = useState(null)
+  const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(null)
+  const [error, setError] = useState(null)
 
-  const viewerRef       = useRef(null)
+  const viewerRef = useRef(null)
   const touchWrapperRef = useRef(null)
-  const touchStartX     = useRef(0)
-  const touchStartY     = useRef(0)
-  const bookRef         = useRef(null)
-  const renditionRef    = useRef(null)
-  const currentCfiRef   = useRef(null)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const bookRef = useRef(null)
+  const renditionRef = useRef(null)
+  const currentCfiRef = useRef(null)
   const isNavigatingRef = useRef(false)
 
   const navLockRef = useRef(false)
@@ -97,42 +97,42 @@ const EpubReaderPage = () => {
   }, [])
 
   const [toc, setToc] = useState([])
-  const tocRef        = useRef([])
+  const tocRef = useRef([])
 
   const keys = localKeys(slug)
 
-  const sessionIdRef          = useRef(generateSessionId())
-  const sessionStartRef       = useRef(Date.now())
-  const latestProgressRef     = useRef(0)
-  const spineIndexRef         = useRef(0)
-  const totalSpineItemsRef    = useRef(0)
-  const locationsReadyRef     = useRef(false)
-  const sessionSentRef        = useRef(false)
+  const sessionIdRef = useRef(generateSessionId())
+  const sessionStartRef = useRef(Date.now())
+  const latestProgressRef = useRef(0)
+  const spineIndexRef = useRef(0)
+  const totalSpineItemsRef = useRef(0)
+  const locationsReadyRef = useRef(false)
+  const sessionSentRef = useRef(false)
   const startReadingCalledRef = useRef(false)
 
   const currentChapterLabelRef = useRef('')
   const currentChapterIndexRef = useRef(0)
-  const totalChaptersRef       = useRef(0)
+  const totalChaptersRef = useRef(0)
 
   const [currentChapterLabel, setCurrentChapterLabel] = useState('')
 
-  const [colorMode,  setColorMode]  = useState(() => localStorage.getItem(keys.colorMode)  || 'light')
-  const [fontSize,   setFontSize]   = useState(() => parseInt(localStorage.getItem(keys.fontSize) || '16'))
+  const [colorMode, setColorMode] = useState(() => localStorage.getItem(keys.colorMode) || 'light')
+  const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem(keys.fontSize) || '16'))
   const [fontFamily, setFontFamily] = useState(() => localStorage.getItem(keys.fontFamily) || "'Georgia', 'Times New Roman', serif")
 
   const isDark = colorMode === 'dark'
 
-  const colorModeRef  = useRef(colorMode)
-  const fontSizeRef   = useRef(fontSize)
+  const colorModeRef = useRef(colorMode)
+  const fontSizeRef = useRef(fontSize)
   const fontFamilyRef = useRef(fontFamily)
 
-  const [showSidebar,  setShowSidebar]  = useState(false)
+  const [showSidebar, setShowSidebar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [showSearch,   setShowSearch]   = useState(false)
-  const [progress,     setProgress]     = useState(0)
-  const [isReady,      setIsReady]      = useState(false)
-  const [epubError,    setEpubError]    = useState(null)
-  const [isSyncing,    setIsSyncing]    = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [isReady, setIsReady] = useState(false)
+  const [epubError, setEpubError] = useState(null)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const [annotations, setAnnotations] = useState(() => {
     try { return JSON.parse(localStorage.getItem(keys.annotations) || '[]') } catch { return [] }
@@ -145,16 +145,16 @@ const EpubReaderPage = () => {
     try { return JSON.parse(localStorage.getItem(keys.corrections) || '[]') } catch { return [] }
   })
 
-  const [selection,       setSelection]       = useState(null)
-  const [showNoteModal,   setShowNoteModal]   = useState(false)
-  const [isBookmarked,    setIsBookmarked]    = useState(false)
+  const [selection, setSelection] = useState(null)
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(false)
   const [showGuestNotice, setShowGuestNotice] = useState(false)
-  const [shareModal,      setShareModal]      = useState(null)
-  const [footnotePopup,   setFootnotePopup]   = useState(null)
+  const [shareModal, setShareModal] = useState(null)
+  const [footnotePopup, setFootnotePopup] = useState(null)
 
   const [showCorrectionModal, setShowCorrectionModal] = useState(false)
-  const [correctionContext,   setCorrectionContext]   = useState(null)
-  const [currentSectionHref,  setCurrentSectionHref] = useState('')
+  const [correctionContext, setCorrectionContext] = useState(null)
+  const [currentSectionHref, setCurrentSectionHref] = useState('')
   const currentSectionHrefRef = useRef('')
 
   const { applyTheme } = useEpubTheme()
@@ -210,8 +210,8 @@ const EpubReaderPage = () => {
         setAnnotations(na)
         setBookmarks(nb)
         localStorage.setItem(keys.annotations, JSON.stringify(na))
-        localStorage.setItem(keys.bookmarks,   JSON.stringify(nb))
-      } catch {}
+        localStorage.setItem(keys.bookmarks, JSON.stringify(nb))
+      } catch { }
     }
     loadFromServer()
   }, [slug, isAuthenticated]) // eslint-disable-line
@@ -226,16 +226,16 @@ const EpubReaderPage = () => {
           .map(c => ({ cfi: c.epubCfi, text: c.originalText, id: c.id, createdAt: c.createdAt }))
 
         const prevStored = JSON.parse(localStorage.getItem(keys.corrections) || '[]')
-        const newCfiSet  = new Set(withCfi.map(c => c.cfi))
+        const newCfiSet = new Set(withCfi.map(c => c.cfi))
         prevStored.forEach(old => {
           if (!newCfiSet.has(old.cfi)) {
-            try { renditionRef.current?.annotations.remove(old.cfi, EPUB_ANNOTATION_TYPE) } catch {}
+            try { renditionRef.current?.annotations.remove(old.cfi, EPUB_ANNOTATION_TYPE) } catch { }
           }
         })
 
         setPendingCorrections(withCfi)
         localStorage.setItem(keys.corrections, JSON.stringify(withCfi))
-      } catch {}
+      } catch { }
     }
     loadPendingCorrections()
   }, [slug, isAuthenticated]) // eslint-disable-line
@@ -246,7 +246,7 @@ const EpubReaderPage = () => {
       try {
         const pct = epubBook.locations.percentageFromCfi(cfi)
         if (typeof pct === 'number' && !isNaN(pct)) { setProgress(Math.round(pct * 100)); return }
-      } catch {}
+      } catch { }
     }
     try {
       const spineItems = (epubBook.spine?.items || epubBook.spine?.spineItems || [])
@@ -258,18 +258,18 @@ const EpubReaderPage = () => {
         const spineIndex = (parseInt(match[1]) / 2) - 1
         setProgress(Math.round((spineIndex / Math.max(total - 1, 1)) * 100))
       }
-    } catch {}
+    } catch { }
   }, [])
 
   const handleOpenCorrection = useCallback(() => {
     if (!selection) return
     setCorrectionContext({
-      selectedText:  selection.text,
-      cfi:           selection.cfi,
+      selectedText: selection.text,
+      cfi: selection.cfi,
       contextBefore: '',
-      contextAfter:  '',
+      contextAfter: '',
       startPosition: 0,
-      endPosition:   selection.text.length,
+      endPosition: selection.text.length,
     })
     setSelection(null)
     setShowCorrectionModal(true)
@@ -279,7 +279,7 @@ const EpubReaderPage = () => {
     if (!slug) throw new Error('Slug tidak ditemukan')
     await chapterService.submitEpubCorrection(slug, {
       ...correctionData,
-      epubCfi:     correctionData.cfi || currentCfiRef.current || '',
+      epubCfi: correctionData.cfi || currentCfiRef.current || '',
       sectionHref: currentSectionHrefRef.current || '',
     }, isZineMode)
 
@@ -291,7 +291,7 @@ const EpubReaderPage = () => {
           cfi, {}, null, 'epub-correction',
           { fill: '#EF4444', 'fill-opacity': '0.30' }
         )
-      } catch {}
+      } catch { }
       setPendingCorrections(prev => {
         const updated = [...prev.filter(c => c.cfi !== cfi), nc]
         localStorage.setItem(keys.corrections, JSON.stringify(updated))
@@ -303,15 +303,15 @@ const EpubReaderPage = () => {
   useEffect(() => {
     if (!book?.fileUrl || !viewerRef.current) return
 
-    if (bookRef.current) { try { bookRef.current.destroy() } catch {} }
+    if (bookRef.current) { try { bookRef.current.destroy() } catch { } }
     setIsReady(false)
     setEpubError(null)
 
-    sessionSentRef.current        = false
+    sessionSentRef.current = false
     startReadingCalledRef.current = false
-    locationsReadyRef.current     = false
-    sessionStartRef.current       = Date.now()
-    sessionIdRef.current          = generateSessionId()
+    locationsReadyRef.current = false
+    sessionStartRef.current = Date.now()
+    sessionIdRef.current = generateSessionId()
 
     const epubBook = ePub(book.fileUrl)
     bookRef.current = epubBook
@@ -331,8 +331,8 @@ const EpubReaderPage = () => {
       const flattenToc = (items, depth = 0) =>
         items.flatMap(item => [
           {
-            label:    item.label?.trim() || '',
-            href:     item.href,
+            label: item.label?.trim() || '',
+            href: item.href,
             fileHref: (item.href || '').split('#')[0],
             depth,
           },
@@ -357,7 +357,7 @@ const EpubReaderPage = () => {
         totalSpineItemsRef.current = spineItems.filter(isLinearSpineItem).length
 
         const cfiFromState = location.state?.lastCfi
-        const savedCfi     = cfiFromState || localStorage.getItem(keys.progress)
+        const savedCfi = cfiFromState || localStorage.getItem(keys.progress)
         if (savedCfi) {
           await rendition.display(savedCfi).catch(() => {
             localStorage.removeItem(keys.progress)
@@ -373,29 +373,29 @@ const EpubReaderPage = () => {
 
         if (isAuthenticated && !startReadingCalledRef.current) {
           startReadingCalledRef.current = true
-          await navigationPromise.catch(() => {})
+          await navigationPromise.catch(() => { })
           try {
             const res = await chapterService.epubStartReading(slug, {
-              sessionId:     sessionIdRef.current,
-              deviceType:    getDeviceType(),
-              source:        'epub',
-              chapterLabel:  currentChapterLabelRef.current,
-              chapterIndex:  currentChapterIndexRef.current,
+              sessionId: sessionIdRef.current,
+              deviceType: getDeviceType(),
+              source: 'epub',
+              chapterLabel: currentChapterLabelRef.current,
+              chapterIndex: currentChapterIndexRef.current,
               totalChapters: totalChaptersRef.current,
             }, isZineMode)
 
             const data = res?.data?.data ?? res?.data
             if (data && !data.firstTime && data.lastCfi) {
-              const serverCfi   = data.lastCfi
-              const localCfi    = localStorage.getItem(keys.progress)
-              const localCfiAt  = parseInt(localStorage.getItem(keys.progressAt) || '0', 10)
+              const serverCfi = data.lastCfi
+              const localCfi = localStorage.getItem(keys.progress)
+              const localCfiAt = parseInt(localStorage.getItem(keys.progressAt) || '0', 10)
               const serverCfiAt = data.lastReadAt ? new Date(data.lastReadAt).getTime() : 0
               const shouldUseServer = !localCfi || serverCfiAt > localCfiAt || cfiFromState
               if (shouldUseServer && serverCfi !== localCfi) {
-                renditionRef.current?.display(serverCfi).catch(() => {})
+                renditionRef.current?.display(serverCfi).catch(() => { })
               }
             }
-          } catch {}
+          } catch { }
         }
 
         try {
@@ -403,7 +403,7 @@ const EpubReaderPage = () => {
           if (epubBook.locations && linearItems.length > 0) {
             return epubBook.locations.generate(2000)
           }
-        } catch {}
+        } catch { }
         return Promise.resolve()
       })
       .then(() => {
@@ -412,7 +412,7 @@ const EpubReaderPage = () => {
             locationsReadyRef.current = true
             calcProgress(currentCfiRef.current, epubBook)
           }
-        } catch {}
+        } catch { }
       })
       .catch(() => {
         setEpubError('Gagal memuat konten buku. File EPUB mungkin rusak atau tidak didukung.')
@@ -443,8 +443,8 @@ const EpubReaderPage = () => {
         const active = findActiveChapter(tocRef.current, currentHref)
         if (active) {
           const topLevel = tocRef.current.filter(t => t.depth === 0)
-          const idx      = topLevel.indexOf(active)
-          const label    = active.label || ''
+          const idx = topLevel.indexOf(active)
+          const label = active.label || ''
           setCurrentChapterLabel(label)
           currentChapterLabelRef.current = label
           if (idx >= 0) {
@@ -463,19 +463,19 @@ const EpubReaderPage = () => {
         if (!selText || selText.length < 2) return
         const sel = contents.window.getSelection()
         if (!sel || sel.rangeCount === 0) return
-        const range      = sel.getRangeAt(0)
-        const rangeRect  = range.getBoundingClientRect()
-        const iframe     = viewerRef.current?.querySelector('iframe')
+        const range = sel.getRangeAt(0)
+        const rangeRect = range.getBoundingClientRect()
+        const iframe = viewerRef.current?.querySelector('iframe')
         if (!iframe) return
         const iframeRect = iframe.getBoundingClientRect()
         setSelection({
           text: selText, cfi: cfiRange,
           position: {
             x: iframeRect.left + rangeRect.left + rangeRect.width / 2,
-            y: iframeRect.top  + rangeRect.top,
+            y: iframeRect.top + rangeRect.top,
           },
         })
-      } catch {}
+      } catch { }
     })
 
     const attachedDocs = new WeakSet()
@@ -499,7 +499,7 @@ const EpubReaderPage = () => {
           e.stopPropagation()
           setSelection(null)
           if (diffX > 0) handleNextRef.current?.()
-          else           handlePrevRef.current?.()
+          else handlePrevRef.current?.()
         }
       }
 
@@ -539,14 +539,14 @@ const EpubReaderPage = () => {
             const targetEl = findAnchorInDoc(doc, targetId)
 
             if (targetEl && isFootnoteElement(targetEl)) {
-              const rawHtml    = extractFootnoteHtml(targetEl)
-              const iframe     = viewerRef.current?.querySelector('iframe')
+              const rawHtml = extractFootnoteHtml(targetEl)
+              const iframe = viewerRef.current?.querySelector('iframe')
               const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0 }
-              const linkRect   = anchor.getBoundingClientRect()
+              const linkRect = anchor.getBoundingClientRect()
               setFootnotePopup({
                 html: rawHtml,
-                x:    iframeRect.left + linkRect.left + linkRect.width / 2,
-                y:    iframeRect.top  + linkRect.bottom,
+                x: iframeRect.left + linkRect.left + linkRect.width / 2,
+                y: iframeRect.top + linkRect.bottom,
               })
               return
             }
@@ -558,7 +558,7 @@ const EpubReaderPage = () => {
                   const cfi = section.cfiFromElement(targetEl)
                   if (cfi) { renditionRef.current?.display(cfi); return }
                 }
-              } catch {}
+              } catch { }
               return
             }
             return
@@ -582,24 +582,24 @@ const EpubReaderPage = () => {
           }
 
           const renditionInner = renditionRef.current
-          const epubBookInner  = bookRef.current
+          const epubBookInner = bookRef.current
           if (!renditionInner || !epubBookInner) return
 
           try {
             const currentHref = _section?.href || ''
-            const baseHref    = currentHref.includes('/')
+            const baseHref = currentHref.includes('/')
               ? currentHref.substring(0, currentHref.lastIndexOf('/') + 1)
               : ''
             let fullHref = href
             if (!href.startsWith('/') && !href.startsWith('#')) fullHref = baseHref + href
 
-            const hashIndex   = fullHref.indexOf('#')
+            const hashIndex = fullHref.indexOf('#')
             const sectionPath = hashIndex !== -1 ? fullHref.slice(0, hashIndex) : fullHref
-            const anchorId    = hashIndex !== -1 ? fullHref.slice(hashIndex + 1) : null
+            const anchorId = hashIndex !== -1 ? fullHref.slice(hashIndex + 1) : null
 
             if (!sectionPath && anchorId) {
               const canonical = resolveCanonicalHref(epubBookInner, currentHref)
-              const { cfi }   = await resolveAnchorToCfi(epubBookInner, canonical, anchorId)
+              const { cfi } = await resolveAnchorToCfi(epubBookInner, canonical, anchorId)
               if (cfi) await renditionInner.display(cfi)
               else await renditionInner.display(currentHref)
               return
@@ -613,24 +613,24 @@ const EpubReaderPage = () => {
                   const targetSection = epubBookInner.spine.get(canonical)
                   if (targetSection) {
                     const targetDoc = await targetSection.load(epubBookInner.load.bind(epubBookInner))
-                    const targetEl  = targetDoc ? findAnchorInDoc(targetDoc, anchorId) : null
+                    const targetEl = targetDoc ? findAnchorInDoc(targetDoc, anchorId) : null
 
                     if (targetEl && isFootnoteElement(targetEl)) {
-                      const rawHtml    = extractFootnoteHtml(targetEl)
+                      const rawHtml = extractFootnoteHtml(targetEl)
                       targetSection.unload()
-                      const iframe     = viewerRef.current?.querySelector('iframe')
+                      const iframe = viewerRef.current?.querySelector('iframe')
                       const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0 }
-                      const linkRect   = anchor.getBoundingClientRect()
+                      const linkRect = anchor.getBoundingClientRect()
                       setFootnotePopup({
                         html: rawHtml,
-                        x:    iframeRect.left + linkRect.left + linkRect.width / 2,
-                        y:    iframeRect.top  + linkRect.bottom,
+                        x: iframeRect.left + linkRect.left + linkRect.width / 2,
+                        y: iframeRect.top + linkRect.bottom,
                       })
                       return
                     }
                     if (targetSection.unload) targetSection.unload()
                   }
-                } catch {}
+                } catch { }
 
                 const { cfi } = await resolveAnchorToCfi(epubBookInner, canonical, anchorId)
                 if (cfi) {
@@ -647,13 +647,13 @@ const EpubReaderPage = () => {
               }
             }
           } catch {
-            try { await renditionRef.current?.display(href) } catch {}
+            try { await renditionRef.current?.display(href) } catch { }
           }
         }, true)
-      } catch {}
+      } catch { }
     })
 
-    return () => { try { epubBook.destroy() } catch {} }
+    return () => { try { epubBook.destroy() } catch { } }
   }, [book]) // eslint-disable-line
 
   useEffect(() => {
@@ -674,48 +674,48 @@ const EpubReaderPage = () => {
       if (Math.abs(diffX) > 50 && Math.abs(diffX) > diffY * 1.5) {
         setSelection(null)
         if (diffX > 0) handleNextRef.current?.()
-        else           handlePrevRef.current?.()
+        else handlePrevRef.current?.()
       }
     }
 
     el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchend',   onTouchEnd,   { passive: true })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchend',   onTouchEnd)
+      el.removeEventListener('touchend', onTouchEnd)
     }
   }, [])
 
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     annotations.forEach(ann => {
-      try { renditionRef.current.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch {}
+      try { renditionRef.current.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch { }
       try {
         renditionRef.current.annotations.highlight(
           ann.cfi, {}, null, 'epub-highlight',
           { fill: ann.color, 'fill-opacity': getHighlightOpacity(colorMode) }
         )
-      } catch {}
+      } catch { }
     })
   }, [isReady, annotations]) // eslint-disable-line
 
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
     pendingCorrections.forEach(c => {
-      try { renditionRef.current.annotations.remove(c.cfi, EPUB_ANNOTATION_TYPE) } catch {}
+      try { renditionRef.current.annotations.remove(c.cfi, EPUB_ANNOTATION_TYPE) } catch { }
       try {
         renditionRef.current.annotations.highlight(
           c.cfi, {}, null, 'epub-correction',
           { fill: '#EF4444', 'fill-opacity': '0.30' }
         )
-      } catch {}
+      } catch { }
     })
   }, [isReady, pendingCorrections]) // eslint-disable-line
 
   const prevFontSizeRef = useRef(fontSize)
   useEffect(() => {
-    colorModeRef.current  = colorMode
-    fontSizeRef.current   = fontSize
+    colorModeRef.current = colorMode
+    fontSizeRef.current = fontSize
     fontFamilyRef.current = fontFamily
 
     if (!renditionRef.current) return
@@ -725,20 +725,20 @@ const EpubReaderPage = () => {
 
     applyTheme(renditionRef.current, colorMode, fontSize, fontFamily)
 
-    localStorage.setItem(keys.colorMode,  colorMode)
-    localStorage.setItem(keys.fontSize,   String(fontSize))
+    localStorage.setItem(keys.colorMode, colorMode)
+    localStorage.setItem(keys.fontSize, String(fontSize))
     localStorage.setItem(keys.fontFamily, fontFamily)
 
     if (!fontSizeChanged) return
 
     const timer = setTimeout(() => {
-      try { renditionRef.current?.resize('100%', '100%') } catch {}
+      try { renditionRef.current?.resize('100%', '100%') } catch { }
     }, 80)
     return () => clearTimeout(timer)
   }, [colorMode, fontSize, fontFamily, applyTheme]) // eslint-disable-line
 
   useEffect(() => { localStorage.setItem(keys.annotations, JSON.stringify(annotations)) }, [annotations]) // eslint-disable-line
-  useEffect(() => { localStorage.setItem(keys.bookmarks,   JSON.stringify(bookmarks))   }, [bookmarks])   // eslint-disable-line
+  useEffect(() => { localStorage.setItem(keys.bookmarks, JSON.stringify(bookmarks)) }, [bookmarks])   // eslint-disable-line
 
   useEffect(() => {
     if (!renditionRef.current || isNavigatingRef.current) return
@@ -747,9 +747,9 @@ const EpubReaderPage = () => {
       if (isNavigatingRef.current) return
       const r = renditionRef.current
       if (!r) return
-      try { r.resize('100%', '100%') } catch {}
+      try { r.resize('100%', '100%') } catch { }
       if (cfi) setTimeout(() => {
-        if (!isNavigatingRef.current) r.display(cfi).catch(() => {})
+        if (!isNavigatingRef.current) r.display(cfi).catch(() => { })
       }, 80)
     }, 120)
     return () => clearTimeout(timer)
@@ -769,13 +769,13 @@ const EpubReaderPage = () => {
     setFootnotePopup(null)
 
     const rendition = renditionRef.current
-    const epubBook  = bookRef.current
+    const epubBook = bookRef.current
     if (!rendition || !epubBook) { navLockRef.current = false; return }
 
-    const locBefore  = rendition.currentLocation()
+    const locBefore = rendition.currentLocation()
     const hrefBefore = locBefore?.start?.href || ''
     const pageBefore = locBefore?.start?.displayed?.page || 1
-    const isMobile   = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
     if (pageBefore > 1) {
       rendition.prev()
@@ -800,12 +800,12 @@ const EpubReaderPage = () => {
     if (prevIdx < 0) { rendition.prev(); return }
 
     const prevSpineItem = spineItems[prevIdx]
-    const prevHref      = prevSpineItem.href || prevSpineItem.url
+    const prevHref = prevSpineItem.href || prevSpineItem.url
 
     const waitRender = (ms) => new Promise(resolve => {
       let done = false
       const finish = () => { if (!done) { done = true; resolve() } }
-      try { rendition.once('rendered', finish) } catch {}
+      try { rendition.once('rendered', finish) } catch { }
       setTimeout(finish, ms ?? (isMobile ? 350 : 200))
     })
 
@@ -822,12 +822,12 @@ const EpubReaderPage = () => {
         if (prevSectionCfis.length === 0) {
           try {
             const prevSection = epubBook.spine.get(prevHref)
-            const cfiBase     = prevSection?.cfiBase
+            const cfiBase = prevSection?.cfiBase
             if (cfiBase) {
               const prefix = `epubcfi(${cfiBase}!`
               prevSectionCfis = allCfis.filter(c => typeof c === 'string' && c.startsWith(prefix))
             }
-          } catch {}
+          } catch { }
         }
 
         if (prevSectionCfis.length > 0) {
@@ -837,14 +837,14 @@ const EpubReaderPage = () => {
 
           let guard = 40
           while (guard-- > 0) {
-            const loc            = rendition.currentLocation()
-            const page           = loc?.start?.displayed?.page  ?? 1
-            const total          = loc?.start?.displayed?.total ?? 1
+            const loc = rendition.currentLocation()
+            const page = loc?.start?.displayed?.page ?? 1
+            const total = loc?.start?.displayed?.total ?? 1
             const currentHrefNow = loc?.start?.href || ''
-            const sameSection    = normalizeHref(currentHrefNow) === normalizeHref(prevHref)
+            const sameSection = normalizeHref(currentHrefNow) === normalizeHref(prevHref)
 
             if (!sameSection) {
-              await waitRender(isMobile ? 400 : 250).then(() => rendition.prev()).catch(() => {})
+              await waitRender(isMobile ? 400 : 250).then(() => rendition.prev()).catch(() => { })
               await waitRender(isMobile ? 400 : 250)
               break
             }
@@ -865,9 +865,9 @@ const EpubReaderPage = () => {
           const body = sectionDoc?.body
 
           if (body) {
-            const walker  = sectionDoc.createTreeWalker(body, NodeFilter.SHOW_ELEMENT, null)
+            const walker = sectionDoc.createTreeWalker(body, NodeFilter.SHOW_ELEMENT, null)
             let lastEl = null
-            let node   = walker.nextNode()
+            let node = walker.nextNode()
             while (node) { lastEl = node; node = walker.nextNode() }
 
             if (lastEl) {
@@ -879,17 +879,17 @@ const EpubReaderPage = () => {
                   await waitRender(isMobile ? 400 : 250)
                   return
                 }
-              } catch {}
+              } catch { }
             }
             if (prevSection.unload) prevSection.unload()
           }
         }
-      } catch {}
+      } catch { }
 
       await rendition.display(prevIdx)
 
     } catch {
-      try { rendition.prev() } catch {}
+      try { rendition.prev() } catch { }
     } finally {
       setTimeout(() => { navLockRef.current = false }, isMobile ? 700 : 400)
     }
@@ -923,7 +923,7 @@ const EpubReaderPage = () => {
       const match = pointCfi.match(/^epubcfi\(\/6\/(\d+)/)
       if (match) {
         const spineIndex = Math.floor(parseInt(match[1]) / 2) - 1
-        await renditionRef.current.display(spineIndex).catch(() => {})
+        await renditionRef.current.display(spineIndex).catch(() => { })
       }
     }
 
@@ -947,7 +947,7 @@ const EpubReaderPage = () => {
             outline: 2px solid #F59E0B;
           }
         `
-        ;(doc.head || doc.documentElement).appendChild(s)
+          ; (doc.head || doc.documentElement).appendChild(s)
       }
 
       doc.querySelectorAll('.epub-search-highlight').forEach(el => {
@@ -988,7 +988,7 @@ const EpubReaderPage = () => {
           }
           if (last < text.length) frag.appendChild(doc.createTextNode(text.slice(last)))
           parent.replaceChild(frag, textNode)
-        } catch {}
+        } catch { }
       })
 
       if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -999,15 +999,15 @@ const EpubReaderPage = () => {
             const p = el.parentNode
             if (p) { p.replaceChild(doc.createTextNode(el.textContent || ''), el); p.normalize() }
           })
-        } catch {}
+        } catch { }
       }, 5000)
 
-    } catch {}
+    } catch { }
   }, [])
 
   const handleTocClick = useCallback(async (href) => {
     const rendition = renditionRef.current
-    const epubBook  = bookRef.current
+    const epubBook = bookRef.current
     if (!rendition || !epubBook || !href) return
 
     setShowSidebar(false)
@@ -1015,10 +1015,10 @@ const EpubReaderPage = () => {
     isNavigatingRef.current = true
 
     try {
-      const hashIndex   = href.indexOf('#')
+      const hashIndex = href.indexOf('#')
       const sectionHref = hashIndex !== -1 ? href.slice(0, hashIndex) : href
-      const anchor      = hashIndex !== -1 ? href.slice(hashIndex + 1) : null
-      const canonical   = resolveCanonicalHref(epubBook, sectionHref)
+      const anchor = hashIndex !== -1 ? href.slice(hashIndex + 1) : null
+      const canonical = resolveCanonicalHref(epubBook, sectionHref)
 
       if (!anchor) {
         const spineItem = resolveSpineItem(epubBook, canonical)
@@ -1033,11 +1033,11 @@ const EpubReaderPage = () => {
       const { cfi } = await resolveAnchorToCfi(epubBook, canonical, anchor)
 
       if (cfi) {
-        const currentHref      = rendition.currentLocation()?.start?.href || ''
+        const currentHref = rendition.currentLocation()?.start?.href || ''
         const alreadyOnSection = currentHref.split('/').pop() === canonical.split('/').pop()
 
         if (alreadyOnSection) {
-          const spineItem  = resolveSpineItem(epubBook, canonical)
+          const spineItem = resolveSpineItem(epubBook, canonical)
           const spineItems = epubBook.spine?.items || []
           const currentIdx = spineItem?.index ??
             spineItems.findIndex(i => (i.href || '').split('/').pop() === canonical.split('/').pop())
@@ -1068,11 +1068,11 @@ const EpubReaderPage = () => {
       }
     } catch {
       try {
-        const hashIndex   = href.indexOf('#')
+        const hashIndex = href.indexOf('#')
         const sectionHref = hashIndex !== -1 ? href.slice(0, hashIndex) : href
-        const canonical   = resolveCanonicalHref(epubBook, sectionHref)
+        const canonical = resolveCanonicalHref(epubBook, sectionHref)
         await rendition.display(canonical)
-      } catch {}
+      } catch { }
     } finally {
       setTimeout(() => { isNavigatingRef.current = false }, 500)
     }
@@ -1091,7 +1091,7 @@ const EpubReaderPage = () => {
     setSelection(null)
     setFootnotePopup(null)
     await new Promise(r => setTimeout(r, 300))
-    renditionRef.current.display(collapseRangeCfi(cfi)).catch(() => {})
+    renditionRef.current.display(collapseRangeCfi(cfi)).catch(() => { })
   }, [])
 
   const handleAnnotationClick = useCallback(async (cfi) => {
@@ -1100,7 +1100,7 @@ const EpubReaderPage = () => {
     setSelection(null)
     setFootnotePopup(null)
     await new Promise(r => setTimeout(r, 300))
-    renditionRef.current.display(collapseRangeCfi(cfi)).catch(() => {})
+    renditionRef.current.display(collapseRangeCfi(cfi)).catch(() => { })
   }, [])
 
   const handleToggleBookmark = async () => {
@@ -1111,7 +1111,7 @@ const EpubReaderPage = () => {
       try {
         const loc = rendition.currentLocation()
         cfi = typeof loc?.start === 'string' ? loc.start : loc?.start?.cfi || null
-      } catch {}
+      } catch { }
     }
     if (!cfi) return
 
@@ -1126,7 +1126,7 @@ const EpubReaderPage = () => {
     } else {
       const page = rendition.currentLocation()?.start?.displayed?.page
       const text = page ? `Halaman ${page}` : `Posisi ${Math.round(progress)}%`
-      const nb   = { cfi, text, label: text, createdAt: Date.now() }
+      const nb = { cfi, text, label: text, createdAt: Date.now() }
       setBookmarks(prev => [...prev, nb])
       setIsBookmarked(true)
       triggerGuestNotice()
@@ -1135,7 +1135,7 @@ const EpubReaderPage = () => {
         try {
           const saved = await epubAnnotationService.addBookmark(slug, isZineMode, nb)
           setBookmarks(prev => prev.map(b => b.cfi === cfi && !b.id ? { ...b, id: saved?.id } : b))
-        } catch {}
+        } catch { }
         finally { setIsSyncing(false) }
       }
     }
@@ -1146,44 +1146,44 @@ const EpubReaderPage = () => {
     setBookmarks(prev => prev.filter((_, i) => i !== idx))
     if (isAuthenticated && bm?.id) {
       try { await epubAnnotationService.deleteBookmark(slug, isZineMode, bm.id) }
-      catch {}
+      catch { }
     }
   }
 
   const handleHighlight = async (color) => {
-      if (!selection) return
+    if (!selection) return
 
-      const existing = annotations.find(a => a.cfi === selection.cfi)
-      if (existing) {
-        try { renditionRef.current?.annotations.remove(existing.cfi, EPUB_ANNOTATION_TYPE) } catch {}
-        if (isAuthenticated && existing.id) {
-          try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, existing.id) }
-          catch {}
-        }
-      }
-
-      try {
-        renditionRef.current?.annotations.highlight(
-          selection.cfi, {}, null, 'epub-highlight',
-          { fill: color, 'fill-opacity': getHighlightOpacity(colorMode) }
-        )
-      } catch {}
-
-      const na = { cfi: selection.cfi, text: selection.text, color, note: existing?.note || '', createdAt: Date.now() }
-      setAnnotations(prev => [...prev.filter(a => a.cfi !== selection.cfi), na])
-      setSelection(null)
-      triggerGuestNotice()
-      if (isAuthenticated) {
-        setIsSyncing(true)
-        try {
-          const saved = await epubAnnotationService.addAnnotation(slug, isZineMode, na)
-          setAnnotations(prev => prev.map(a =>
-            a.cfi === na.cfi && a.createdAt === na.createdAt && !a.id ? { ...a, id: saved?.id } : a
-          ))
-        } catch {}
-        finally { setIsSyncing(false) }
+    const existing = annotations.find(a => a.cfi === selection.cfi)
+    if (existing) {
+      try { renditionRef.current?.annotations.remove(existing.cfi, EPUB_ANNOTATION_TYPE) } catch { }
+      if (isAuthenticated && existing.id) {
+        try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, existing.id) }
+        catch { }
       }
     }
+
+    try {
+      renditionRef.current?.annotations.highlight(
+        selection.cfi, {}, null, 'epub-highlight',
+        { fill: color, 'fill-opacity': getHighlightOpacity(colorMode) }
+      )
+    } catch { }
+
+    const na = { cfi: selection.cfi, text: selection.text, color, note: existing?.note || '', createdAt: Date.now() }
+    setAnnotations(prev => [...prev.filter(a => a.cfi !== selection.cfi), na])
+    setSelection(null)
+    triggerGuestNotice()
+    if (isAuthenticated) {
+      setIsSyncing(true)
+      try {
+        const saved = await epubAnnotationService.addAnnotation(slug, isZineMode, na)
+        setAnnotations(prev => prev.map(a =>
+          a.cfi === na.cfi && a.createdAt === na.createdAt && !a.id ? { ...a, id: saved?.id } : a
+        ))
+      } catch { }
+      finally { setIsSyncing(false) }
+    }
+  }
 
   const handleOpenNote = () => setShowNoteModal(true)
 
@@ -1194,7 +1194,7 @@ const EpubReaderPage = () => {
         selection.cfi, {}, null, 'epub-highlight',
         { fill: color, 'fill-opacity': getHighlightOpacity(colorMode) }
       )
-    } catch {}
+    } catch { }
     const na = { cfi: selection.cfi, text: selection.text, color, note, createdAt: Date.now() }
     setAnnotations(prev => [...prev, na])
     setShowNoteModal(false)
@@ -1207,18 +1207,18 @@ const EpubReaderPage = () => {
         setAnnotations(prev => prev.map(a =>
           a.cfi === na.cfi && a.createdAt === na.createdAt && !a.id ? { ...a, id: saved?.id } : a
         ))
-      } catch {}
+      } catch { }
       finally { setIsSyncing(false) }
     }
   }
 
   const handleDeleteAnnotation = async (idx) => {
     const ann = annotations[idx]
-    if (ann) { try { renditionRef.current?.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch {} }
+    if (ann) { try { renditionRef.current?.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch { } }
     setAnnotations(prev => prev.filter((_, i) => i !== idx))
     if (isAuthenticated && ann?.id) {
       try { await epubAnnotationService.deleteAnnotation(slug, isZineMode, ann.id) }
-      catch {}
+      catch { }
     }
   }
 
@@ -1230,8 +1230,8 @@ const EpubReaderPage = () => {
       return
     }
     setShareModal({
-      text:         selection.text,
-      cfi:          selection.cfi,
+      text: selection.text,
+      cfi: selection.cfi,
       chapterLabel: currentChapterLabelRef.current,
     })
     setSelection(null)
@@ -1241,10 +1241,10 @@ const EpubReaderPage = () => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') handleNext()
-      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   handlePrev()
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') handlePrev()
       if (e.key === 'Escape') {
         if (showCorrectionModal) { setShowCorrectionModal(false); setCorrectionContext(null); return }
-        if (footnotePopup)       { setFootnotePopup(null); return }
+        if (footnotePopup) { setFootnotePopup(null); return }
         setShowSidebar(false)
         setShowSettings(false)
         setShowSearch(false)
@@ -1283,12 +1283,12 @@ const EpubReaderPage = () => {
     )
   }
 
-  const modeCfg      = COLOR_MODES[colorMode] || COLOR_MODES.light
-  const headerBg     = colorMode === 'dark' ? '#111827' : colorMode === 'cream' ? '#f0e6d3' : '#ffffff'
+  const modeCfg = COLOR_MODES[colorMode] || COLOR_MODES.light
+  const headerBg = colorMode === 'dark' ? '#111827' : colorMode === 'cream' ? '#f0e6d3' : '#ffffff'
   const headerBorder = colorMode === 'dark' ? '#374151' : colorMode === 'cream' ? '#d6c5aa' : '#e5e7eb'
-  const headerColor  = modeCfg.color
-  const mutedClr     = colorMode === 'dark' ? '#9CA3AF' : colorMode === 'cream' ? '#7a6a55' : '#9CA3AF'
-  const progressBg   = colorMode === 'dark' ? '#374151' : colorMode === 'cream' ? '#d6c5aa' : '#e5e7eb'
+  const headerColor = modeCfg.color
+  const mutedClr = colorMode === 'dark' ? '#9CA3AF' : colorMode === 'cream' ? '#7a6a55' : '#9CA3AF'
+  const progressBg = colorMode === 'dark' ? '#374151' : colorMode === 'cream' ? '#d6c5aa' : '#e5e7eb'
 
   const canCorrect = isCorrectableEpubSection(currentSectionHref)
 
@@ -1388,7 +1388,7 @@ const EpubReaderPage = () => {
             ref={touchWrapperRef}
             className="flex-1 overflow-hidden relative"
             style={{
-              background:  modeCfg.bg,
+              background: modeCfg.bg,
               touchAction: 'pan-y',
             }}
           >
@@ -1560,11 +1560,11 @@ const EpubReaderPage = () => {
             feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
               ...activityData,
               activityType: 'shared_annotation',
-              entityType:   isZineMode ? 'ZINE' : 'BOOK',
-              entitySlug:   slug,
-              entityTitle:  book?.title,
-              entityCover:  book?.coverImageUrl,
-              metadata:     { selectedText: shareModal.text },
+              entityType: isZineMode ? 'ZINE' : 'BOOK',
+              entitySlug: slug,
+              entityTitle: book?.title,
+              entityCover: book?.coverImageUrl,
+              metadata: { selectedText: shareModal.text },
             })
           }}
         />
