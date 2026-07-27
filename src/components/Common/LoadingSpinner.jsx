@@ -16,7 +16,7 @@ const LoadingSpinner = ({ fullScreen = false, size = 'md' }) => {
 
   if (fullScreen) {
     return (
-      <div className="min-h-screen flex flex-col justify-center items-center">
+      <div className="min-h-screen flex flex-col justify-center items-center bg-stone-50 dark:bg-slate-950">
         <div className="flex flex-col items-center justify-center">
           {spinner}
           <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium animate-pulse">Loading...</p>
