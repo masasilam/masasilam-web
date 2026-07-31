@@ -4,6 +4,7 @@ import bookService from '../services/bookService'
 import { filmService } from '../services/filmService'
 import zineService from '../services/zineService'
 import api from '../services/api'
+import { articleHref } from '../utils/newspaperUtils'
 import SEO from '../components/Common/SEO'
 import {
   Search, BookOpen, Film, Layers, Newspaper,
@@ -256,7 +257,7 @@ const NewspaperCard = memo(({ article, query }) => {
   const acc = ACCENTS.newspaper
   const matchFields = detectMatchFields(article, query, 'newspaper')
   return (
-    <Link to={`/koran/${article.category}/${article.publishDate}/${article.slug}`}
+    <Link to={articleHref(article)}
       className={`group flex gap-3 p-3 rounded-xl border transition-all duration-200 shadow-sm bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 hover:shadow-md ${acc.hover} focus:outline-none ${acc.ring} focus-visible:ring-2`}>
       <div className="flex-shrink-0 w-14 sm:w-16">
         <div className="aspect-[2/3] rounded-lg flex items-center justify-center border bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800">
@@ -335,9 +336,9 @@ const SectionBlock = memo(({ type, items, query, loading, count }) => {
         {loading
           ? Array.from({ length: 6 }, (_, i) => <SkeletonCard key={i} />)
           : type === 'book' ? items.map((item, i) => <BookCard key={item.id || i} book={item} query={query} />)
-          : type === 'film' ? items.map((item, i) => <FilmCard key={item.id || i} film={item} query={query} />)
-          : type === 'zine' ? items.map((item, i) => <ZineCard key={item.id || i} zine={item} query={query} />)
-          : items.map((item, i) => <NewspaperCard key={item.id || i} article={item} query={query} />)
+            : type === 'film' ? items.map((item, i) => <FilmCard key={item.id || i} film={item} query={query} />)
+              : type === 'zine' ? items.map((item, i) => <ZineCard key={item.id || i} zine={item} query={query} />)
+                : items.map((item, i) => <NewspaperCard key={item.id || i} article={item} query={query} />)
         }
       </div>
     </section>
@@ -675,9 +676,9 @@ const SearchResultsPage = () => {
 
           {activeTab === 'all' ? (
             <>
-              <SectionBlock type="book"      items={results.book}      query={query} loading={loading.book}      count={totals.book} />
-              <SectionBlock type="film"      items={results.film}      query={query} loading={loading.film}      count={totals.film} />
-              <SectionBlock type="zine"      items={results.zine}      query={query} loading={loading.zine}      count={totals.zine} />
+              <SectionBlock type="book" items={results.book} query={query} loading={loading.book} count={totals.book} />
+              <SectionBlock type="film" items={results.film} query={query} loading={loading.film} count={totals.film} />
+              <SectionBlock type="zine" items={results.zine} query={query} loading={loading.zine} count={totals.zine} />
               <SectionBlock type="newspaper" items={results.newspaper} query={query} loading={loading.newspaper} count={totals.newspaper} />
               {!isAnyLoading && !hasAnyResults && (
                 <div className="text-center py-16 sm:py-20">
@@ -691,9 +692,9 @@ const SearchResultsPage = () => {
             </>
           ) : (
             <>
-              {activeTab === 'book'      && <SectionBlock type="book"      items={results.book}      query={query} loading={loading.book}      count={totals.book} />}
-              {activeTab === 'film'      && <SectionBlock type="film"      items={results.film}      query={query} loading={loading.film}      count={totals.film} />}
-              {activeTab === 'zine'      && <SectionBlock type="zine"      items={results.zine}      query={query} loading={loading.zine}      count={totals.zine} />}
+              {activeTab === 'book' && <SectionBlock type="book" items={results.book} query={query} loading={loading.book} count={totals.book} />}
+              {activeTab === 'film' && <SectionBlock type="film" items={results.film} query={query} loading={loading.film} count={totals.film} />}
+              {activeTab === 'zine' && <SectionBlock type="zine" items={results.zine} query={query} loading={loading.zine} count={totals.zine} />}
               {activeTab === 'newspaper' && <SectionBlock type="newspaper" items={results.newspaper} query={query} loading={loading.newspaper} count={totals.newspaper} />}
 
               {!isAnyLoading && totalPages > 1 && (

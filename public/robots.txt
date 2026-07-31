@@ -1,7 +1,7 @@
 # robots.txt - MasasilaM.com
 # Perpustakaan Digital Domain Publik Indonesia
-# Updated: December 2025
-# Last Modified: 2025-12-28
+# Updated: July 2026
+# Last Modified: 2026-07-31
 
 # ============================================
 # GLOBAL RULES - Allow All Good Bots
@@ -16,6 +16,7 @@ Sitemap: https://masasilam.com/sitemap-genres.xml
 Sitemap: https://masasilam.com/sitemap-authors.xml
 Sitemap: https://masasilam.com/sitemap-books.xml
 Sitemap: https://masasilam.com/sitemap-chapters.xml
+Sitemap: https://masasilam.com/sitemap-newspapers.xml
 
 # ============================================
 # BLOCK PRIVATE/AUTH AREAS
@@ -44,6 +45,8 @@ Disallow: /api
 # Block search results (duplicate content)
 Disallow: /cari?
 Disallow: /cari$
+Disallow: /koran/cari?
+Disallow: /koran/cari$
 
 # ALLOW pagination for main pages (CRITICAL!)
 Allow: /buku?page=
@@ -52,6 +55,7 @@ Allow: /kategori?page=
 Allow: /kategori?*page=*
 Allow: /penulis?page=
 Allow: /penulis?*page=*
+Allow: /koran/rubrik/*?page=*
 
 # Block sort/filter combinations (too many duplicate pages)
 Disallow: /*?*sort=*&*
@@ -273,9 +277,6 @@ Disallow: /
 User-agent: WebSauger
 Disallow: /
 
-User-agent: WebCopier
-Disallow: /
-
 # Vulnerability scanners
 User-agent: Nikto
 Disallow: /
@@ -344,5 +345,6 @@ Disallow: /
 # 5. SEO tools are allowed but rate-limited
 # 6. Pagination is explicitly allowed to prevent content loss
 # 7. Asset query parameters blocked to prevent duplicate indexing
+# 8. Newspaper article URLs are canonical per source (no category/date variants)
 
 # For questions or concerns, contact: info@masa-silam.com

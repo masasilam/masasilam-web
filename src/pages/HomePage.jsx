@@ -2,11 +2,12 @@ import {
   useState, useEffect, memo, useCallback, useRef, useTransition
 } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, ChevronLeft, ChevronRight, Film, Newspaper, Layers, Sprout } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, Film, Newspaper, Layers, Building2 } from 'lucide-react'
 import bookService from '../services/bookService'
 import { filmService } from '../services/filmService'
 import zineService from '../services/zineService'
 import api from '../services/api'
+import { sourceHref } from '../utils/newspaperUtils'
 import SEO from '../components/Common/SEO'
 import FeaturedBanner from '../components/Home/FeaturedBanner'
 import {
@@ -15,9 +16,6 @@ import {
   combineStructuredData
 } from '../utils/seoHelpers'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers — module-level, tidak pernah dibuat ulang
-// ─────────────────────────────────────────────────────────────────────────────
 const getWikimediaThumb = (url, w = 300) => {
   if (!url) return null
   if (url.includes('/thumb/')) return url
@@ -34,7 +32,7 @@ const getWikimediaThumb = (url, w = 300) => {
 const getFilmPoster = (film) => {
   if (!film) return null
   const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
-  const mainThumb    = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
+  const mainThumb = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
   const trailerThumb = videoSources.find(v => v.isTrailer)?.thumbnailUrl
   return (
     film.posterUrl || film.poster_url || film.poster ||
@@ -47,65 +45,39 @@ const getFilmPoster = (film) => {
   )
 }
 
-// Newspaper fallback — module-level
-const fetchArticlesFromCategories = async (limit = 10) => {
-  const catRes = await api.get('/newspapers/categories')
-  const categories = (catRes.data?.data || []).filter(c => (c.articleCount || 0) > 0)
-  if (!categories.length) return []
-  const perCat = Math.max(1, Math.ceil(limit / categories.length))
-  const results = await Promise.allSettled(
-    categories.map(cat =>
-      api.get(`/newspapers/categories/${cat.slug}`, {
-        params: { page: 1, limit: perCat, sortBy: 'date', sortOrder: 'DESC' }
-      })
-    )
-  )
-  return results
-    .filter(r => r.status === 'fulfilled')
-    .flatMap(r => r.value.data?.data?.list || r.value.data?.data || [])
-    .slice(0, limit)
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Accent configs — satu sumber kebenaran untuk semua warna
-// ─────────────────────────────────────────────────────────────────────────────
 const ACCENTS = {
   book: {
-    text:   'text-amber-600 dark:text-amber-400',
-    bg:     'bg-amber-50 dark:bg-amber-500/10',
+    text: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-500/10',
     border: 'border-amber-500 dark:border-amber-400',
-    btn:    'hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400',
-    badge:  'bg-amber-500',
+    btn: 'hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400',
+    badge: 'bg-amber-500',
   },
   zine: {
-    text:   'text-emerald-600 dark:text-emerald-400',
-    bg:     'bg-emerald-50 dark:bg-emerald-500/10',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
     border: 'border-emerald-500 dark:border-emerald-400',
-    btn:    'hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400',
-    badge:  'bg-emerald-500',
+    btn: 'hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400',
+    badge: 'bg-emerald-500',
   },
   film: {
-    text:   'text-blue-600 dark:text-blue-400',
-    bg:     'bg-blue-50 dark:bg-blue-500/10',
+    text: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-500/10',
     border: 'border-blue-500 dark:border-blue-400',
-    btn:    'hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400',
-    badge:  'bg-blue-500',
+    btn: 'hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400',
+    badge: 'bg-blue-500',
   },
   newspaper: {
-    text:   'text-violet-600 dark:text-violet-400',
-    bg:     'bg-violet-50 dark:bg-violet-500/10',
+    text: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-500/10',
     border: 'border-violet-500 dark:border-violet-400',
-    btn:    'hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500 dark:hover:text-violet-400',
-    badge:  'bg-violet-500',
+    btn: 'hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500 dark:hover:text-violet-400',
+    badge: 'bg-violet-500',
   },
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Skeletons — dimensi IDENTIK dengan kartu asli untuk mencegah CLS
-// ─────────────────────────────────────────────────────────────────────────────
 const SkeletonCard = memo(() => (
   <div className="flex-shrink-0 w-36 sm:w-44 animate-pulse" aria-hidden="true">
-    {/* aspect-[2/3] identik dengan BookCard / ZineCard / FilmCard */}
     <div className="aspect-[2/3] rounded-xl mb-3 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
     <div className="h-3 rounded-full w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
     <div className="h-2.5 rounded-full w-2/3 bg-stone-200 dark:bg-slate-700" />
@@ -115,26 +87,19 @@ SkeletonCard.displayName = 'SkeletonCard'
 
 const SkeletonNewspaper = memo(() => (
   <div
-    className="flex-shrink-0 w-64 sm:w-72 animate-pulse rounded-xl p-5 border
+    className="flex-shrink-0 w-64 sm:w-72 animate-pulse rounded-xl overflow-hidden border
                 bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700"
     aria-hidden="true">
-    <div className="flex items-center justify-between mb-3">
-      <div className="h-3 rounded-full w-1/3 bg-stone-200 dark:bg-slate-700" />
-      <div className="h-2.5 rounded-full w-1/4 bg-stone-200 dark:bg-slate-700" />
+    <div className="w-full h-28 bg-stone-200 dark:bg-slate-700" />
+    <div className="p-5">
+      <div className="h-3.5 rounded-full w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
+      <div className="h-2.5 rounded-full w-2/3 mb-3 bg-stone-200 dark:bg-slate-700" />
+      <div className="h-2.5 rounded-full w-full bg-stone-200 dark:bg-slate-700" />
     </div>
-    <div className="h-px rounded mb-3 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-4 rounded-full w-full mb-2 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-4 rounded-full w-4/5 mb-2 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-4 rounded-full w-3/5 mb-3 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-2.5 rounded-full w-1/2 bg-stone-200 dark:bg-slate-700" />
   </div>
 ))
 SkeletonNewspaper.displayName = 'SkeletonNewspaper'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BookCard — amber accent
-// LCP: priority prop → eager + fetchPriority high untuk 2 kartu pertama
-// ─────────────────────────────────────────────────────────────────────────────
 const BookCard = memo(({ book, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
   const thumbUrl = getWikimediaThumb(book.cover_image, 300)
@@ -189,10 +154,6 @@ const BookCard = memo(({ book, priority = false }) => {
 })
 BookCard.displayName = 'BookCard'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ZineCard — emerald accent
-// BUG-1 FIX: rendering dikontrol dari parent (loadingZines guard)
-// ─────────────────────────────────────────────────────────────────────────────
 const ZineCard = memo(({ zine, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
   const thumbUrl = getWikimediaThumb(zine.coverImageUrl, 300)
@@ -247,9 +208,6 @@ const ZineCard = memo(({ zine, priority = false }) => {
 })
 ZineCard.displayName = 'ZineCard'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FilmCard — blue accent
-// ─────────────────────────────────────────────────────────────────────────────
 const FilmCard = memo(({ film, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
@@ -257,8 +215,8 @@ const FilmCard = memo(({ film, priority = false }) => {
   const thumbUrl = rawPosterUrl ? getWikimediaThumb(rawPosterUrl, 300) : null
   const year = film.tahunRilis
     ? (typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4
-        ? film.tahunRilis
-        : new Date(film.tahunRilis).getFullYear())
+      ? film.tahunRilis
+      : new Date(film.tahunRilis).getFullYear())
     : null
   const showImage = thumbUrl && !imgError
 
@@ -322,52 +280,55 @@ const FilmCard = memo(({ film, priority = false }) => {
 })
 FilmCard.displayName = 'FilmCard'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NewspaperCard — violet accent
-// ─────────────────────────────────────────────────────────────────────────────
-const NewspaperCard = memo(({ article }) => {
-  const sourceName = article.sourceName || article.source?.name || null
-  const category = article.categoryName || article.category
-  return (
-    <Link
-      to={`/koran/${article.category}/${article.publishDate}/${article.slug}`}
-      className="group flex-shrink-0 w-64 sm:w-72 rounded-xl p-5 border transition-all duration-300
-                 bg-white border-stone-200 shadow-sm
-                 hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/80
-                 dark:bg-slate-900 dark:border-slate-700 dark:shadow-none
-                 dark:hover:border-violet-500/60 dark:hover:shadow-violet-900/20
-                 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full
-                         text-violet-600 bg-violet-50 border border-violet-200
-                         dark:text-violet-400 dark:bg-violet-500/10 dark:border-violet-700/50">
-          {category}
-        </span>
-        <span className="text-[10px] text-stone-400 dark:text-slate-500">
-          {article.dateFormatted || article.publishDate}
-        </span>
+const NewspaperSourceCard = memo(({ source }) => (
+  <Link
+    to={sourceHref(source.slug || source.id)}
+    className="group flex-shrink-0 w-64 sm:w-72 rounded-xl border overflow-hidden transition-all duration-300
+               bg-white border-stone-200 shadow-sm
+               hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/80
+               dark:bg-slate-900 dark:border-slate-700 dark:shadow-none
+               dark:hover:border-violet-500/60 dark:hover:shadow-violet-900/20
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+  >
+    {source.logoUrl ? (
+      <div className="w-full h-28 overflow-hidden bg-stone-900">
+        <img src={source.logoUrl} alt={source.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
       </div>
-      <div className="w-full h-px mb-3 bg-gradient-to-r from-violet-300 to-transparent dark:from-violet-500/40" />
-      <h3
-        className="text-sm font-bold line-clamp-3 leading-relaxed mb-3 transition-colors
-                   text-stone-800 group-hover:text-violet-700 dark:text-slate-200 dark:group-hover:text-violet-300"
-        style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
-        {article.title}
-      </h3>
-      {sourceName && (
-        <p className="text-[10px] flex items-center gap-1 text-stone-400 dark:text-slate-500">
-          <Newspaper className="w-3 h-3 flex-shrink-0" />{sourceName}
-        </p>
+    ) : null}
+    <div className="p-5">
+      <div className="flex items-start gap-3 mb-3">
+        {!source.logoUrl && (
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-violet-50 dark:bg-violet-500/10">
+            <Newspaper className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h3
+            className="font-black text-sm sm:text-base leading-tight text-stone-900 dark:text-slate-50 transition-colors group-hover:text-violet-700 dark:group-hover:text-violet-300"
+            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+            {source.name}
+          </h3>
+          {source.location && (
+            <p className="flex items-center gap-1 text-[10px] mt-0.5 text-stone-400 dark:text-slate-500">
+              <Building2 className="w-3 h-3" />{source.location}
+            </p>
+          )}
+        </div>
+      </div>
+      {source.description && (
+        <p className="text-xs text-stone-500 dark:text-slate-400 line-clamp-2 mb-3">{source.description}</p>
       )}
-    </Link>
-  )
-})
-NewspaperCard.displayName = 'NewspaperCard'
+      <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-slate-800">
+        <span className="text-[10px] text-stone-400 dark:text-slate-500">
+          <span className="font-semibold text-stone-700 dark:text-slate-300">{(source.totalArticles || 0).toLocaleString('id-ID')}</span> artikel
+        </span>
+        <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400">Lihat Arsip →</span>
+      </div>
+    </div>
+  </Link>
+))
+NewspaperSourceCard.displayName = 'NewspaperSourceCard'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EmptyState — komponen generik untuk semua seksi kosong
-// ─────────────────────────────────────────────────────────────────────────────
 const EmptyState = memo(({ icon: Icon, color, message, linkTo, linkLabel }) => (
   <div className="flex-1 flex flex-col items-center justify-center py-14 text-center min-w-[200px]">
     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 ${color.bg}`}>
@@ -383,9 +344,6 @@ const EmptyState = memo(({ icon: Icon, color, message, linkTo, linkLabel }) => (
 ))
 EmptyState.displayName = 'EmptyState'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SectionHeader — INP: scroll handler pakai useCallback
-// ─────────────────────────────────────────────────────────────────────────────
 const SectionHeader = memo(({
   icon: Icon, title, subtitle,
   accentText, accentBg, accentBorder, accentBtn,
@@ -420,7 +378,7 @@ const SectionHeader = memo(({
         )}
         {scrollRef && (
           <div className="hidden lg:flex gap-1.5">
-            {(['left', 'right'] ).map(dir => (
+            {(['left', 'right']).map(dir => (
               <button
                 key={dir}
                 onClick={() => scroll(dir)}
@@ -440,7 +398,6 @@ const SectionHeader = memo(({
 })
 SectionHeader.displayName = 'SectionHeader'
 
-// INP: will-change agar browser siapkan compositing layer
 const ScrollRow = memo(({ children, scrollRef, label }) => (
   <div
     ref={scrollRef}
@@ -453,75 +410,63 @@ const ScrollRow = memo(({ children, scrollRef, label }) => (
 ))
 ScrollRow.displayName = 'ScrollRow'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE
-// ─────────────────────────────────────────────────────────────────────────────
 const HomePage = () => {
-  const [books,     setBooks]     = useState({ popular: [], new: [] })
-  const [zines,     setZines]     = useState({ latest: [] })
-  const [films,     setFilms]     = useState({ popular: [] })
-  const [newspaper, setNewspaper] = useState({ trending: [] })
+  const [books, setBooks] = useState({ popular: [], new: [] })
+  const [zines, setZines] = useState({ latest: [] })
+  const [films, setFilms] = useState({ popular: [] })
+  const [newspaper, setNewspaper] = useState({ sources: [] })
 
-  const [loadingBooks,     setLoadingBooks]     = useState(true)
-  const [loadingZines,     setLoadingZines]     = useState(true)
-  const [loadingFilms,     setLoadingFilms]     = useState(true)
+  const [loadingBooks, setLoadingBooks] = useState(true)
+  const [loadingZines, setLoadingZines] = useState(true)
+  const [loadingFilms, setLoadingFilms] = useState(true)
   const [loadingNewspaper, setLoadingNewspaper] = useState(true)
 
-  // INP: startTransition agar update data dari fetch tidak blok frame interaksi
   const [, startTransition] = useTransition()
 
   const newBooksRef = useRef(null)
   const popBooksRef = useRef(null)
-  const zinesRef    = useRef(null)
-  const filmsRef    = useRef(null)
-  const koranRef    = useRef(null)
+  const zinesRef = useRef(null)
+  const filmsRef = useRef(null)
+  const koranRef = useRef(null)
 
   useEffect(() => {
-    // ── Books ──────────────────────────────────────────────────────────────
     const fetchBooks = async () => {
       try {
         const [pop, nw] = await Promise.all([
           bookService.getBooks({ page: 1, limit: 16, sortField: 'viewCount', sortOrder: 'DESC' }),
-          bookService.getBooks({ page: 1, limit: 16, sortField: 'updateAt',  sortOrder: 'DESC' }),
+          bookService.getBooks({ page: 1, limit: 16, sortField: 'updateAt', sortOrder: 'DESC' }),
         ])
         const map = (r) => (r.data?.list || r.data?.data || []).map(b => ({
           ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image
         }))
         startTransition(() => setBooks({ popular: map(pop), new: map(nw) }))
-      } catch (err) { console.error('Error fetching books:', err) }
+      } catch { }
       finally { setLoadingBooks(false) }
     }
 
-    // ── Zines ──────────────────────────────────────────────────────────────
     const fetchZines = async () => {
       try {
         const res = await zineService.getZines({ page: 1, limit: 16, sortField: 'updateAt', sortOrder: 'DESC' })
         startTransition(() => setZines({ latest: res.data?.data || [] }))
-      } catch (err) { console.error('Error fetching zines:', err) }
+      } catch { }
       finally { setLoadingZines(false) }
     }
 
-    // ── Films ──────────────────────────────────────────────────────────────
     const fetchFilms = async () => {
       try {
         const res = await filmService.getFilms({ page: 0, size: 16, sortField: 'tahunRilis', sortOrder: 'DESC' })
         startTransition(() => setFilms({ popular: res.data?.data || [] }))
-      } catch (err) { console.error('Error fetching films:', err) }
+      } catch { }
       finally { setLoadingFilms(false) }
     }
 
-    // ── Newspaper ──────────────────────────────────────────────────────────
     const fetchNewspaper = async () => {
       try {
-        const res = await api.get('/newspapers/trending', { params: { days: 30, limit: 10 } })
-        let trending = res.data?.data || []
-        if (!trending.length) trending = await fetchArticlesFromCategories(10)
-        startTransition(() => setNewspaper({ trending }))
+        const res = await api.get('/newspapers/sources', { params: { page: 1, limit: 10 } })
+        const sources = res.data?.data?.list || []
+        startTransition(() => setNewspaper({ sources }))
       } catch {
-        try {
-          const trending = await fetchArticlesFromCategories(10)
-          startTransition(() => setNewspaper({ trending }))
-        } catch (err2) { console.error('Error fetching newspaper:', err2) }
+        startTransition(() => setNewspaper({ sources: [] }))
       } finally { setLoadingNewspaper(false) }
     }
 
@@ -550,17 +495,13 @@ const HomePage = () => {
 
       <div className="min-h-screen transition-colors duration-300 bg-stone-50 dark:bg-slate-950">
 
-        {/* ── Featured Banner ───────────────────────────────────────────── */}
         <FeaturedBanner
           books={books.popular}
           films={films.popular}
-          articles={newspaper.trending}
+          articles={[]}
           zines={zines.latest}
         />
 
-        {/* ════════════════════════════════════════════════════════════
-            BUKU TERBARU — amber  (above fold, no content-visibility)
-        ════════════════════════════════════════════════════════════ */}
         <section
           aria-labelledby="section-buku-terbaru"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
@@ -580,22 +521,19 @@ const HomePage = () => {
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
               : books.new.length > 0
                 ? books.new.map((b, i) => (
-                    <BookCard key={b.id || i} book={b} priority={i < 2} />
-                  ))
+                  <BookCard key={b.id || i} book={b} priority={i < 2} />
+                ))
                 : <EmptyState
-                    icon={BookOpen}
-                    color={ACCENTS.book}
-                    message="Belum ada buku tersedia"
-                    linkTo="/buku"
-                    linkLabel="Jelajahi Koleksi Buku"
-                  />
+                  icon={BookOpen}
+                  color={ACCENTS.book}
+                  message="Belum ada buku tersedia"
+                  linkTo="/buku"
+                  linkLabel="Jelajahi Koleksi Buku"
+                />
             }
           </ScrollRow>
         </section>
 
-        {/* ════════════════════════════════════════════════════════════
-            BUKU TERPOPULER — amber
-        ════════════════════════════════════════════════════════════ */}
         <section
           aria-labelledby="section-buku-populer"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
@@ -615,25 +553,19 @@ const HomePage = () => {
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
               : books.popular.length > 0
                 ? books.popular.map((b, i) => (
-                    <BookCard key={b.id || i} book={b} priority={i < 2} />
-                  ))
+                  <BookCard key={b.id || i} book={b} priority={i < 2} />
+                ))
                 : <EmptyState
-                    icon={BookOpen}
-                    color={ACCENTS.book}
-                    message="Belum ada buku tersedia"
-                    linkTo="/buku"
-                    linkLabel="Jelajahi Koleksi Buku"
-                  />
+                  icon={BookOpen}
+                  color={ACCENTS.book}
+                  message="Belum ada buku tersedia"
+                  linkTo="/buku"
+                  linkLabel="Jelajahi Koleksi Buku"
+                />
             }
           </ScrollRow>
         </section>
 
-        {/* ════════════════════════════════════════════════════════════
-            ZINE — emerald
-            BUG-1 FIX: guard loadingZines SEBELUM cek .length
-            Tanpa guard ini, saat loading array masih [] sehingga
-            `zines.latest.length > 0` false → empty state muncul.
-        ════════════════════════════════════════════════════════════ */}
         <section
           aria-labelledby="section-zine"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
@@ -650,27 +582,57 @@ const HomePage = () => {
             scrollRef={zinesRef}
           />
           <ScrollRow scrollRef={zinesRef} label="Daftar zine dan magazine">
-            {/* ▼ FIX: loadingZines dicek PERTAMA — baru cek isi array */}
             {loadingZines
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
               : zines.latest.length > 0
                 ? zines.latest.map((z, i) => (
-                    <ZineCard key={z.id || i} zine={z} priority={i < 2} />
-                  ))
+                  <ZineCard key={z.id || i} zine={z} priority={i < 2} />
+                ))
                 : <EmptyState
-                    icon={Layers}
-                    color={ACCENTS.zine}
-                    message="Belum ada zine tersedia"
-                    linkTo="/zine"
-                    linkLabel="Jelajahi Koleksi Zine"
-                  />
+                  icon={Layers}
+                  color={ACCENTS.zine}
+                  message="Belum ada zine tersedia"
+                  linkTo="/zine"
+                  linkLabel="Jelajahi Koleksi Zine"
+                />
             }
           </ScrollRow>
         </section>
 
-        {/* ════════════════════════════════════════════════════════════
-            FILM — blue
-        ════════════════════════════════════════════════════════════ */}
+        <section
+          aria-labelledby="section-koran"
+          className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
+          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}
+        >
+          <SectionHeader
+            icon={Newspaper}
+            title="Arsip Koran"
+            subtitle="Surat kabar yang tersedia dalam arsip"
+            accentText={ACCENTS.newspaper.text}
+            accentBg={ACCENTS.newspaper.bg}
+            accentBorder={ACCENTS.newspaper.border}
+            accentBtn={ACCENTS.newspaper.btn}
+            actionPath="/koran"
+            scrollRef={koranRef}
+          />
+          <ScrollRow scrollRef={koranRef} label="Daftar surat kabar dalam arsip">
+            {loadingNewspaper
+              ? Array.from({ length: 5 }, (_, i) => <SkeletonNewspaper key={i} />)
+              : newspaper.sources.length > 0
+                ? newspaper.sources.map((src, i) => (
+                  <NewspaperSourceCard key={src.id || i} source={src} />
+                ))
+                : <EmptyState
+                  icon={Newspaper}
+                  color={ACCENTS.newspaper}
+                  message="Belum ada surat kabar tersedia"
+                  linkTo="/koran"
+                  linkLabel="Jelajahi Arsip Koran"
+                />
+            }
+          </ScrollRow>
+        </section>
+
         <section
           aria-labelledby="section-film"
           className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
@@ -691,56 +653,19 @@ const HomePage = () => {
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
               : films.popular.length > 0
                 ? films.popular.map((f, i) => (
-                    <FilmCard key={f.id || i} film={f} priority={i < 2} />
-                  ))
+                  <FilmCard key={f.id || i} film={f} priority={i < 2} />
+                ))
                 : <EmptyState
-                    icon={Film}
-                    color={ACCENTS.film}
-                    message="Belum ada film tersedia"
-                    linkTo="/film"
-                    linkLabel="Jelajahi Kumpulan Film"
-                  />
+                  icon={Film}
+                  color={ACCENTS.film}
+                  message="Belum ada film tersedia"
+                  linkTo="/film"
+                  linkLabel="Jelajahi Kumpulan Film"
+                />
             }
           </ScrollRow>
         </section>
 
-        {/* ════════════════════════════════════════════════════════════
-            KORAN — violet  (paling jauh di bawah fold)
-        ════════════════════════════════════════════════════════════ */}
-        <section
-          aria-labelledby="section-koran"
-          className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2"
-          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}
-        >
-          <SectionHeader
-            icon={Newspaper}
-            title="Arsip Koran"
-            accentText={ACCENTS.newspaper.text}
-            accentBg={ACCENTS.newspaper.bg}
-            accentBorder={ACCENTS.newspaper.border}
-            accentBtn={ACCENTS.newspaper.btn}
-            actionPath="/koran"
-            scrollRef={koranRef}
-          />
-          <ScrollRow scrollRef={koranRef} label="Arsip artikel koran">
-            {loadingNewspaper
-              ? Array.from({ length: 5 }, (_, i) => <SkeletonNewspaper key={i} />)
-              : newspaper.trending.length > 0
-                ? newspaper.trending.map((art, i) => (
-                    <NewspaperCard key={art.id || i} article={art} />
-                  ))
-                : <EmptyState
-                    icon={Newspaper}
-                    color={ACCENTS.newspaper}
-                    message="Belum ada artikel koran"
-                    linkTo="/koran"
-                    linkLabel="Jelajahi Arsip Koran"
-                  />
-            }
-          </ScrollRow>
-        </section>
-
-        {/* Bottom spacer */}
         <div className="pb-12 sm:pb-16" />
       </div>
     </>
