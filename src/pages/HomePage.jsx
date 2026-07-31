@@ -87,12 +87,11 @@ SkeletonCard.displayName = 'SkeletonCard'
 
 const SkeletonNewspaper = memo(() => (
   <div
-    className="flex-shrink-0 w-64 sm:w-72 animate-pulse rounded-xl overflow-hidden border
+    className="flex-shrink-0 w-56 sm:w-64 animate-pulse rounded-xl overflow-hidden border
                 bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700"
     aria-hidden="true">
-    <div className="w-full h-28 bg-stone-200 dark:bg-slate-700" />
-    <div className="p-5">
-      <div className="h-3.5 rounded-full w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
+    <div className="w-full aspect-video bg-stone-200 dark:bg-slate-700" />
+    <div className="p-4">
       <div className="h-2.5 rounded-full w-2/3 mb-3 bg-stone-200 dark:bg-slate-700" />
       <div className="h-2.5 rounded-full w-full bg-stone-200 dark:bg-slate-700" />
     </div>
@@ -283,44 +282,46 @@ FilmCard.displayName = 'FilmCard'
 const NewspaperSourceCard = memo(({ source }) => (
   <Link
     to={sourceHref(source.slug || source.id)}
-    className="group flex-shrink-0 w-64 sm:w-72 rounded-xl border overflow-hidden transition-all duration-300
+    aria-label={source.name}
+    className="group flex-shrink-0 w-56 sm:w-64 rounded-xl border overflow-hidden transition-all duration-300
                bg-white border-stone-200 shadow-sm
                hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/80
                dark:bg-slate-900 dark:border-slate-700 dark:shadow-none
                dark:hover:border-violet-500/60 dark:hover:shadow-violet-900/20
                focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
   >
-    {source.logoUrl ? (
-      <div className="w-full h-28 overflow-hidden bg-stone-900">
-        <img src={source.logoUrl} alt={source.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-      </div>
-    ) : null}
-    <div className="p-5">
-      <div className="flex items-start gap-3 mb-3">
-        {!source.logoUrl && (
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-violet-50 dark:bg-violet-500/10">
+    <div className="w-full aspect-[576/224] overflow-hidden bg-stone-50 dark:bg-slate-800/60">
+      {source.logoUrl ? (
+        <img
+          src={source.logoUrl}
+          alt={source.name}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-violet-50 dark:bg-violet-500/10">
             <Newspaper className="w-6 h-6 text-violet-600 dark:text-violet-400" />
           </div>
-        )}
-        <div className="min-w-0">
-          <h3
-            className="font-black text-sm sm:text-base leading-tight text-stone-900 dark:text-slate-50 transition-colors group-hover:text-violet-700 dark:group-hover:text-violet-300"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
-            {source.name}
-          </h3>
-          {source.location && (
-            <p className="flex items-center gap-1 text-[10px] mt-0.5 text-stone-400 dark:text-slate-500">
-              <Building2 className="w-3 h-3" />{source.location}
-            </p>
-          )}
         </div>
-      </div>
+      )}
+    </div>
+    <div className="p-4">
+      {source.location && (
+        <p className="flex items-center gap-1 text-[10px] mb-2 text-stone-400 dark:text-slate-500">
+          <Building2 className="w-3 h-3 flex-shrink-0" />
+          <span className="line-clamp-1">{source.location}</span>
+        </p>
+      )}
       {source.description && (
         <p className="text-xs text-stone-500 dark:text-slate-400 line-clamp-2 mb-3">{source.description}</p>
       )}
       <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-slate-800">
         <span className="text-[10px] text-stone-400 dark:text-slate-500">
-          <span className="font-semibold text-stone-700 dark:text-slate-300">{(source.totalArticles || 0).toLocaleString('id-ID')}</span> artikel
+          <span className="font-semibold text-stone-700 dark:text-slate-300">
+            {(source.totalArticles || 0).toLocaleString('id-ID')}
+          </span> artikel
         </span>
         <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400">Lihat Arsip →</span>
       </div>
@@ -607,7 +608,6 @@ const HomePage = () => {
           <SectionHeader
             icon={Newspaper}
             title="Arsip Koran"
-            subtitle="Surat kabar yang tersedia dalam arsip"
             accentText={ACCENTS.newspaper.text}
             accentBg={ACCENTS.newspaper.bg}
             accentBorder={ACCENTS.newspaper.border}

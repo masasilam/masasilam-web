@@ -27,50 +27,37 @@ const SkeletonSource = () => (
 const SourceCard = ({ source }) => (
   <Link
     to={sourceHref(source.slug || source.id)}
+    aria-label={source.name}
     className="group flex flex-col rounded-2xl border overflow-hidden transition-all duration-200
                bg-white border-stone-200
                hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/60
                dark:bg-slate-900 dark:border-slate-700
                dark:hover:border-violet-600/60 dark:hover:shadow-violet-900/20"
   >
-    {source.logoUrl && (
-      <div className="w-full h-28 overflow-hidden bg-stone-900">
+    <div className="w-full h-28 overflow-hidden flex items-center justify-center bg-stone-100 dark:bg-slate-800">
+      {source.logoUrl ? (
         <img
           src={source.logoUrl}
           alt={source.name}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-      </div>
-    )}
+      ) : (
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-violet-50 dark:bg-violet-500/10">
+          <Newspaper className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+        </div>
+      )}
+    </div>
 
     <div className="p-5 sm:p-6 flex flex-col flex-1">
-      <div className="flex items-start gap-3 mb-3">
-        {!source.logoUrl && (
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
-                       bg-violet-50 dark:bg-violet-500/10"
-          >
-            <Newspaper className="w-6 h-6 text-violet-600 dark:text-violet-400" />
-          </div>
-        )}
-        <div className="min-w-0">
-          <h3
-            className="font-black text-base sm:text-lg leading-tight
-                       text-stone-900 dark:text-slate-50 transition-colors
-                       group-hover:text-violet-700 dark:group-hover:text-violet-300"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-          >
-            {source.name}
-          </h3>
-          {source.location && (
-            <p className="flex items-center gap-1 text-xs mt-0.5 text-stone-400 dark:text-slate-500">
-              <Building2 className="w-3 h-3" />
-              {source.location}
-            </p>
-          )}
-        </div>
-      </div>
+      <span className="sr-only">{source.name}</span>
+
+      {source.location && (
+        <p className="flex items-center gap-1 text-xs mb-2 text-stone-400 dark:text-slate-500">
+          <Building2 className="w-3 h-3 flex-shrink-0" />
+          <span className="line-clamp-1">{source.location}</span>
+        </p>
+      )}
 
       {source.description && (
         <p className="text-xs text-stone-500 dark:text-slate-400 line-clamp-2 mb-4">
@@ -135,7 +122,7 @@ const NewspaperHomePage = () => {
       />
 
       <div className="border-b transition-colors bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
-        <div className="container mx-auto px-4 max-w-7xl py-8 sm:py-12">
+        <div className="container mx-auto px-4 max-w-7xl pt-10 pb-8 sm:pt-14 sm:pb-12">
           <div className="text-center mb-4">
             <h1
               className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-none mb-2
@@ -203,7 +190,7 @@ const NewspaperHomePage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 max-w-7xl py-8 sm:py-10">
+      <div className="container mx-auto px-4 max-w-7xl pt-8 pb-16 sm:pt-12 sm:pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-10">
             <section>
@@ -298,8 +285,8 @@ const NewspaperHomePage = () => {
             </div>
 
             {stats && (
-              <div className="rounded-2xl p-5 transition-colors bg-stone-900 dark:bg-slate-800/60">
-                <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-stone-400">
+              <div className="rounded-2xl border p-5 transition-colors bg-white border-stone-200 dark:bg-slate-800/60 dark:border-slate-700">
+                <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-stone-400 dark:text-slate-500">
                   Statistik Arsip
                 </h3>
                 <div className="space-y-3">
@@ -317,11 +304,11 @@ const NewspaperHomePage = () => {
                     { label: 'Rentang Arsip', value: stats.dateRange || '-', icon: Calendar }
                   ].map(({ label, value, icon: Icon }) => (
                     <div key={label} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-stone-400">
+                      <div className="flex items-center gap-2 text-stone-400 dark:text-slate-500">
                         <Icon className="w-3.5 h-3.5" />
                         <span className="text-xs">{label}</span>
                       </div>
-                      <span className="font-bold text-sm text-white">{value}</span>
+                      <span className="font-bold text-sm text-stone-900 dark:text-white">{value}</span>
                     </div>
                   ))}
                 </div>
