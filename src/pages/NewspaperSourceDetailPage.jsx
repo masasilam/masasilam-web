@@ -86,11 +86,11 @@ const NewspaperSourceDetailPage = () => {
 
                     <div className="flex items-center gap-4">
                         {source.logoUrl ? (
-                            <div className="w-full sm:w-72 h-20 sm:h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-stone-900 flex items-center justify-center">
+                            <div className="w-full sm:w-72 h-20 sm:h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-stone-50 dark:bg-slate-800/60">
                                 <img
                                     src={source.logoUrl}
                                     alt={source.name}
-                                    className="w-full h-full object-contain"
+                                    className="w-full h-full object-cover"
                                 />
                             </div>
                         ) : (

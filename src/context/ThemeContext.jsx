@@ -5,19 +5,14 @@ export const ThemeContext = createContext()
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Get theme from localStorage or default to 'dark'
     const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME)
-    return savedTheme || 'dark' // ← PERUBAHAN: dari 'light' ke 'dark'
+    return savedTheme || 'dark'
   })
 
   useEffect(() => {
-    // Save theme to localStorage
     localStorage.setItem(STORAGE_KEYS.THEME, theme)
-    
-    // Update document attributes
     document.documentElement.setAttribute('data-theme', theme)
-    
-    // Add/remove dark class for Tailwind
+    document.documentElement.style.colorScheme = theme
     if (theme === 'dark') {
       document.documentElement.classList.add('dark')
     } else {

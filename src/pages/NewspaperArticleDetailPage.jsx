@@ -39,6 +39,7 @@ const LS_FONT_FAMILY_KEY = 'koran_reader_fontFamily'
 const LS_MODE_KEY = 'koran_reader_mode'
 
 const EPUB_SCOPED_CSS = `
+  [data-epub] { hyphens: auto; }
   [data-epub] p {
     margin-top: 0; margin-bottom: 0;
     text-indent: 1.5em !important; text-align: justify;
@@ -47,6 +48,7 @@ const EPUB_SCOPED_CSS = `
     hyphenate-limit-chars: 6 2 2 !important;
     word-wrap: break-word !important; overflow-wrap: break-word !important;
     line-height: inherit !important;
+    orphans: 2; widows: 2;
   }
   [data-epub] blockquote, [data-epub] li, [data-epub] td, [data-epub] th {
     -webkit-hyphens: auto !important; hyphens: auto !important;
@@ -55,22 +57,205 @@ const EPUB_SCOPED_CSS = `
   [data-epub] p:first-child { text-indent: 0 !important; margin-top: 0 !important; }
   [data-epub] h1 + p, [data-epub] h2 + p, [data-epub] h3 + p,
   [data-epub] h4 + p, [data-epub] h5 + p, [data-epub] h6 + p,
-  [data-epub] .first-paragraph { text-indent: 0 !important; margin-top: 2em !important; }
+  [data-epub] .first-paragraph,
+  [data-epub] section > p:first-of-type { text-indent: 0 !important; margin-top: 2em !important; }
   [data-epub] h1, [data-epub] h2, [data-epub] h3,
   [data-epub] h4, [data-epub] h5, [data-epub] h6 {
     font-family: inherit !important; text-align: center !important;
     margin: 2.5em 0 0.25em 0 !important; hyphens: none !important;
+    page-break-after: avoid;
   }
   [data-epub] h1 { font-size: 1.5em !important; font-weight: 700 !important; }
-  [data-epub] h2 { font-size: 1.3em !important; }
-  [data-epub] h3 { font-size: 1.2em !important; }
+  [data-epub] h2 { font-size: 1.3em !important; font-weight: 650; }
+  [data-epub] h3 { font-size: 1.2em !important; font-weight: 600; }
+  [data-epub] h4 { font-size: 1.1em; font-weight: 550; }
+  [data-epub] h5 { font-size: 1.05em; font-weight: 500; }
+  [data-epub] h6 { font-size: 1em; font-weight: 450; }
   [data-epub] blockquote {
     margin: 0.25em 0 !important; padding: 0 0.25em !important;
     border-left: 3px solid #ccc !important; font-style: italic !important;
+    hyphens: auto;
   }
   [data-epub] blockquote p { text-indent: 0 !important; }
+  [data-epub] blockquote p + p { text-indent: 1.5em; }
   [data-epub] img { max-width: 100% !important; height: auto !important; display: block !important; margin: 0 auto !important; }
+
+  [data-epub] p.separator, [data-epub] p.ornament, [data-epub] p.divider {
+    text-align: center !important; text-indent: 0 !important; margin: 2em 0 !important; color: #666;
+  }
+  [data-epub] p.ornament-flower { letter-spacing: 0.3em; font-size: 1.1em; text-align: center; text-indent: 0; }
+
+  [data-epub] .poem { margin: 2em 0; text-align: left; text-indent: 0; hyphens: none; line-height: 1.4; }
+  [data-epub] .poem p, [data-epub] .poem div, [data-epub] .poem span { text-align: left; text-indent: 0; margin: 0; hyphens: none; }
+  [data-epub] .poem .note { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; position: relative; font-size: 0.9em; }
+  [data-epub] .poem .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
+  [data-epub] .poem .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] .poem h1, [data-epub] .poem h2, [data-epub] .poem h3, [data-epub] .poem h4 {
+    text-align: center; font-weight: 600; margin: 1.5em 0 1em 0; text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  [data-epub] .poem .author { text-align: center; font-weight: 500; font-size: 1.1em; margin: 2em 0 1em 0; text-transform: uppercase; letter-spacing: 0.2em; }
+  [data-epub] .poem span { display: block; margin: 0; line-height: 1.4; }
+  [data-epub] .poem div + div { margin-top: 1.5em; }
+  [data-epub] .poem p:last-child { text-align: right; font-style: italic; margin-top: 2em; font-size: 0.9em; }
+  [data-epub] .indent { margin-left: 2em; }
+
+  [data-epub] ol, [data-epub] ul { margin: 0; text-align: justify; hyphens: auto; }
+  [data-epub] ul.dash-list { list-style: none; padding-left: 1.5em; margin: 0; }
+  [data-epub] ul.dash-list li { text-indent: -0.7em; margin: 0; }
+  [data-epub] ul.dash-list li::before { content: "– "; }
+
+  [data-epub] strong, [data-epub] b { font-weight: 600; }
+  [data-epub] em, [data-epub] i { font-style: italic; }
+  [data-epub] q::before { content: open-quote; }
+  [data-epub] q::after { content: close-quote; }
+
+  [data-epub] blockquote .note {
+    margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important;
+    padding-left: 0 !important; padding-right: 0 !important;
+    position: relative; font-size: 0.9em; border-left: none !important; font-style: normal !important;
+  }
+  [data-epub] blockquote .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
+  [data-epub] blockquote .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; font-style: normal !important; }
+
+  [data-epub] a { text-decoration: underline; hyphens: none; }
+  [data-epub] a:hover { opacity: 0.8; }
+
+  [data-epub] nav { padding: 0.25em; max-width: 38em; margin: 0.25em auto; }
+  [data-epub] nav h1 { margin: 2.5em 0 0.25em 0; }
+  [data-epub] nav ol, [data-epub] nav li { list-style: none; margin: 0; text-align: left; text-indent: 0; }
+  [data-epub] nav a { text-decoration: none; display: block; line-height: 1.6; padding: 0.2em 0; hyphens: none; }
+  [data-epub] nav a:hover { text-decoration: underline; opacity: 0.8; }
+
+  [data-epub] .titlepage {
+    text-align: center; padding: 0.25em; max-width: 38em; margin: 0.25em auto;
+    min-height: 70vh; display: flex; flex-direction: column; justify-content: center;
+  }
+  [data-epub] .titlepage h1 { font-size: 2em; font-weight: 700; margin: 2.5em 0 0.25em 0; }
+  [data-epub] .titlepage .subtitle { font-size: 1.4em; font-weight: 600; margin: 0.5em 0 2em 0; text-align: center; }
+  [data-epub] .titlepage h2 { font-size: 1.3em; font-weight: 650; margin: 2.5em 0 0.25em 0; }
+  [data-epub] .titlepage h3 { font-size: 1.2em; font-weight: 600; margin: 2.5em 0 0.25em 0; }
+
+  [data-epub].chapter, [data-epub] .colophon, [data-epub] .imprint, [data-epub] .uncopyright {
+    padding: 0.25em; max-width: 38em; margin: 0.25em auto;
+  }
+  [data-epub] .colophon p { text-indent: 0; }
+  [data-epub] .colophon > p:first-of-type { text-align: center; }
+  [data-epub] .colophon, [data-epub] .imprint, [data-epub] .uncopyright { text-align: justify; }
+  [data-epub] .info-box p, [data-epub] .info-box p:first-of-type { text-align: left !important; text-indent: 0 !important; }
+
+  [data-epub] .image-inline { display: inline; vertical-align: middle; height: 2em; width: auto; margin: 0 0.3em; }
+  [data-epub] .image-with-caption { margin: 2em auto; text-align: center; }
+  [data-epub] .image-with-caption img { margin: 0 auto; }
+  [data-epub] .image-caption { text-align: center; font-size: 0.9em; margin: 0.5em 0 0 0; color: #666; line-height: 1.4; text-indent: 0; }
+  [data-epub] section.colophon img, [data-epub] section.imprint img,
+  [data-epub] .colophon img, [data-epub] .imprint img {
+    max-width: 150px !important; max-height: 150px !important; width: auto; height: auto;
+    margin: 1em auto 2em auto !important; object-fit: contain;
+  }
+  [data-epub] .image-small { max-width: 120px !important; max-height: 120px !important; width: auto; height: auto; margin: 1em auto !important; object-fit: contain; }
+  [data-epub] .image-medium { max-width: 200px !important; max-height: 200px !important; width: auto; height: auto; margin: 1em auto !important; object-fit: contain; }
+  [data-epub] .image-container { margin: 0.25em 0; overflow: hidden; clear: both; }
+  [data-epub] .image-left { float: left; margin: 0 0.5em 0.25em 0; max-width: 45%; }
+  [data-epub] .image-right { float: right; margin: 0 0 0.25em 0.5em; max-width: 45%; }
+  [data-epub] .image-top, [data-epub] .image-bottom { display: block; margin: 0.25em auto; max-width: 100%; }
+  [data-epub] .image-container::after { content: ""; display: table; clear: both; }
+
+  [data-epub] .letter {
+    margin: 3em auto; padding: 2em; border: 1px solid #ccc; border-radius: 8px;
+    background-color: #fdfcf8; max-width: 36em; line-height: 1.6; hyphens: auto;
+  }
+  [data-epub] .letter p { margin: 0; text-align: justify; }
+  [data-epub] .letter .note {
+    margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; position: relative; font-size: 0.9em;
+    background-color: transparent !important; border: none !important; border-radius: 0 !important;
+    padding-left: 0 !important; padding-right: 0 !important;
+  }
+  [data-epub] .letter .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
+  [data-epub] .letter .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] .letter .date { text-align: right; font-style: italic; margin-bottom: 2em; text-indent: 0; }
+  [data-epub] .letter .salutation { margin-bottom: 1.5em; text-indent: 0; font-weight: 500; }
+  [data-epub] .letter .body { text-indent: 1.5em; text-align: justify; }
+  [data-epub] .letter .body:first-of-type { text-indent: 0; margin-top: 0; }
+  [data-epub] .letter .closing { margin-top: 2em; text-align: right; font-style: italic; text-indent: 0; }
+  [data-epub] .letter .signature { text-align: right; font-weight: 600; margin-top: 0.5em; text-indent: 0; }
+  [data-epub] .letter-date { text-align: right; font-style: italic; text-indent: 0; }
+
+  [data-epub] .epigraph { font-style: italic; text-align: center; margin: 3em auto; max-width: 32em; hyphens: none; }
+  [data-epub] .epigraph cite { display: block; margin-top: 1em; font-size: 0.9em; text-align: right; font-style: normal; }
+  [data-epub] .subtitle { font-size: 1.1em; text-align: center; margin: 1.5em 0; }
+  [data-epub] .center { text-align: center; text-indent: 0; }
+
+  [data-epub] .dialog { margin: 1em 0; text-indent: 0; }
+  [data-epub] .dialog p { margin: 0.2em 0; text-indent: -1em; padding-left: 1em; }
+  [data-epub] .dialog .speaker { font-weight: 600; }
+  [data-epub] .dialog .note { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; padding-left: 0 !important; position: relative; font-size: 0.9em; }
+  [data-epub] .dialog .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
+  [data-epub] .dialog .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; padding-left: 0 !important; }
+
+  [data-epub] .scene-break { text-align: center; margin: 2em 0; letter-spacing: 0.3em; color: #666; }
+  [data-epub] .scene-break::before { content: "⁂"; }
+
+  [data-epub] .info-box { padding: 0.5em 1em; margin: 1.5em 0; background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+  [data-epub] .info-box p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] .info-box p:first-child { margin-top: 0 !important; }
+  [data-epub] .info-box p:last-child { margin-bottom: 0 !important; }
+
+  [data-epub] .note { margin: 2.5em 0 1.5em 0; padding-top: 1em; position: relative; font-size: 0.9em; }
+  [data-epub] .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
+  [data-epub] .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] .note p:first-child { margin-top: 0 !important; }
+  [data-epub] .note p:last-child { margin-bottom: 0 !important; }
+
+  [data-epub] .formula-list { margin-left: 2em; max-width: 30em; }
+  [data-epub] .formula-list p { display: grid; grid-template-columns: auto auto 1fr; gap: 0.5em 1em; align-items: baseline; }
+
+  [data-epub] .music-notation { margin: 1.5em 0; }
+  [data-epub] .music-meta { font-size: 0.9em; margin-bottom: 1em; font-style: italic; }
+  [data-epub] .music-row { margin-bottom: 0.15em; }
+  [data-epub] .notation-line {
+    font-family: "Courier New", "Lucida Console", monospace; font-size: 0.88em; display: block;
+    white-space: pre; letter-spacing: 0.05em; line-height: 1.3; border-bottom: 0.5px solid #ccc; padding-bottom: 1px;
+  }
+  [data-epub] .lyric-line { font-size: 0.85em; display: block; white-space: pre; color: #444; line-height: 1.5; margin-bottom: 0.6em; }
+  [data-epub] .music-section-label { font-size: 0.9em; font-weight: 600; font-style: italic; margin: 1.2em 0 0.4em 0; }
+
+  [data-epub] table { width: 100%; border-collapse: collapse; margin: 1.5em 0; font-size: 0.95em; }
+  [data-epub] th, [data-epub] td { border: 1px solid #ccc; padding: 0.4em 0.6em; text-align: left; hyphens: none; }
+  [data-epub] th { background-color: #f0f0f0; font-weight: 600; }
+  [data-epub] code, [data-epub] pre { font-family: "Courier New", monospace; background-color: #f6f6f6; border-radius: 4px; }
+  [data-epub] pre { padding: 0.5em; overflow-x: auto; font-size: 0.9em; }
+  [data-epub] .smallcaps { font-variant: small-caps; letter-spacing: 0.05em; }
+  [data-epub] .uppercase { text-transform: uppercase; }
+
+  @media (prefers-color-scheme: dark) {
+    [data-epub] { background-color: #121212; color: #e0e0e0; }
+    [data-epub] blockquote { border-left-color: #666; }
+    [data-epub] .letter { background-color: #1e1e1e; border-color: #444; }
+    [data-epub] th { background-color: #222; }
+    [data-epub] td, [data-epub] th { border-color: #444; }
+    [data-epub] pre { background-color: #1e1e1e; }
+    [data-epub] .info-box { background-color: #2d2d2d; border: 1px solid #555; color: #e0e0e0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+    [data-epub] .note::before { border-top-color: #666; }
+    [data-epub] img { filter: invert(1); }
+    [data-epub] .image-inline { filter: invert(1); opacity: 0.9; }
+    [data-epub] img.photo, [data-epub] img.illustration, [data-epub] img.colored, [data-epub] .chapter img.no-invert { filter: none; opacity: 0.9; }
+    [data-epub] img.logo, [data-epub] .colophon img, [data-epub] .imprint img { filter: invert(1) hue-rotate(180deg); }
+    [data-epub] .image-caption { color: #aaa; }
+    [data-epub] p.separator, [data-epub] p.ornament, [data-epub] p.divider { color: #999; }
+    [data-epub] .scene-break { color: #999; }
+  }
+
+  @media screen and (max-width: 600px) {
+    [data-epub] .image-left, [data-epub] .image-right { float: none; display: block; margin: 0.25em auto; max-width: 90%; }
+    [data-epub] .indent { margin-left: 1em; }
+    [data-epub] .formula-list { margin-left: 0.5em; }
+    [data-epub] .formula-list p { grid-template-columns: auto auto 1fr; gap: 0.3em 0.5em; font-size: 0.9em; }
+  }
 `
+
+const MetaDot = ({ mode }) => (
+  <span aria-hidden="true" style={{ color: mode.color, opacity: 0.3 }}>·</span>
+)
 
 const ReaderToolbar = ({ fontIdx, setFontIdx, fontFamilyKey, setFontFamilyKey, modeKey, setModeKey }) => {
   const [open, setOpen] = useState(false)
@@ -151,7 +336,7 @@ const ArticleContent = ({ html, fontSize, fontFamily, mode }) => {
   return (
     <>
       <style>{EPUB_SCOPED_CSS}</style>
-      <div ref={ref} data-epub lang="id" className="chapter"
+      <div ref={ref} data-epub lang="en" className="chapter"
         style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, backgroundColor: 'transparent', margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em', transition: 'font-size 0.15s, color 0.2s' }} />
     </>
   )
@@ -287,52 +472,76 @@ const NewspaperArticleDetailPage = () => {
           <article className="lg:col-span-2">
             <div className="rounded-2xl border overflow-hidden mb-6 shadow-sm transition-all" style={{ background: mode.cardBg, borderColor: mode.border }}>
               <div className="px-5 sm:px-8 pt-6 sm:pt-8">
-                <div className="flex items-center gap-2 mb-4 flex-wrap">
-                  {chips.map(c => {
-                    const ChipIcon = getIcon(c.slug)
-                    return (
-                      <Link key={c.slug} to={rubrikHref(c.slug)} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition hover:opacity-80"
-                        style={{ background: mode.bg, color: mode.color, borderColor: mode.border }}>
-                        <ChipIcon className="w-3.5 h-3.5" /> {c.name}
-                      </Link>
-                    )
-                  })}
+
+                <div className="flex items-center justify-center gap-x-2 gap-y-1.5 mb-5 flex-wrap text-center">
                   {article.importance === 'high' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">BERITA UTAMA</span>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style={{ background: 'rgba(239,68,68,0.12)', color: '#dc2626' }}>BERITA UTAMA</span>
                   )}
-                </div>
-
-                <h1 className="font-black leading-tight mb-3 transition-all"
-                  style={{ color: mode.color, fontFamily: `Georgia, "Times New Roman", serif`, fontSize: `calc(${fontSize} * 1.7)`, lineHeight: 1.25 }}>
-                  {article.title}
-                </h1>
-
-                {article.subtitle && (
-                  <p className="text-base italic mb-4 border-l-4 pl-4" style={{ color: mode.color, opacity: 0.65, borderColor: mode.border }}>{article.subtitle}</p>
-                )}
-
-                <div className="h-px mb-4" style={{ background: `linear-gradient(to right, #7c3aed, transparent)` }} />
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs pb-5 border-b mb-4" style={{ color: mode.color, opacity: 0.6, borderColor: mode.border }}>
-                  <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{article.dateFormatted || article.publishDate}</span>
-                  <span className="flex items-center gap-1.5"><Newspaper className="w-3.5 h-3.5" />{sourceName}</span>
-                  {authorNames.length > 0 && <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{authorNames.join(', ')}</span>}
-                  {article.pageNumber && <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5" />Halaman {article.pageNumber}</span>}
-                  {article.viewCount > 0 && <span className="flex items-center gap-1.5 ml-auto"><Eye className="w-3.5 h-3.5" />{article.viewCount.toLocaleString('id-ID')} tayangan</span>}
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap pb-3">
-                  <button onClick={handleShare} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all" style={{ borderColor: mode.border, color: mode.color, background: mode.bg }}>
-                    <Share2 className="w-3.5 h-3.5" />Bagikan
-                  </button>
-                  {article.wordCount > 0 && (
-                    <span className="flex items-center gap-1.5 text-xs" style={{ color: mode.color, opacity: 0.45 }}>
-                      <Clock className="w-3.5 h-3.5" />~{Math.max(1, Math.ceil(article.wordCount / 200))} mnt · {article.wordCount.toLocaleString('id-ID')} kata
-                    </span>
-                  )}
-                  <div className="ml-auto">
-                    <ReaderToolbar fontIdx={fontIdx} setFontIdx={setFontIdx} fontFamilyKey={fontFamilyKey} setFontFamilyKey={setFontFamilyKey} modeKey={modeKey} setModeKey={setModeKey} />
+                  <div className="flex items-center gap-x-1.5 gap-y-1 flex-wrap justify-center">
+                    {chips.map((c, i) => {
+                      const ChipIcon = getIcon(c.slug)
+                      return (
+                        <span key={c.slug} className="flex items-center gap-1.5">
+                          {i > 0 && <MetaDot mode={mode} />}
+                          <Link to={rubrikHref(c.slug)} title={c.name}
+                            className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide transition hover:opacity-70"
+                            style={{ color: '#7c3aed' }}>
+                            <ChipIcon className="w-3 h-3" />{c.name}
+                          </Link>
+                        </span>
+                      )
+                    })}
                   </div>
+                </div>
+
+                <div style={{ maxWidth: '38em', margin: '0 auto', textAlign: 'center' }}>
+                  <h1 className="font-black leading-tight mb-3 transition-all"
+                    style={{ color: mode.color, fontFamily: `Georgia, "Times New Roman", serif`, fontSize: `calc(${fontSize} * 1.7)`, lineHeight: 1.25 }}>
+                    {article.title}
+                  </h1>
+
+                  {article.subtitle && (
+                    <p className="text-base italic mb-4" style={{ color: mode.color, opacity: 0.65 }}>{article.subtitle}</p>
+                  )}
+                </div>
+
+                <div className="h-px mt-1 mb-4" style={{ background: `linear-gradient(to right, #7c3aed, transparent)` }} />
+
+                <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-xs pb-4" style={{ color: mode.color, opacity: 0.6 }}>
+                  <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{article.dateFormatted || article.publishDate}</span>
+                  <MetaDot mode={mode} />
+                  <span className="flex items-center gap-1.5"><Newspaper className="w-3.5 h-3.5" />{sourceName}</span>
+                  {authorNames.length > 0 && (
+                    <>
+                      <MetaDot mode={mode} />
+                      <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{authorNames.join(', ')}</span>
+                    </>
+                  )}
+                  {article.pageNumber && (
+                    <>
+                      <MetaDot mode={mode} />
+                      <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5" />Halaman {article.pageNumber}</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3 flex-wrap pt-3 pb-4 border-t" style={{ borderColor: mode.border }}>
+                  <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
+                    <button onClick={handleShare} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all" style={{ borderColor: mode.border, color: mode.color, background: mode.bg }}>
+                      <Share2 className="w-3.5 h-3.5" />Bagikan
+                    </button>
+                    {article.wordCount > 0 && (
+                      <span className="flex items-center gap-1.5 text-xs" style={{ color: mode.color, opacity: 0.45 }}>
+                        <Clock className="w-3.5 h-3.5" />~{Math.max(1, Math.ceil(article.wordCount / 200))} mnt · {article.wordCount.toLocaleString('id-ID')} kata
+                      </span>
+                    )}
+                    {article.viewCount > 0 && (
+                      <span className="flex items-center gap-1.5 text-xs" style={{ color: mode.color, opacity: 0.45 }}>
+                        <Eye className="w-3.5 h-3.5" />{article.viewCount.toLocaleString('id-ID')} tayangan
+                      </span>
+                    )}
+                  </div>
+                  <ReaderToolbar fontIdx={fontIdx} setFontIdx={setFontIdx} fontFamilyKey={fontFamilyKey} setFontFamilyKey={setFontFamilyKey} modeKey={modeKey} setModeKey={setModeKey} />
                 </div>
               </div>
 
@@ -347,7 +556,7 @@ const NewspaperArticleDetailPage = () => {
               ) : plainContent ? (
                 <>
                   <style>{EPUB_SCOPED_CSS}</style>
-                  <div data-epub lang="id" className="chapter" style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em' }}>
+                  <div data-epub lang="en" className="chapter" style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em' }}>
                     {plainContent.split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
                   </div>
                 </>
@@ -363,6 +572,12 @@ const NewspaperArticleDetailPage = () => {
                   ))}
                 </div>
               )}
+
+              <div className="px-5 sm:px-8 pb-6 pt-4 border-t flex justify-center" style={{ borderColor: mode.border }}>
+                <button onClick={handleShare} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all hover:opacity-80" style={{ borderColor: mode.border, color: mode.color, background: mode.bg }}>
+                  <Share2 className="w-4 h-4" />Bagikan Artikel Ini
+                </button>
+              </div>
             </div>
 
             {article.sameDateArticles?.length > 0 && (
