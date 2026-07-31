@@ -499,7 +499,7 @@ const HomePage = () => {
         <FeaturedBanner
           books={books.popular}
           films={films.popular}
-          articles={[]}
+          articles={newspaper.sources}
           zines={zines.latest}
         />
 
