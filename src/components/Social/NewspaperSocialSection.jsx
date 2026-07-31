@@ -1,13 +1,13 @@
 import { Quote, ListChecks } from 'lucide-react'
-import AddToListButton             from './AddToListButton'
-import SocialAnnotationsForEntity  from './SocialAnnotationsForEntity'
-import SocialSectionBlock          from './SocialSectionBlock'
+import AddToListButton from './AddToListButton'
+import SocialAnnotationsForEntity from './SocialAnnotationsForEntity'
+import SocialSectionBlock from './SocialSectionBlock'
 
 const NewspaperSocialSection = ({ article, mode }) => {
   if (!article?.id) return null
 
   const borderClr = mode?.key === 'dark' ? '#1e293b' : mode?.key === 'sepia' ? '#d6c9b0' : '#e7e5e4'
-  const colorVar  = mode?.color || '#1c1917'
+  const colorVar = mode?.color || '#1c1917'
 
   return (
     <div className="space-y-3 mt-6">
