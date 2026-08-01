@@ -18,6 +18,7 @@ import BookReviewsPage from './pages/BookReviewsPage'
 import SeriesDetailPage from './pages/SeriesDetailPage'
 import FilmsPage from './pages/FilmsPage'
 import FilmDetailPage from './pages/FilmDetailPage'
+import FilmReviewsPage from './pages/FilmReviewsPage'
 import FilmWatchPage from './pages/FilmWatchPage'
 import PersonDetailPage from './pages/PersonDetailPage'
 import CompanyDetailPage from './pages/CompanyDetailPage'
@@ -137,13 +138,14 @@ function App() {
 
         <Route path="/zine" element={<PublicLayout><ZinesPage /></PublicLayout>} />
         <Route path="/zine/seri/:seriesSlug" element={<PublicLayout><ZineSeriesPage /></PublicLayout>} />
-        <Route path="/zine/:zineSlug" element={<PublicLayout><ZineDetailPage /></PublicLayout>} />
         <Route path="/zine/:zineSlug/ulasan" element={<PublicLayout><ZineReviewsPage /></PublicLayout>} />
         <Route path="/zine/:zineSlug/baca" element={<EpubReaderPage mode="zine" />} />
+        <Route path="/zine/:zineSlug" element={<PublicLayout><ZineDetailPage /></PublicLayout>} />
 
         <Route path="/film" element={<PublicLayout><FilmsPage /></PublicLayout>} />
-        <Route path="/film/:filmSlug" element={<PublicLayout><FilmDetailPage /></PublicLayout>} />
+        <Route path="/film/:filmSlug/ulasan" element={<PublicLayout><FilmReviewsPage /></PublicLayout>} />
         <Route path="/film/:filmSlug/tonton" element={<FilmWatchPage />} />
+        <Route path="/film/:filmSlug" element={<PublicLayout><FilmDetailPage /></PublicLayout>} />
         <Route path="/person/:personSlug" element={<PublicLayout><PersonDetailPage /></PublicLayout>} />
         <Route path="/perusahaan/:companySlug" element={<PublicLayout><CompanyDetailPage /></PublicLayout>} />
 

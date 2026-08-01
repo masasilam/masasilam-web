@@ -17,7 +17,6 @@ import TrailerModal from '../components/Film/TrailerModal'
 import FilmDetailSocialSection from '../components/Social/FilmDetailSocialSection'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
-// ── Wikimedia thumb helper ────────────────────────────────────────────────────
 const getWikimediaThumb = (url, w = 600) => {
   if (!url) return null
   if (url.includes('/thumb/')) return url
@@ -31,7 +30,6 @@ const getWikimediaThumb = (url, w = 600) => {
   return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
 }
 
-// ── Mapping copyrightStatusId → label (selaras FilmCard) ─────────────────────
 const COPYRIGHT_STATUS_NAME = {
   1: 'Domain Publik',
   2: 'Berhak Cipta',
@@ -45,49 +43,47 @@ const COPYRIGHT_STATUS_NAME = {
   10: 'Status Tidak Diketahui',
 }
 
-// ── Normalize ─────────────────────────────────────────────────────────────────
 const normalizeFilm = (raw) => {
-  const mainVideo    = raw.videoSources?.find(v => !v.isTrailer)
+  const mainVideo = raw.videoSources?.find(v => !v.isTrailer)
   const trailerVideo = raw.videoSources?.find(v => v.isTrailer)
   return {
     ...raw,
     year: raw.tahunRilis
       ? (typeof raw.tahunRilis === 'string' && raw.tahunRilis.length === 4
-          ? raw.tahunRilis
-          : new Date(raw.tahunRilis).getFullYear())
+        ? raw.tahunRilis
+        : new Date(raw.tahunRilis).getFullYear())
       : null,
-    negara:   raw.negaraAsal || raw.negara || null,
-    bahasa:   raw.originalLanguage || raw.bahasa || null,
+    negara: raw.negaraAsal || raw.negara || null,
+    bahasa: raw.originalLanguage || raw.bahasa || null,
     sinopsis: raw.deskripsi || raw.sinopsis || raw.description || null,
     anggaran: raw.budget?.displayValue || raw.anggaran || null,
-    directorList:        Array.isArray(raw.sutradara)          ? raw.sutradara          : [],
-    castList:            Array.isArray(raw.pemeran)            ? raw.pemeran            : [],
-    writerList:          Array.isArray(raw.penulisSkenario)    ? raw.penulisSkenario    : [],
-    producerList:        Array.isArray(raw.produser)           ? raw.produser           : [],
-    editorList:          Array.isArray(raw.filmEditor)         ? raw.filmEditor         : [],
-    cinematographerList: Array.isArray(raw.cinematographer)    ? raw.cinematographer    : [],
-    composerList:        Array.isArray(raw.composer)           ? raw.composer           : [],
-    narratorList:        Array.isArray(raw.narator)            ? raw.narator            : [],
-    productionList:      Array.isArray(raw.perusahaanProduksi) ? raw.perusahaanProduksi : [],
-    distributorList:     Array.isArray(raw.distributor)        ? raw.distributor        : [],
-    narrativeLocList:    Array.isArray(raw.narrativeLocation)  ? raw.narrativeLocation  : [],
-    filmingLocList:      Array.isArray(raw.filmingLocation)    ? raw.filmingLocation    : [],
-    genreList:           Array.isArray(raw.genre)              ? raw.genre              : [],
-    reviewScores:        Array.isArray(raw.reviewScores)       ? raw.reviewScores       : [],
-    videoUrl:   raw.videoUrl   || mainVideo?.embedUrl    || mainVideo?.directUrl    || null,
+    directorList: Array.isArray(raw.sutradara) ? raw.sutradara : [],
+    castList: Array.isArray(raw.pemeran) ? raw.pemeran : [],
+    writerList: Array.isArray(raw.penulisSkenario) ? raw.penulisSkenario : [],
+    producerList: Array.isArray(raw.produser) ? raw.produser : [],
+    editorList: Array.isArray(raw.filmEditor) ? raw.filmEditor : [],
+    cinematographerList: Array.isArray(raw.cinematographer) ? raw.cinematographer : [],
+    composerList: Array.isArray(raw.composer) ? raw.composer : [],
+    narratorList: Array.isArray(raw.narator) ? raw.narator : [],
+    productionList: Array.isArray(raw.perusahaanProduksi) ? raw.perusahaanProduksi : [],
+    distributorList: Array.isArray(raw.distributor) ? raw.distributor : [],
+    narrativeLocList: Array.isArray(raw.narrativeLocation) ? raw.narrativeLocation : [],
+    filmingLocList: Array.isArray(raw.filmingLocation) ? raw.filmingLocation : [],
+    genreList: Array.isArray(raw.genre) ? raw.genre : [],
+    reviewScores: Array.isArray(raw.reviewScores) ? raw.reviewScores : [],
+    videoUrl: raw.videoUrl || mainVideo?.embedUrl || mainVideo?.directUrl || null,
     trailerUrl: raw.trailerUrl || trailerVideo?.embedUrl || trailerVideo?.directUrl || null,
-    posterUrl:  raw.posterUrl
+    posterUrl: raw.posterUrl
       || mainVideo?.thumbnailUrl
       || trailerVideo?.thumbnailUrl
       || null,
   }
 }
 
-// ── RatingModal ───────────────────────────────────────────────────────────────
 const RatingModal = ({ isOpen, onClose, onSubmit, filmTitle }) => {
-  const [rating, setRating]           = useState(0)
+  const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
-  const [submitting, setSubmitting]   = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -101,11 +97,11 @@ const RatingModal = ({ isOpen, onClose, onSubmit, filmTitle }) => {
   if (!isOpen) return null
 
   const ratingLabels = {
-    0.5:'⭐ 0.5 - Sangat Buruk', 1:'⭐ 1.0 - Sangat Buruk',
-    1.5:'⭐ 1.5 - Buruk',        2:'⭐⭐ 2.0 - Buruk',
-    2.5:'⭐⭐ 2.5 - Kurang',     3:'⭐⭐⭐ 3.0 - Cukup',
-    3.5:'⭐⭐⭐ 3.5 - Lumayan',  4:'⭐⭐⭐⭐ 4.0 - Bagus',
-    4.5:'⭐⭐⭐⭐ 4.5 - Sangat Bagus', 5:'⭐⭐⭐⭐⭐ 5.0 - Sempurna',
+    0.5: '⭐ 0.5 - Sangat Buruk', 1: '⭐ 1.0 - Sangat Buruk',
+    1.5: '⭐ 1.5 - Buruk', 2: '⭐⭐ 2.0 - Buruk',
+    2.5: '⭐⭐ 2.5 - Kurang', 3: '⭐⭐⭐ 3.0 - Cukup',
+    3.5: '⭐⭐⭐ 3.5 - Lumayan', 4: '⭐⭐⭐⭐ 4.0 - Bagus',
+    4.5: '⭐⭐⭐⭐ 4.5 - Sangat Bagus', 5: '⭐⭐⭐⭐⭐ 5.0 - Sempurna',
   }
 
   return (
@@ -132,19 +128,18 @@ const RatingModal = ({ isOpen, onClose, onSubmit, filmTitle }) => {
               Rating Bintang <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-1 items-center justify-center">
-              {[1,2,3,4,5].map(star => {
+              {[1, 2, 3, 4, 5].map(star => {
                 const isHalf = (hoverRating || rating) === star - 0.5
                 const isFull = (hoverRating || rating) >= star
                 return (
                   <div key={star} className="relative cursor-pointer group">
-                    <Star className={`w-12 h-12 transition-all ${
-                      isFull
+                    <Star className={`w-12 h-12 transition-all ${isFull
                         ? 'fill-blue-400 text-blue-400 scale-110'
                         : 'fill-slate-200 text-slate-300 dark:fill-slate-700 dark:text-slate-600'
-                    } group-hover:scale-110`} />
+                      } group-hover:scale-110`} />
                     {isHalf && !isFull && (
                       <Star className="w-12 h-12 absolute top-0 left-0 fill-blue-400 text-blue-400"
-                        style={{ clipPath:'polygon(0 0,50% 0,50% 100%,0 100%)' }} />
+                        style={{ clipPath: 'polygon(0 0,50% 0,50% 100%,0 100%)' }} />
                     )}
                     <div className="absolute inset-0 flex">
                       <button type="button" className="w-1/2 h-full"
@@ -183,9 +178,8 @@ const RatingModal = ({ isOpen, onClose, onSubmit, filmTitle }) => {
   )
 }
 
-// ── RatingSummary ─────────────────────────────────────────────────────────────
 const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
-  const hasApiStats     = ratingStats?.totalRatings > 0
+  const hasApiStats = ratingStats?.totalRatings > 0
   const hasReviewScores = reviewScores?.length > 0
 
   if (!hasApiStats && !hasReviewScores) {
@@ -195,7 +189,7 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
         <div className="text-center flex-shrink-0">
           <div className="text-3xl font-bold text-slate-200 dark:text-slate-700">—</div>
           <div className="flex gap-0.5 mt-1 justify-center">
-            {[1,2,3,4,5].map(s => (
+            {[1, 2, 3, 4, 5].map(s => (
               <Star key={s} className="w-3.5 h-3.5 text-slate-200 dark:text-slate-700" />
             ))}
           </div>
@@ -249,20 +243,20 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
     )
   }
 
-  const avg         = ratingStats.averageRating
-  const total       = ratingStats.totalRatings
+  const avg = ratingStats.averageRating
+  const total = ratingStats.totalRatings
   const filledStars = Math.floor(avg)
-  const hasHalf     = avg - filledStars >= 0.25 && avg - filledStars < 0.75
-  const hasAlmost   = avg - filledStars >= 0.75
+  const hasHalf = avg - filledStars >= 0.25 && avg - filledStars < 0.75
+  const hasAlmost = avg - filledStars >= 0.75
   const ratingLabel = avg >= 4.5 ? 'Luar Biasa' : avg >= 4 ? 'Sangat Bagus'
     : avg >= 3.5 ? 'Bagus' : avg >= 3 ? 'Cukup' : avg >= 2 ? 'Kurang' : 'Buruk'
 
   const bars = [
-    { label:'5', count: ratingStats.rating50Count || 0 },
-    { label:'4', count: (ratingStats.rating45Count||0)+(ratingStats.rating40Count||0) },
-    { label:'3', count: (ratingStats.rating35Count||0)+(ratingStats.rating30Count||0) },
-    { label:'2', count: (ratingStats.rating25Count||0)+(ratingStats.rating20Count||0) },
-    { label:'1', count: (ratingStats.rating15Count||0)+(ratingStats.rating10Count||0)+(ratingStats.rating05Count||0) },
+    { label: '5', count: ratingStats.count50 || 0 },
+    { label: '4', count: (ratingStats.count45 || 0) + (ratingStats.count40 || 0) },
+    { label: '3', count: (ratingStats.count35 || 0) + (ratingStats.count30 || 0) },
+    { label: '2', count: (ratingStats.count25 || 0) + (ratingStats.count20 || 0) },
+    { label: '1', count: (ratingStats.count15 || 0) + (ratingStats.count10 || 0) + (ratingStats.count05 || 0) },
   ]
 
   return (
@@ -275,15 +269,15 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
             {avg.toFixed(1)}
           </div>
           <div className="flex gap-0.5 mb-1">
-            {[1,2,3,4,5].map(s => {
-              const isFull = s <= filledStars || (s === filledStars+1 && hasAlmost)
-              const isHalf = s === filledStars+1 && hasHalf
+            {[1, 2, 3, 4, 5].map(s => {
+              const isFull = s <= filledStars || (s === filledStars + 1 && hasAlmost)
+              const isHalf = s === filledStars + 1 && hasHalf
               return (
                 <span key={s} className="relative inline-block">
                   <Star className="w-4 h-4 text-slate-200 dark:text-slate-600" />
-                  {(isFull||isHalf) && (
+                  {(isFull || isHalf) && (
                     <Star className="w-4 h-4 absolute inset-0 fill-blue-400 text-blue-400"
-                      style={isHalf?{clipPath:'polygon(0 0,50% 0,50% 100%,0 100%)'}:{}} />
+                      style={isHalf ? { clipPath: 'polygon(0 0,50% 0,50% 100%,0 100%)' } : {}} />
                   )}
                 </span>
               )
@@ -293,8 +287,8 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
           <div className="text-[10px] mt-0.5 text-slate-400 dark:text-slate-500">{total} rating</div>
         </div>
         <div className="flex-1 space-y-1.5 flex flex-col justify-center">
-          {bars.map(({label, count}) => {
-            const pct = total > 0 ? (count/total)*100 : 0
+          {bars.map(({ label, count }) => {
+            const pct = total > 0 ? (count / total) * 100 : 0
             return (
               <div key={label} className="flex items-center gap-2">
                 <div className="flex items-center gap-0.5 w-10 justify-end flex-shrink-0">
@@ -303,7 +297,7 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
                 </div>
                 <div className="flex-1 h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700">
                   <div className="h-full bg-blue-400 rounded-full transition-all duration-700"
-                    style={{width:`${pct}%`}} />
+                    style={{ width: `${pct}%` }} />
                 </div>
                 <span className="text-[10px] w-6 text-right text-slate-400 dark:text-slate-500">{count}</span>
               </div>
@@ -325,7 +319,7 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
                      transition-all bg-blue-50 text-blue-700 hover:bg-blue-100
                      dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40">
-          <Star className={`w-3.5 h-3.5 ${userRating?'fill-blue-400 text-blue-400':''}`} />
+          <Star className={`w-3.5 h-3.5 ${userRating ? 'fill-blue-400 text-blue-400' : ''}`} />
           {userRating ? 'Ubah Rating' : 'Beri Rating'}
         </button>
       </div>
@@ -333,11 +327,10 @@ const RatingSummary = ({ ratingStats, reviewScores, onRate, userRating }) => {
   )
 }
 
-// ── PosterImage — support landscape & portrait ────────────────────────────────
 const PosterImage = ({ rawUrl, alt, className, isLandscape = false }) => {
-  const [src, setSrc]       = useState(() => getWikimediaThumb(rawUrl, isLandscape ? 900 : 600) || rawUrl)
+  const [src, setSrc] = useState(() => getWikimediaThumb(rawUrl, isLandscape ? 900 : 600) || rawUrl)
   const [loaded, setLoaded] = useState(false)
-  const [error, setError]   = useState(!rawUrl)
+  const [error, setError] = useState(!rawUrl)
 
   const handleError = () => {
     if (src !== rawUrl && rawUrl) setSrc(rawUrl)
@@ -374,18 +367,15 @@ const PosterImage = ({ rawUrl, alt, className, isLandscape = false }) => {
   )
 }
 
-// ── PersonCard ────────────────────────────────────────────────────────────────
 const PersonCard = ({ person, role }) => {
   const name = typeof person === 'string' ? person : person?.name || '—'
   const photo = typeof person === 'object' ? person?.photoUrl : null
-  const slug  = typeof person === 'object' ? person?.slug : null
-  const desc  = typeof person === 'object' ? person?.description : null
+  const desc = typeof person === 'object' ? person?.description : null
 
-  const inner = (
-    <div className="flex items-center gap-2.5 p-2.5 rounded-xl border transition-all
-                    bg-white border-slate-100 hover:border-blue-200 hover:shadow-sm
-                    dark:bg-slate-900 dark:border-slate-700 dark:hover:border-blue-700/50
-                    group cursor-pointer">
+  return (
+    <div className="flex items-center gap-2.5 p-2.5 rounded-xl border
+                    bg-white border-slate-100
+                    dark:bg-slate-900 dark:border-slate-700">
       <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden
                       bg-gradient-to-br from-blue-100 to-blue-50
                       dark:from-blue-900/40 dark:to-slate-800">
@@ -395,8 +385,7 @@ const PersonCard = ({ person, role }) => {
         }
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-xs font-semibold truncate text-slate-800 dark:text-slate-200
-                        group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+        <div className="text-xs font-semibold truncate text-slate-800 dark:text-slate-200">
           {name}
         </div>
         {desc && (
@@ -408,11 +397,8 @@ const PersonCard = ({ person, role }) => {
       </div>
     </div>
   )
-
-  return slug ? <Link to={`/orang/${slug}`}>{inner}</Link> : inner
 }
 
-// ── CompanyCard ───────────────────────────────────────────────────────────────
 const CompanyCard = ({ company }) => {
   const name = typeof company === 'string' ? company : company?.name || '—'
   const logo = typeof company === 'object' ? company?.logoUrl : null
@@ -449,7 +435,6 @@ const CompanyCard = ({ company }) => {
   return slug ? <Link to={`/perusahaan/${slug}`}>{inner}</Link> : inner
 }
 
-// ── SectionBlock ──────────────────────────────────────────────────────────────
 const SectionBlock = ({ icon: Icon, title, children, iconColor = 'text-blue-500' }) => (
   <section className="mb-6">
     <h2 className={`text-base sm:text-lg font-bold mb-3 flex items-center gap-2
@@ -461,7 +446,6 @@ const SectionBlock = ({ icon: Icon, title, children, iconColor = 'text-blue-500'
   </section>
 )
 
-// ── VideoSourceItem ───────────────────────────────────────────────────────────
 const VideoSourceItem = ({ source, onPlay, onWatch }) => (
   <div className="flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer
                   bg-white border-slate-100 hover:border-blue-300 hover:shadow-sm
@@ -472,8 +456,8 @@ const VideoSourceItem = ({ source, onPlay, onWatch }) => (
       {source.thumbnailUrl
         ? <img src={source.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
         : <div className="w-full h-full flex items-center justify-center">
-            <VideoIcon className="w-5 h-5 text-slate-400" />
-          </div>
+          <VideoIcon className="w-5 h-5 text-slate-400" />
+        </div>
       }
       <div className="absolute inset-0 bg-black/30 flex items-center justify-center
                       group-hover:bg-black/10 transition-colors">
@@ -488,8 +472,8 @@ const VideoSourceItem = ({ source, onPlay, onWatch }) => (
       <div className="flex items-center gap-2 mt-0.5">
         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md
                          ${source.isTrailer
-                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                           : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
           {source.isTrailer ? <VideoIcon className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" fill="currentColor" />}
           {source.isTrailer ? 'Trailer' : 'Full'}
         </span>
@@ -508,25 +492,24 @@ const VideoSourceItem = ({ source, onPlay, onWatch }) => (
   </div>
 )
 
-// ── FilmDetailPage ─────────────────────────────────────────────────────────────
 const FilmDetailPage = () => {
   const { filmSlug } = useParams()
-  const navigate     = useNavigate()
+  const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
 
-  const [film,              setFilm]              = useState(null)
-  const [loading,           setLoading]           = useState(true)
-  const [error,             setError]             = useState(null)
+  const [film, setFilm] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
-  const [isTrailerOpen,     setIsTrailerOpen]     = useState(false)
-  const [activeVideo,       setActiveVideo]       = useState(null)
-  const [userRating,        setUserRating]        = useState(null)
-  const [ratingStats,       setRatingStats]       = useState(null)
-  const [recentReviews,     setRecentReviews]     = useState([])
-  const [reviewsLoading,    setReviewsLoading]    = useState(false)
-  const [showFullSynopsis,  setShowFullSynopsis]  = useState(false)
-  const [activeTab,         setActiveTab]         = useState('info') // 'info' | 'crew' | 'video' | 'ulasan'
-  const [isFavorited,       setIsFavorited]       = useState(false)
+  const [isTrailerOpen, setIsTrailerOpen] = useState(false)
+  const [activeVideo, setActiveVideo] = useState(null)
+  const [userRating, setUserRating] = useState(null)
+  const [ratingStats, setRatingStats] = useState(null)
+  const [recentReviews, setRecentReviews] = useState([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [showFullSynopsis, setShowFullSynopsis] = useState(false)
+  const [activeTab, setActiveTab] = useState('info')
+  const [isFavorited, setIsFavorited] = useState(false)
 
   const backUrl = useRef(sessionStorage.getItem('filmsPageUrl') || '/film')
 
@@ -560,11 +543,11 @@ const FilmDetailPage = () => {
     }
   }, [film])
 
-  const fetchUserRating    = async () => {
+  const fetchUserRating = async () => {
     try { const r = await filmService.getMyRating?.(filmSlug); setUserRating(r?.data || null) } catch { setUserRating(null) }
   }
-  const fetchRatingStats   = async () => {
-    try { const r = await filmService.getRatingStats?.(filmSlug); setRatingStats(r?.data || null) } catch {}
+  const fetchRatingStats = async () => {
+    try { const r = await filmService.getRatingStats?.(filmSlug); setRatingStats(r?.data || null) } catch { }
   }
   const fetchRecentReviews = async () => {
     try {
@@ -579,7 +562,7 @@ const FilmDetailPage = () => {
     try {
       if (navigator.share) await navigator.share({ title: film.judul, url: window.location.href })
       else { await navigator.clipboard.writeText(window.location.href); alert('✅ Link disalin!') }
-    } catch {}
+    } catch { }
   }
 
   const handleFavorite = () => {
@@ -611,28 +594,26 @@ const FilmDetailPage = () => {
       fetchRatingStats()
       feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
         activityType: 'reviewed',
-        entityType:   'FILM',
-        entitySlug:   filmSlug,
-        entityTitle:  film?.judul,
-        entityCover:  rawPosterUrl,
+        entityType: 'FILM',
+        entitySlug: filmSlug,
+        entityTitle: film?.judul,
+        entityCover: rawPosterUrl,
       })
     } catch (e) { alert(`❌ Gagal: ${e.response?.data?.detail || e.message}`) }
   }
 
-  // ── Trailer modal — HANYA untuk trailer ───────────────────────────────────
   const handlePlayTrailer = (source) => {
     setActiveVideo(source)
     setIsTrailerOpen(true)
   }
 
-  // ── Navigate ke FilmWatchPage — untuk film lengkap ────────────────────────
   const handleWatchFilm = () => {
     feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
       activityType: 'started_reading',
-      entityType:   'FILM',
-      entitySlug:   filmSlug,
-      entityTitle:  film?.judul,
-      entityCover:  rawPosterUrl,
+      entityType: 'FILM',
+      entitySlug: filmSlug,
+      entityTitle: film?.judul,
+      entityCover: rawPosterUrl,
     })
     navigate(`/film/${filmSlug}/tonton`)
   }
@@ -659,12 +640,12 @@ const FilmDetailPage = () => {
     (Array.isArray(film.imageUrls) && film.imageUrls.length > 0 ? film.imageUrls[0] : null) ||
     null
 
-  const avgRating      = ratingStats?.averageRating
+  const avgRating = ratingStats?.averageRating
   const avgReviewScore = reviewScores?.[0]?.value || null
 
-  const videoSources  = Array.isArray(film.videoSources) ? film.videoSources : []
+  const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
   const trailerSource = videoSources.find(v => v.isTrailer)
-  const mainSource    = videoSources.find(v => !v.isTrailer)
+  const mainSource = videoSources.find(v => !v.isTrailer)
 
   const hasCrew = writerList.length > 0 || producerList.length > 0 || editorList.length > 0 ||
     cinematographerList.length > 0 || composerList.length > 0 || narratorList.length > 0
@@ -674,14 +655,14 @@ const FilmDetailPage = () => {
     : null
 
   const tabs = [
-    { id: 'info',   label: 'Info',      icon: Info },
-    { id: 'crew',   label: 'Kru',       icon: Users,       hidden: !hasCrew && castList.length === 0 },
-    { id: 'video',  label: 'Video',     icon: VideoIcon,   hidden: videoSources.length === 0 },
-    { id: 'ulasan', label: 'Ulasan',    icon: MessageCircle },
+    { id: 'info', label: 'Info', icon: Info },
+    { id: 'crew', label: 'Kru', icon: Users, hidden: !hasCrew && castList.length === 0 },
+    { id: 'video', label: 'Video', icon: VideoIcon, hidden: videoSources.length === 0 },
+    { id: 'ulasan', label: 'Ulasan', icon: MessageCircle },
   ].filter(t => !t.hidden)
 
   const seoTitle = `${film.judul}${year ? ` (${year})` : ''} - Film`
-  const seoDesc  = (sinopsis || '').slice(0, 160)
+  const seoDesc = (sinopsis || '').slice(0, 160)
 
   return (
     <>
@@ -698,7 +679,6 @@ const FilmDetailPage = () => {
                       bg-slate-50 dark:bg-slate-950">
         <div className="container mx-auto px-3 sm:px-4 max-w-5xl">
 
-          {/* ── Breadcrumb ────────────────────────────────────────── */}
           <div className="pt-4 pb-2">
             <nav className="flex items-center gap-1.5 text-xs mb-3 overflow-x-auto scrollbar-none
                             text-slate-400 dark:text-slate-500">
@@ -716,12 +696,8 @@ const FilmDetailPage = () => {
             </button>
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════
-              HERO SECTION — Poster LANDSCAPE + info di kanan
-          ═══════════════════════════════════════════════════════════════ */}
           <div className="mb-6">
 
-            {/* ── POSTER LANDSCAPE ────────────────────────────────────── */}
             {rawPosterUrl && (
               <div className="relative w-full rounded-2xl overflow-hidden shadow-xl mb-4
                               shadow-slate-200/80 dark:shadow-black/50
@@ -732,11 +708,9 @@ const FilmDetailPage = () => {
                   className="absolute inset-0 w-full h-full"
                   isLandscape={true}
                 />
-                {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
 
-                {/* Year badge */}
                 {year && (
                   <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-lg
                                   bg-black/60 backdrop-blur-sm text-white text-xs font-bold">
@@ -744,7 +718,6 @@ const FilmDetailPage = () => {
                   </div>
                 )}
 
-                {/* Video badges top-left */}
                 <div className="absolute top-3 left-3 z-10 flex gap-1.5">
                   {mainSource && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md
@@ -760,9 +733,7 @@ const FilmDetailPage = () => {
                   )}
                 </div>
 
-                {/* Content overlay bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 z-10">
-                  {/* Genre pills */}
                   {genreList.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-2 sm:mb-3">
                       {genreList.slice(0, 4).map((g, i) => (
@@ -791,7 +762,6 @@ const FilmDetailPage = () => {
                     </p>
                   )}
 
-                  {/* Meta row */}
                   <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-white/80 text-xs sm:text-sm">
                     {year && (
                       <span className="flex items-center gap-1">
@@ -824,7 +794,6 @@ const FilmDetailPage = () => {
                   </div>
                 </div>
 
-                {/* ── Play overlay poster → navigate ke FilmWatchPage ── */}
                 {mainSource && (
                   <button
                     onClick={handleWatchFilm}
@@ -839,10 +808,8 @@ const FilmDetailPage = () => {
               </div>
             )}
 
-            {/* ── ACTION BUTTONS ──────────────────────────────────────── */}
             <div className="flex items-center gap-2">
 
-              {/* ✅ TONTON FILM → navigate ke FilmWatchPage */}
               {mainSource && (
                 <button
                   onClick={handleWatchFilm}
@@ -856,7 +823,6 @@ const FilmDetailPage = () => {
                 </button>
               )}
 
-              {/* ✅ TRAILER → buka TrailerModal */}
               {trailerSource && (
                 <button
                   onClick={() => handlePlayTrailer(trailerSource)}
@@ -870,24 +836,23 @@ const FilmDetailPage = () => {
                 </button>
               )}
 
-              {/* Icon actions — flex-shrink-0 agar tidak tercompress */}
               <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={handleFavorite}
                   className={`p-2.5 rounded-xl border transition-all active:scale-95
                               ${isFavorited
-                                ? 'bg-red-50 border-red-300 text-red-500 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
-                                : 'bg-white border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'
-                              }`}>
+                      ? 'bg-red-50 border-red-300 text-red-500 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'
+                    }`}>
                   <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
                 </button>
                 <button
                   onClick={handleOpenRatingModal}
                   className={`p-2.5 rounded-xl border transition-all active:scale-95
                               ${userRating
-                                ? 'bg-blue-50 border-blue-300 text-blue-600 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400'
-                                : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'
-                              }`}>
+                      ? 'bg-blue-50 border-blue-300 text-blue-600 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'
+                    }`}>
                   <Star className={`w-5 h-5 ${userRating ? 'fill-current' : ''}`} />
                 </button>
                 <button
@@ -900,7 +865,6 @@ const FilmDetailPage = () => {
               </div>
             </div>
 
-            {/* User rating display */}
             {userRating && (
               <div className="flex items-center justify-between p-3 rounded-xl border mt-2
                               bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800">
@@ -919,9 +883,6 @@ const FilmDetailPage = () => {
             )}
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════
-              QUICK META STRIP — mobile-friendly pills
-          ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
             {year && (
               <div className="flex items-center gap-2 p-3 rounded-xl border transition-colors
@@ -985,9 +946,6 @@ const FilmDetailPage = () => {
             )}
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════
-              RATING SUMMARY
-          ═══════════════════════════════════════════════════════════════ */}
           <div className="mb-6">
             <RatingSummary
               ratingStats={ratingStats}
@@ -997,9 +955,6 @@ const FilmDetailPage = () => {
             />
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════
-              TABS
-          ═══════════════════════════════════════════════════════════════ */}
           <div className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto scrollbar-none
                           bg-slate-100 dark:bg-slate-800/60">
             {tabs.map(tab => {
@@ -1011,9 +966,9 @@ const FilmDetailPage = () => {
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium
                               whitespace-nowrap transition-all flex-shrink-0
                               ${activeTab === tab.id
-                                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                              }`}>
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}>
                   <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {tab.label}
                 </button>
@@ -1021,13 +976,9 @@ const FilmDetailPage = () => {
             })}
           </div>
 
-          {/* ═══════════════════════════════════════════════════════════════
-              TAB: INFO
-          ═══════════════════════════════════════════════════════════════ */}
           {activeTab === 'info' && (
             <div className="space-y-6">
 
-              {/* ── Sinopsis ───────────────────────────────────────────── */}
               <SectionBlock icon={BookOpen} title="Sinopsis">
                 <div className="rounded-2xl p-4 sm:p-5 border transition-colors
                                 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700">
@@ -1056,7 +1007,6 @@ const FilmDetailPage = () => {
                 </div>
               </SectionBlock>
 
-              {/* ── Genre ─────────────────────────────────────────────── */}
               {genreList.length > 0 && (
                 <SectionBlock icon={Award} title="Genre">
                   <div className="flex flex-wrap gap-2">
@@ -1073,11 +1023,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Hak Cipta & Lisensi ─────────────────────────────────
-                  Menampilkan status hak cipta (dari copyrightStatusId)
-                  berdampingan dengan `catatan` — catatan bebas dari
-                  penginput data yang mengklarifikasi status tersebut
-                  (mis. alasan, sumber izin, batasan penggunaan, dll). ── */}
               {(copyrightStatusName || film.catatan) && (
                 <SectionBlock icon={Copyright} title="Hak Cipta & Lisensi" iconColor="text-slate-500">
                   <div className="rounded-2xl p-4 sm:p-5 border transition-colors
@@ -1101,7 +1046,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Alias ─────────────────────────────────────────────── */}
               {Array.isArray(film.aliasIndonesia) && film.aliasIndonesia.length > 0 && (
                 <SectionBlock icon={FilmIcon} title="Nama Alternatif">
                   <div className="flex flex-wrap gap-2">
@@ -1117,7 +1061,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Perusahaan Produksi ────────────────────────────────── */}
               {productionList.length > 0 && (
                 <SectionBlock icon={Building2} title="Perusahaan Produksi" iconColor="text-purple-500">
                   <div className="space-y-2">
@@ -1128,7 +1071,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Distributor ───────────────────────────────────────── */}
               {distributorList.length > 0 && (
                 <SectionBlock icon={Building2} title="Distributor" iconColor="text-indigo-500">
                   <div className="space-y-2">
@@ -1139,7 +1081,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Lokasi ────────────────────────────────────────────── */}
               {(narrativeLocList.length > 0 || filmingLocList.length > 0) && (
                 <SectionBlock icon={MapPin} title="Lokasi" iconColor="text-rose-500">
                   <div className="rounded-2xl border overflow-hidden transition-colors
@@ -1180,7 +1121,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Finansial ─────────────────────────────────────────── */}
               {(anggaran || film.boxOffice?.length > 0) && (
                 <SectionBlock icon={Award} title="Finansial" iconColor="text-emerald-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1208,7 +1148,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Review Scores ──────────────────────────────────────── */}
               {reviewScores.length > 0 && (
                 <SectionBlock icon={Star} title="Skor Kritikus" iconColor="text-yellow-500">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1227,7 +1166,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Content Ratings ────────────────────────────────────── */}
               {film.contentRatings?.length > 0 && (
                 <SectionBlock icon={Info} title="Rating Konten">
                   <div className="flex flex-wrap gap-2">
@@ -1248,7 +1186,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Seri / Sekuel ──────────────────────────────────────── */}
               {(film.partOfSeries || film.followedBy) && (
                 <SectionBlock icon={Bookmark} title="Seri" iconColor="text-violet-500">
                   <div className="space-y-2">
@@ -1282,7 +1219,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Sumber / Wikidata ──────────────────────────────────── */}
               {film.wikidataQid && !film.wikidataQid.startsWith('MANUAL_') && (
                 <div className="p-4 rounded-xl border transition-colors
                                 bg-slate-50 border-slate-200 dark:bg-slate-800/60 dark:border-slate-700">
@@ -1300,13 +1236,9 @@ const FilmDetailPage = () => {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════════════════════════
-              TAB: CREW & CAST
-          ═══════════════════════════════════════════════════════════════ */}
           {activeTab === 'crew' && (
             <div className="space-y-6">
 
-              {/* ── Sutradara ─────────────────────────────────────────── */}
               {directorList.length > 0 && (
                 <SectionBlock icon={Clapperboard} title="Sutradara">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1315,7 +1247,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Pemeran ───────────────────────────────────────────── */}
               {castList.length > 0 && (
                 <SectionBlock icon={Users} title="Pemeran">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -1324,7 +1255,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Narator ───────────────────────────────────────────── */}
               {narratorList.length > 0 && (
                 <SectionBlock icon={Mic2} title="Narator" iconColor="text-amber-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1333,7 +1263,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Penulis Skenario ──────────────────────────────────── */}
               {writerList.length > 0 && (
                 <SectionBlock icon={Pencil} title="Penulis Skenario" iconColor="text-emerald-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1342,7 +1271,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Produser ──────────────────────────────────────────── */}
               {producerList.length > 0 && (
                 <SectionBlock icon={Award} title="Produser" iconColor="text-violet-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1351,7 +1279,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Film Editor ───────────────────────────────────────── */}
               {editorList.length > 0 && (
                 <SectionBlock icon={Pencil} title="Editor Film" iconColor="text-rose-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1360,7 +1287,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Sinematografer ────────────────────────────────────── */}
               {cinematographerList.length > 0 && (
                 <SectionBlock icon={Camera} title="Sinematografer" iconColor="text-indigo-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1369,7 +1295,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* ── Komposer ──────────────────────────────────────────── */}
               {composerList.length > 0 && (
                 <SectionBlock icon={Music2} title="Komposer Musik" iconColor="text-pink-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1380,9 +1305,6 @@ const FilmDetailPage = () => {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════════════════════════
-              TAB: VIDEO
-          ═══════════════════════════════════════════════════════════════ */}
           {activeTab === 'video' && videoSources.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
@@ -1399,9 +1321,6 @@ const FilmDetailPage = () => {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════════════════════════
-              TAB: ULASAN
-          ═══════════════════════════════════════════════════════════════ */}
           {activeTab === 'ulasan' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1455,7 +1374,7 @@ const FilmDetailPage = () => {
                                         flex-shrink-0 overflow-hidden bg-blue-50 dark:bg-blue-900/20">
                           {review.userPhotoUrl
                             ? <img src={review.userPhotoUrl} alt={review.userName}
-                                className="w-9 h-9 object-cover" loading="lazy" />
+                              className="w-9 h-9 object-cover" loading="lazy" />
                             : <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                           }
                         </div>
@@ -1472,7 +1391,7 @@ const FilmDetailPage = () => {
                             )}
                             <span className="text-xs ml-auto text-slate-400 dark:text-slate-500">
                               {new Date(review.createdAt).toLocaleDateString('id-ID',
-                                { year:'numeric', month:'short', day:'numeric' })}
+                                { year: 'numeric', month: 'short', day: 'numeric' })}
                             </span>
                           </div>
                         </div>
@@ -1504,19 +1423,16 @@ const FilmDetailPage = () => {
             </div>
           )}
 
-          {/* ── Social Integration ── */}
           <div className="mt-8">
             <FilmDetailSocialSection film={film} />
           </div>
 
         </div>
 
-        {/* ── Fixed bottom bar mobile ─────────────────────────────────── */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-2
                         bg-white/95 dark:bg-slate-950/95 backdrop-blur-md
                         border-t border-slate-200 dark:border-slate-800">
           <div className="flex gap-2">
-            {/* ✅ Film lengkap → FilmWatchPage */}
             {mainSource ? (
               <button
                 onClick={handleWatchFilm}
@@ -1527,7 +1443,6 @@ const FilmDetailPage = () => {
                 Tonton Film
               </button>
             ) : trailerSource ? (
-              /* ✅ Kalau tidak ada film lengkap, baru trailer → modal */
               <button
                 onClick={() => handlePlayTrailer(trailerSource)}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl
@@ -1553,7 +1468,6 @@ const FilmDetailPage = () => {
           </div>
         </div>
 
-        {/* Modals */}
         <TrailerModal
           isOpen={isTrailerOpen}
           onClose={() => { setIsTrailerOpen(false); setActiveVideo(null) }}
