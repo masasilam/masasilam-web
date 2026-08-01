@@ -70,11 +70,11 @@ const AboutPage = () => {
           catch { return fallback }
         }
 
-        const totalBooks    = safe(results[0], r => r.data?.total || r.data?.data?.total || 0)
-        const totalAuthors  = safe(results[1], r => r.data?.total || r.data?.data?.total || 0)
-        const totalUsers    = safe(results[2], r => r.data?.length || r.data?.data?.length || 0)
-        const totalZines    = safe(results[3], r => r.data?.total || r.data?.data?.total || 0)
-        const totalFilms    = safe(results[4], r => r.data?.total || r.data?.data?.total || 0)
+        const totalBooks = safe(results[0], r => r.data?.total || r.data?.data?.total || 0)
+        const totalAuthors = safe(results[1], r => r.data?.total || r.data?.data?.total || 0)
+        const totalUsers = safe(results[2], r => r.data?.length || r.data?.data?.length || 0)
+        const totalZines = safe(results[3], r => r.data?.total || r.data?.data?.total || 0)
+        const totalFilms = safe(results[4], r => r.data?.total || r.data?.data?.total || 0)
         // /newspapers/stats returns { data: { data: { totalArticles, totalSources, ... } } }
         const totalArticles = safe(results[5], r =>
           r.data?.data?.totalArticles || r.data?.totalArticles || 0
@@ -93,12 +93,12 @@ const AboutPage = () => {
   if (loading) return <LoadingSpinner fullScreen />
 
   const displayStats = [
-    { icon: Book,      value: stats.totalBooks,    label: 'Buku',       color: { text: 'text-amber-400',   bg: 'bg-amber-400/10'   } },
-    { icon: Layers,    value: stats.totalZines,    label: 'Zine & Magazine',     color: { text: 'text-emerald-400', bg: 'bg-emerald-400/10' } },
-    { icon: Film,      value: stats.totalFilms,    label: 'Film',        color: { text: 'text-blue-400',    bg: 'bg-blue-400/10'    } },
-    { icon: Newspaper, value: stats.totalArticles, label: 'Arsip Koran',        color: { text: 'text-violet-400',  bg: 'bg-violet-400/10'  } },
-    { icon: Users,     value: stats.totalUsers,    label: 'Kawan yang Mendaftar', color: { text: 'text-pink-400',    bg: 'bg-pink-400/10'    } },
-    { icon: Heart,     value: stats.totalAuthors,  label: 'Penulis',            color: { text: 'text-rose-400',    bg: 'bg-rose-400/10'    } },
+    { icon: Book, value: stats.totalBooks, label: 'Buku', color: { text: 'text-amber-400', bg: 'bg-amber-400/10' } },
+    { icon: Layers, value: stats.totalZines, label: 'Zine & Magazine', color: { text: 'text-emerald-400', bg: 'bg-emerald-400/10' } },
+    { icon: Film, value: stats.totalFilms, label: 'Film', color: { text: 'text-blue-400', bg: 'bg-blue-400/10' } },
+    { icon: Newspaper, value: stats.totalArticles, label: 'Arsip Koran', color: { text: 'text-violet-400', bg: 'bg-violet-400/10' } },
+    { icon: Users, value: stats.totalUsers, label: 'Kawan yang Mendaftar', color: { text: 'text-pink-400', bg: 'bg-pink-400/10' } },
+    { icon: Heart, value: stats.totalAuthors, label: 'Penulis', color: { text: 'text-rose-400', bg: 'bg-rose-400/10' } },
   ]
 
   const values = [
@@ -191,7 +191,7 @@ const AboutPage = () => {
           </h1>
 
           <p className="text-base sm:text-xl text-stone-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed mb-10 font-light">
-            PERPUSTAKAAN DIGITAL<br/>Domain Publik<br/>dan yang Terbengkalai dan yang Terdegradasi
+            PERPUSTAKAAN DIGITAL<br />Domain Publik<br />dan yang Terbengkalai dan yang Terdegradasi
           </p>
 
           <a

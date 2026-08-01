@@ -1,6 +1,7 @@
 import '../styles/epub-styles.css'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import ReactDOM from 'react-dom'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ChevronRight, Calendar, User, Newspaper, Eye, BookOpen,
@@ -257,30 +258,71 @@ const MetaDot = ({ mode }) => (
   <span aria-hidden="true" style={{ color: mode.color, opacity: 0.3 }}>·</span>
 )
 
-const ReaderToolbar = ({ fontIdx, setFontIdx, fontFamilyKey, setFontFamilyKey, modeKey, setModeKey }) => {
+const ReaderToolbar = ({ fontIdx, setFontIdx, fontFamilyKey, setFontFamilyKey, modeKey, setModeKey, fullWidth = false }) => {
   const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+  const [coords, setCoords] = useState({ top: 0, right: 12, width: 320 })
+  const btnRef = useRef(null)
+  const panelRef = useRef(null)
   const mode = READ_MODES.find(m => m.key === modeKey) || READ_MODES[0]
 
-  useEffect(() => {
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+  const updatePosition = useCallback(() => {
+    if (!btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const margin = 12
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const panelWidth = Math.min(320, viewportWidth - margin * 2)
+    let right = viewportWidth - rect.right
+    if (right < margin) right = margin
+    if (right + panelWidth > viewportWidth - margin) right = margin
+    let top = rect.bottom + 8
+    const maxHeight = viewportHeight - top - margin
+    if (maxHeight < 260 && rect.top - margin > 260) top = Math.max(margin, rect.top - 8 - 420)
+    setCoords({ top, right, width: panelWidth })
   }, [])
+
+  useEffect(() => {
+    const handler = e => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        panelRef.current && !panelRef.current.contains(e.target)
+      ) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('touchstart', handler)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [open, updatePosition])
 
   const currentFont = FONT_FAMILIES.find(f => f.key === fontFamilyKey) || FONT_FAMILIES[0]
 
   return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen(o => !o)} title="Pengaturan Tampilan"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all"
+    <>
+      <button ref={btnRef} onClick={() => setOpen(o => !o)} title="Pengaturan Tampilan"
+        className={fullWidth
+          ? "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-bold transition-all active:scale-[0.98]"
+          : "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all"}
         style={{ borderColor: open ? '#7c3aed' : mode.border, color: open ? '#7c3aed' : mode.color, backgroundColor: open ? 'rgba(124,58,237,0.08)' : mode.cardBg }}>
-        <Type className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Tampilan</span>
+        <Type className={fullWidth ? "w-4 h-4" : "w-3.5 h-3.5"} />
+        <span className={fullWidth ? "" : "hidden sm:inline"}>Tampilan</span>
       </button>
 
-      {open && (
-        <div className="absolute top-full right-0 mt-2 z-50 rounded-2xl shadow-2xl border p-5 w-80" style={{ background: mode.bg, borderColor: mode.border }}>
+      {open && ReactDOM.createPortal(
+        <div ref={panelRef} className="fixed z-[9999] rounded-2xl shadow-2xl border p-5"
+          style={{ top: coords.top, right: coords.right, left: 'auto', width: coords.width, background: mode.bg, borderColor: mode.border, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto' }}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: mode.color, opacity: 0.5 }}>Pengaturan Baca</span>
             <button onClick={() => setOpen(false)} style={{ color: mode.color, opacity: 0.4 }} className="hover:opacity-70 transition-opacity"><X className="w-4 h-4" /></button>
@@ -323,9 +365,10 @@ const ReaderToolbar = ({ fontIdx, setFontIdx, fontFamilyKey, setFontFamilyKey, m
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
 
@@ -466,7 +509,7 @@ const NewspaperArticleDetailPage = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+      <div className="max-w-5xl mx-auto px-4 pt-6 sm:pt-8 pb-24 lg:pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           <article className="lg:col-span-2">
@@ -527,7 +570,7 @@ const NewspaperArticleDetailPage = () => {
 
                 <div className="flex items-center justify-between gap-3 flex-wrap pt-3 pb-4 border-t" style={{ borderColor: mode.border }}>
                   <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
-                    <button onClick={handleShare} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all" style={{ borderColor: mode.border, color: mode.color, background: mode.bg }}>
+                    <button onClick={handleShare} className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all" style={{ borderColor: mode.border, color: mode.color, background: mode.bg }}>
                       <Share2 className="w-3.5 h-3.5" />Bagikan
                     </button>
                     {article.wordCount > 0 && (
@@ -541,7 +584,9 @@ const NewspaperArticleDetailPage = () => {
                       </span>
                     )}
                   </div>
-                  <ReaderToolbar fontIdx={fontIdx} setFontIdx={setFontIdx} fontFamilyKey={fontFamilyKey} setFontFamilyKey={setFontFamilyKey} modeKey={modeKey} setModeKey={setModeKey} />
+                  <div className="hidden lg:block">
+                    <ReaderToolbar fontIdx={fontIdx} setFontIdx={setFontIdx} fontFamilyKey={fontFamilyKey} setFontFamilyKey={setFontFamilyKey} modeKey={modeKey} setModeKey={setModeKey} />
+                  </div>
                 </div>
               </div>
 
@@ -644,6 +689,16 @@ const NewspaperArticleDetailPage = () => {
             <NewspaperSocialSection article={article} mode={mode} />
 
           </aside>
+        </div>
+      </div>
+
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 backdrop-blur-md border-t"
+        style={{ background: mode.bg, opacity: 0.98, borderColor: mode.border, paddingLeft: '12px', paddingRight: '12px', paddingTop: '8px', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+        <div className="flex gap-2">
+          <ReaderToolbar fontIdx={fontIdx} setFontIdx={setFontIdx} fontFamilyKey={fontFamilyKey} setFontFamilyKey={setFontFamilyKey} modeKey={modeKey} setModeKey={setModeKey} fullWidth />
+          <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-bold transition-all active:scale-[0.98]" style={{ borderColor: mode.border, color: mode.color, background: mode.cardBg }}>
+            <Share2 className="w-4 h-4" />Bagikan
+          </button>
         </div>
       </div>
     </div>
