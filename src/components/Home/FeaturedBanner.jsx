@@ -384,14 +384,14 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
           style={{ padding: 'clamp(16px, 3vw, 36px) clamp(16px, 4vw, 48px)' }}
         >
           <div
-            className="flex items-center gap-4 sm:gap-6 lg:gap-8 sm:max-h-[260px] lg:max-h-[300px] sm:overflow-hidden"
+            className="flex items-center gap-4 sm:gap-6 lg:gap-8 h-[190px] sm:h-auto sm:max-h-[260px] lg:max-h-[300px] overflow-hidden"
             style={{ maxWidth: '820px' }}
           >
 
             <div
-              className="flex-shrink-0 relative overflow-hidden rounded-lg sm:rounded-xl"
+              className={`flex-shrink-0 relative overflow-hidden rounded-lg sm:rounded-xl ${(item._type === 'newspaper' || item._type === 'film') ? 'w-[clamp(130px,44vw,220px)] h-auto sm:w-auto sm:h-[clamp(120px,22vw,220px)]' : ''}`}
               style={{
-                height: 'clamp(120px, 22vw, 220px)',
+                ...((item._type === 'newspaper' || item._type === 'film') ? {} : { height: 'clamp(120px, 22vw, 220px)' }),
                 aspectRatio: POSTER_RATIO[item._type],
                 boxShadow: `0 12px 36px ${cfg.glow}, 0 4px 12px rgba(0,0,0,${isDark ? 0.6 : 0.2})`,
                 border: `1px solid ${posterBorder}`,
@@ -498,16 +498,12 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
               </div>
 
               <h2
-                className="font-serif font-bold leading-tight mb-1 sm:mb-1.5"
+                className="font-serif font-bold leading-tight mb-1 sm:mb-1.5 line-clamp-2"
                 style={{
                   fontSize: 'clamp(15px, 3vw, 28px)',
                   color: titleColor,
                   textShadow: isDark ? '0 2px 12px rgba(0,0,0,0.7)' : 'none',
                   letterSpacing: '-0.02em',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
                 }}
               >
                 {item._title}
@@ -528,14 +524,10 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
 
               {item._desc && (
                 <p
-                  className="leading-relaxed mb-3 sm:mb-3.5"
+                  className="leading-relaxed mb-2 sm:mb-3.5 line-clamp-1 sm:line-clamp-2"
                   style={{
                     fontSize: 'clamp(10px, 1.5vw, 12px)',
                     color: descColor,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
                     maxWidth: '480px',
                   }}
                 >
