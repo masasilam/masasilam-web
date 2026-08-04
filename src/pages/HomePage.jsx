@@ -16,34 +16,7 @@ import {
   combineStructuredData
 } from '../utils/seoHelpers'
 
-const getWikimediaThumb = (url, w = 300) => {
-  if (!url) return null
-  if (url.includes('/thumb/')) return url
-  const m = url.match(
-    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
-  )
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbFilename = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
-}
-
-const getFilmPoster = (film) => {
-  if (!film) return null
-  const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
-  const mainThumb = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
-  const trailerThumb = videoSources.find(v => v.isTrailer)?.thumbnailUrl
-  return (
-    film.posterUrl || film.poster_url || film.poster ||
-    mainThumb || trailerThumb ||
-    film.thumbnailUrl || film.thumbnail || film.coverUrl ||
-    film.imageUrl || film.image ||
-    (typeof film.imageUrls === 'string' && film.imageUrls
-      ? film.imageUrls.split(',')[0].trim() : null) ||
-    null
-  )
-}
+import { getFilmCover, getWikimediaThumb } from '../utils/filmImages'
 
 const ACCENTS = {
   book: {
@@ -210,7 +183,8 @@ ZineCard.displayName = 'ZineCard'
 const FilmCard = memo(({ film, priority = false }) => {
   const [loaded, setLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
-  const rawPosterUrl = getFilmPoster(film)
+  // Slot 16:9 (aspect-video di bawah) → landscape, bukan poster potret.
+  const rawPosterUrl = getFilmCover(film, 'landscape')
   const thumbUrl = rawPosterUrl ? getWikimediaThumb(rawPosterUrl, 300) : null
   const year = film.tahunRilis
     ? (typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4

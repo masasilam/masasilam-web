@@ -5,6 +5,7 @@ import { filmService } from '../services/filmService'
 import zineService from '../services/zineService'
 import api from '../services/api'
 import { articleHref } from '../utils/newspaperUtils'
+import { getFilmCover, getWikimediaThumb } from '../utils/filmImages'
 import SEO from '../components/Common/SEO'
 import {
   Search, BookOpen, Film, Layers, Newspaper,
@@ -16,30 +17,6 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-const getWikimediaThumb = (url, w = 300) => {
-  if (!url) return null
-  if (url.includes('/thumb/')) return url
-  const m = url.match(
-    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
-  )
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbFilename = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
-}
-
-const getFilmPoster = (film) => {
-  if (!film) return null
-  return (
-    film.posterUrl || film.poster_url || film.poster ||
-    film.thumbnailUrl || film.thumbnail || film.coverUrl ||
-    film.imageUrl || film.image ||
-    (typeof film.imageUrls === 'string' && film.imageUrls
-      ? film.imageUrls.split(',')[0].trim() : null) || null
-  )
-}
-
 const detectMatchFields = (item, query, type) => {
   if (!query) return []
   const q = query.toLowerCase()
@@ -171,7 +148,9 @@ BookCard.displayName = 'BookCard'
 const FilmCard = memo(({ film, query }) => {
   const [loaded, setLoaded] = useState(false)
   const [imgErr, setImgErr] = useState(false)
-  const rawPoster = getFilmPoster(film)
+  // Slot di sini aspect-[2/3] → poster potret; jatuh ke landscape hanya kalau
+  // poster potret belum diinput admin.
+  const rawPoster = getFilmCover(film, 'portrait')
   const thumbUrl = rawPoster ? getWikimediaThumb(rawPoster, 300) : null
   const acc = ACCENTS.film
   const matchFields = detectMatchFields(film, query, 'film')

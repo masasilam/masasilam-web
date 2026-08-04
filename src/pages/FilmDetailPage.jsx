@@ -5,9 +5,10 @@ import {
   Globe, X, MessageCircle, ThumbsUp, ArrowLeft, Video as VideoIcon,
   ChevronDown, User, Users, Building2, MapPin, Mic2, Pencil,
   Camera, Music2, Clapperboard, Award, BookOpen, Eye, Bookmark,
-  ExternalLink, ChevronRight, Info, Copyright
+  ExternalLink, ChevronRight, Info, Copyright, Image as ImageIcon
 } from 'lucide-react'
 import { filmService } from '../services/filmService'
+import { getFilmCover, getFilmGallery, getWikimediaThumb } from '../utils/filmImages'
 import { useAuth } from '../hooks/useAuth'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
 import Button from '../components/Common/Button'
@@ -16,19 +17,6 @@ import SEO from '../components/Common/SEO'
 import TrailerModal from '../components/Film/TrailerModal'
 import FilmDetailSocialSection from '../components/Social/FilmDetailSocialSection'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
-
-const getWikimediaThumb = (url, w = 600) => {
-  if (!url) return null
-  if (url.includes('/thumb/')) return url
-  const m = url.match(
-    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
-  )
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbFilename = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
-}
 
 const COPYRIGHT_STATUS_NAME = {
   1: 'Domain Publik',
@@ -73,10 +61,10 @@ const normalizeFilm = (raw) => {
     reviewScores: Array.isArray(raw.reviewScores) ? raw.reviewScores : [],
     videoUrl: raw.videoUrl || mainVideo?.embedUrl || mainVideo?.directUrl || null,
     trailerUrl: raw.trailerUrl || trailerVideo?.embedUrl || trailerVideo?.directUrl || null,
-    posterUrl: raw.posterUrl
-      || mainVideo?.thumbnailUrl
-      || trailerVideo?.thumbnailUrl
-      || null,
+    // posterUrl sengaja TIDAK di-fallback ke thumbnail video di sini. Dulu baris
+    // ini menimpa posterUrl dengan stills sehingga poster asli dan stills jadi
+    // tak terbedakan. Fallback-nya sekarang urusan getFilmCover, yang tetap bisa
+    // membaca videoSources karena ikut ter-spread lewat ...raw.
   }
 }
 
@@ -634,11 +622,9 @@ const FilmDetailPage = () => {
     genreList, reviewScores,
   } = film
 
-  const rawPosterUrl =
-    film.posterUrl || film.poster_url || film.poster ||
-    film.thumbnailUrl || film.thumbnail || film.coverUrl ||
-    (Array.isArray(film.imageUrls) && film.imageUrls.length > 0 ? film.imageUrls[0] : null) ||
-    null
+  // Hero di halaman ini landscape (aspect-[16/6]), jadi pakai cover landscape.
+  const rawPosterUrl = getFilmCover(film, 'landscape')
+  const gallery = getFilmGallery(film)
 
   const avgRating = ratingStats?.averageRating
   const avgReviewScore = reviewScores?.[0]?.value || null
@@ -1215,6 +1201,39 @@ const FilmDetailPage = () => {
                         </div>
                       </div>
                     )}
+                  </div>
+                </SectionBlock>
+              )}
+
+              {/* Galeri — inilah yang akhirnya memakai "URL Gambar Tambahan".
+                  Sebelumnya field itu cuma jadi fallback paling buncit untuk
+                  satu gambar sampul, jadi praktis tidak pernah tampil. */}
+              {gallery.length > 1 && (
+                <SectionBlock icon={ImageIcon} title="Galeri" iconColor="text-rose-500">
+                  <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
+                    {gallery.map((url, i) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 w-40 sm:w-48 snap-start rounded-xl overflow-hidden border
+                                   transition-all hover:shadow-md
+                                   bg-slate-100 border-slate-200
+                                   hover:border-blue-300
+                                   dark:bg-slate-800 dark:border-slate-700 dark:hover:border-blue-600"
+                      >
+                        <img
+                          src={getWikimediaThumb(url, 400)}
+                          alt={`${film.judul} — gambar ${i + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-28 sm:h-32 object-cover"
+                          onError={e => { e.target.closest('a').style.display = 'none' }}
+                        />
+                      </a>
+                    ))}
                   </div>
                 </SectionBlock>
               )}
