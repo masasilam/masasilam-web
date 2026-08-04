@@ -35,9 +35,9 @@ const FONT_FAMILIES = [
 ]
 
 const READ_MODES = [
-  { key: 'light', label: 'Terang', bg: '#ffffff', color: '#111111', cardBg: '#f9fafb', border: '#e5e7eb' },
-  { key: 'sepia', label: 'Sepia', bg: '#f5f0e8', color: '#3b2d1f', cardBg: '#ede8de', border: '#d6c9b0' },
-  { key: 'dark', label: 'Gelap', bg: '#1a1a2e', color: '#ffffff', cardBg: '#16213e', border: '#2d2d4e' },
+  { key: 'light', label: 'Terang', bg: '#ffffff', color: '#1c1917', cardBg: '#fafaf9', border: '#e7e5e4', accent: '#7c3aed' },
+  { key: 'sepia', label: 'Sepia', bg: '#f5f0e8', color: '#3b2d1f', cardBg: '#ede8de', border: '#d6c9b0', accent: '#9a5b13' },
+  { key: 'dark', label: 'Gelap', bg: '#020617', color: '#f1f5f9', cardBg: '#0f172a', border: '#334155', accent: '#a78bfa' },
 ]
 
 const EPUB_SCOPED_CSS = `
@@ -102,10 +102,11 @@ const EPUB_SCOPED_CSS = `
   [data-epub] .letter {
     margin: 3em auto !important; padding: 2em !important;
     border: 1px solid #ccc !important; border-radius: 8px !important;
-    max-width: 36em !important; line-height: 1.6 !important;
+    max-width: 36em !important; line-height: 1.6 !important; hyphens: auto !important;
   }
-  [data-epub] .letter p          { margin: 0; text-indent: 0 !important; }
+  [data-epub] .letter p          { margin: 0 !important; text-indent: 0 !important; text-align: justify !important; }
   [data-epub] .letter .body      { text-indent: 1.5em !important; }
+  [data-epub] .letter .body:first-of-type { text-indent: 0 !important; margin-top: 0 !important; }
   [data-epub] .letter .date,
   [data-epub] .letter .closing   { text-align: right !important; font-style: italic !important; }
   [data-epub] .letter .signature { text-align: right !important; font-weight: 600 !important; }
@@ -116,8 +117,18 @@ const EPUB_SCOPED_CSS = `
   }
   [data-epub] .poem p, [data-epub] .poem div, [data-epub] .poem span {
     text-align: left !important; text-indent: 0 !important; margin: 0 !important; hyphens: none !important;
+    display: block !important; line-height: 1.4 !important;
   }
-  [data-epub] .poem p:last-child { text-align: right !important; font-style: italic !important; margin-top: 2em !important; }
+  [data-epub] .poem div + div    { margin-top: 1.5em !important; }
+  [data-epub] .poem .author {
+    text-align: center !important; font-weight: 500 !important; font-size: 1.1em !important;
+    margin: 2em 0 1em 0 !important; text-transform: uppercase !important; letter-spacing: 0.2em !important;
+  }
+  [data-epub] .poem h1, [data-epub] .poem h2, [data-epub] .poem h3, [data-epub] .poem h4 {
+    text-align: center !important; font-weight: 600 !important; margin: 1.5em 0 1em 0 !important;
+    text-transform: uppercase !important; letter-spacing: 0.1em !important;
+  }
+  [data-epub] .poem p:last-child { text-align: right !important; font-style: italic !important; margin-top: 2em !important; font-size: 0.9em !important; }
   [data-epub] .indent            { margin-left: 2em !important; }
   [data-epub] .epigraph          { font-style: italic !important; text-align: center !important; margin: 3em auto !important; hyphens: none !important; }
   [data-epub] .epigraph p        { text-indent: 0 !important; text-align: center !important; }
@@ -127,9 +138,25 @@ const EPUB_SCOPED_CSS = `
   [data-epub] .info-box p        { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
   [data-epub] .note              { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; position: relative !important; font-size: 0.9em !important; border-top: 1px solid #999 !important; }
   [data-epub] .note p            { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
+  [data-epub] a[epub\:type="noteref"] {
+    color: var(--epub-note-color, #7c3aed) !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    padding: 0 0.05em;
+  }
+  [data-epub] a[epub\:type="noteref"]:hover {
+    text-decoration: underline !important;
+    opacity: 0.75;
+  }
+  [data-epub] sup a[epub\:type="noteref"] { font-size: 0.75em; }
+  [data-epub] .dialog            { margin: 1em 0 !important; text-indent: 0 !important; }
+  [data-epub] .dialog p          { margin: 0.2em 0 !important; text-indent: -1em !important; padding-left: 1em !important; text-align: left !important; }
+  [data-epub] .dialog .speaker   { font-weight: 600 !important; }
   [data-epub] .scene-break       { text-align: center !important; margin: 2em 0 !important; letter-spacing: 0.3em !important; }
   [data-epub] .scene-break::before { content: "⁂" !important; }
   [data-epub] ul.dash-list       { list-style: none !important; padding-left: 1.5em !important; }
+  [data-epub] ul.dash-list li    { text-indent: -0.7em !important; }
   [data-epub] ul.dash-list li::before { content: "– " !important; }
   [data-epub] .smallcaps         { font-variant: small-caps !important; }
   [data-epub] .uppercase         { text-transform: uppercase !important; }
@@ -262,11 +289,45 @@ const VisualView = ({ html }) => {
   const [fontIdx, setFontIdx] = useState(2)
   const [fontKey, setFontKey] = useState('garamond')
   const [modeKey, setModeKey] = useState('light')
+  const [footnote, setFootnote] = useState(null)
   const mode = READ_MODES.find(m => m.key === modeKey) || READ_MODES[0]
   const fontSize = FONT_SIZES[fontIdx].value
   const fontFamily = (FONT_FAMILIES.find(f => f.key === fontKey) || FONT_FAMILIES[0]).stack
 
   useEffect(() => { if (ref.current) ref.current.innerHTML = html || '' }, [html])
+
+  useEffect(() => {
+    const container = ref.current
+    if (!container) return
+    const handleClick = e => {
+      const link = e.target.closest('a[epub\\:type="noteref"], a[href^="#fn"]')
+      if (!link) return
+      e.preventDefault()
+      const targetId = link.getAttribute('href')?.slice(1)
+      if (!targetId) return
+      const targetEl = container.querySelector(`#${CSS.escape(targetId)}`)
+      if (!targetEl) return
+      const rect = link.getBoundingClientRect()
+      const panelWidth = 300
+      let left = rect.left
+      if (left + panelWidth > window.innerWidth - 12) left = window.innerWidth - panelWidth - 12
+      if (left < 12) left = 12
+      setFootnote({ html: targetEl.innerHTML, top: rect.bottom + 8, left })
+    }
+    container.addEventListener('click', handleClick)
+    return () => container.removeEventListener('click', handleClick)
+  }, [html])
+
+  useEffect(() => {
+    if (!footnote) return
+    const close = () => setFootnote(null)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [footnote])
 
   if (!html) {
     return (
@@ -300,7 +361,16 @@ const VisualView = ({ html }) => {
           ))}
         </div>
       </div>
-      <div ref={ref} data-epub lang="id" className="chapter" style={{ fontFamily, fontSize, lineHeight: 1.5, color: mode.color, backgroundColor: mode.bg, margin: '0 auto', padding: '1.25em', maxWidth: '38em', transition: 'background-color 0.2s, color 0.2s, font-size 0.15s' }} />
+      <div ref={ref} data-epub lang="id" className="chapter" style={{ fontFamily, fontSize, lineHeight: 1.5, color: mode.color, backgroundColor: mode.bg, margin: '0 auto', padding: '1.25em', maxWidth: '38em', transition: 'background-color 0.2s, color 0.2s, font-size 0.15s', '--epub-note-color': mode.accent }} />
+      {footnote && ReactDOM.createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setFootnote(null)} />
+          <div className="fixed z-[9999] rounded-xl shadow-2xl border p-4 text-sm leading-relaxed"
+            style={{ top: footnote.top, left: footnote.left, width: 300, background: mode.cardBg, borderColor: mode.border, color: mode.color }}
+            dangerouslySetInnerHTML={{ __html: footnote.html }} />
+        </>,
+        document.body
+      )}
     </div>
   )
 }

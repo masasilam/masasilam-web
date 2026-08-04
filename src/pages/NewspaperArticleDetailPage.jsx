@@ -31,9 +31,9 @@ const FONT_FAMILIES = [
   { key: 'system', label: 'Sans', stack: 'ui-sans-serif,system-ui,-apple-system,sans-serif' },
 ]
 const READ_MODES = [
-  { key: 'light', label: 'Terang', bg: '#ffffff', color: '#1c1917', cardBg: '#fafaf9', border: '#e7e5e4' },
-  { key: 'sepia', label: 'Sepia', bg: '#f5f0e8', color: '#3b2d1f', cardBg: '#ede8de', border: '#d6c9b0' },
-  { key: 'dark', label: 'Gelap', bg: '#020617', color: '#f1f5f9', cardBg: '#0f172a', border: '#334155' },
+  { key: 'light', label: 'Terang', bg: '#ffffff', color: '#1c1917', cardBg: '#fafaf9', border: '#e7e5e4', accent: '#7c3aed' },
+  { key: 'sepia', label: 'Sepia', bg: '#f5f0e8', color: '#3b2d1f', cardBg: '#ede8de', border: '#d6c9b0', accent: '#9a5b13' },
+  { key: 'dark', label: 'Gelap', bg: '#020617', color: '#f1f5f9', cardBg: '#0f172a', border: '#334155', accent: '#a78bfa' },
 ]
 const LS_FONT_SIZE_KEY = 'koran_reader_fontSize'
 const LS_FONT_FAMILY_KEY = 'koran_reader_fontFamily'
@@ -86,18 +86,20 @@ const EPUB_SCOPED_CSS = `
   }
   [data-epub] p.ornament-flower { letter-spacing: 0.3em; font-size: 1.1em; text-align: center; text-indent: 0; }
 
-  [data-epub] .poem { margin: 2em 0; text-align: left; text-indent: 0; hyphens: none; line-height: 1.4; }
-  [data-epub] .poem p, [data-epub] .poem div, [data-epub] .poem span { text-align: left; text-indent: 0; margin: 0; hyphens: none; }
+[data-epub] .poem { margin: 2em 0 !important; text-align: left !important; text-indent: 0 !important; hyphens: none !important; line-height: 1.4 !important; }
+  [data-epub] .poem p, [data-epub] .poem div, [data-epub] .poem span {
+    text-align: left !important; text-indent: 0 !important; margin: 0 !important; hyphens: none !important;
+    display: block !important; line-height: 1.4 !important;
+  }
   [data-epub] .poem .note { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; position: relative; font-size: 0.9em; }
   [data-epub] .poem .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
   [data-epub] .poem .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
   [data-epub] .poem h1, [data-epub] .poem h2, [data-epub] .poem h3, [data-epub] .poem h4 {
-    text-align: center; font-weight: 600; margin: 1.5em 0 1em 0; text-transform: uppercase; letter-spacing: 0.1em;
+    text-align: center !important; font-weight: 600 !important; margin: 1.5em 0 1em 0 !important; text-transform: uppercase !important; letter-spacing: 0.1em !important;
   }
-  [data-epub] .poem .author { text-align: center; font-weight: 500; font-size: 1.1em; margin: 2em 0 1em 0; text-transform: uppercase; letter-spacing: 0.2em; }
-  [data-epub] .poem span { display: block; margin: 0; line-height: 1.4; }
-  [data-epub] .poem div + div { margin-top: 1.5em; }
-  [data-epub] .poem p:last-child { text-align: right; font-style: italic; margin-top: 2em; font-size: 0.9em; }
+  [data-epub] .poem .author { text-align: center !important; font-weight: 500 !important; font-size: 1.1em !important; margin: 2em 0 1em 0 !important; text-transform: uppercase !important; letter-spacing: 0.2em !important; }
+  [data-epub] .poem div + div { margin-top: 1.5em !important; }
+  [data-epub] .poem p:last-child { text-align: right !important; font-style: italic !important; margin-top: 2em !important; font-size: 0.9em !important; }
   [data-epub] .indent { margin-left: 2em; }
 
   [data-epub] ol, [data-epub] ul { margin: 0; text-align: justify; hyphens: auto; }
@@ -192,6 +194,18 @@ const EPUB_SCOPED_CSS = `
   [data-epub] .dialog .note { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; padding-left: 0 !important; position: relative; font-size: 0.9em; }
   [data-epub] .dialog .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
   [data-epub] .dialog .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; padding-left: 0 !important; }
+  [data-epub] a[epub\:type="noteref"] {
+    color: var(--epub-note-color, #7c3aed) !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    padding: 0 0.05em;
+  }
+  [data-epub] a[epub\:type="noteref"]:hover {
+    text-decoration: underline !important;
+    opacity: 0.75;
+  }
+  [data-epub] sup a[epub\:type="noteref"] { font-size: 0.75em; }
 
   [data-epub] .scene-break { text-align: center; margin: 2em 0; letter-spacing: 0.3em; color: #666; }
   [data-epub] .scene-break::before { content: "⁂"; }
@@ -374,13 +388,60 @@ const ReaderToolbar = ({ fontIdx, setFontIdx, fontFamilyKey, setFontFamilyKey, m
 
 const ArticleContent = ({ html, fontSize, fontFamily, mode }) => {
   const ref = useRef(null)
+  const [footnote, setFootnote] = useState(null)
+
   useEffect(() => { if (ref.current && html) ref.current.innerHTML = html }, [html])
+
+  useEffect(() => {
+    const container = ref.current
+    if (!container) return
+    const handleClick = e => {
+      const link = e.target.closest('a[epub\\:type="noteref"], a[href^="#fn"]')
+      if (!link) return
+      e.preventDefault()
+      const targetId = link.getAttribute('href')?.slice(1)
+      if (!targetId) return
+      const targetEl = container.querySelector(`#${CSS.escape(targetId)}`)
+      if (!targetEl) return
+      const rect = link.getBoundingClientRect()
+      const panelWidth = 300
+      let left = rect.left
+      if (left + panelWidth > window.innerWidth - 12) left = window.innerWidth - panelWidth - 12
+      if (left < 12) left = 12
+      setFootnote({ html: targetEl.innerHTML, top: rect.bottom + 8, left })
+    }
+    container.addEventListener('click', handleClick)
+    return () => container.removeEventListener('click', handleClick)
+  }, [html])
+
+  useEffect(() => {
+    if (!footnote) return
+    const close = () => setFootnote(null)
+    const closeOnKey = e => { if (e.key === 'Escape') setFootnote(null) }
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    document.addEventListener('keydown', closeOnKey)
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+      document.removeEventListener('keydown', closeOnKey)
+    }
+  }, [footnote])
 
   return (
     <>
       <style>{EPUB_SCOPED_CSS}</style>
-      <div ref={ref} data-epub lang="en" className="chapter"
-        style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, backgroundColor: 'transparent', margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em', transition: 'font-size 0.15s, color 0.2s' }} />
+      <div ref={ref} data-epub lang="id" className="chapter"
+        style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, backgroundColor: 'transparent', margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em', transition: 'font-size 0.15s, color 0.2s', '--epub-note-color': mode.accent }} />
+      {footnote && ReactDOM.createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setFootnote(null)} />
+          <div className="fixed z-[9999] rounded-xl shadow-2xl border p-4 text-sm leading-relaxed"
+            style={{ top: footnote.top, left: footnote.left, width: 300, background: mode.cardBg, borderColor: mode.border, color: mode.color }}
+            dangerouslySetInnerHTML={{ __html: footnote.html }} />
+        </>,
+        document.body
+      )}
     </>
   )
 }
