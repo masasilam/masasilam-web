@@ -3,19 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Clock, Film as FilmIcon, Play, Video, Star, Globe, Lock, HelpCircle,
 } from 'lucide-react'
-
-const getWikimediaThumb = (url, w = 600) => {
-  if (!url) return null
-  if (url.includes('/thumb/')) return url
-  const m = url.match(
-    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
-  )
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbFilename = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
-}
+import { getFilmCover, getWikimediaThumb } from '../../utils/filmImages'
 
 // ── Mapping copyrightStatusId → label ────────────────────────────────────────
 const COPYRIGHT_STATUS_NAME = {
@@ -112,25 +100,10 @@ const FilmCard = memo(({ film }) => {
     : null
 
   const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
-  const mainThumb    = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
-  const trailerThumb = videoSources.find(v => v.isTrailer)?.thumbnailUrl
 
-  const rawPosterUrl =
-    film.posterUrl   ||
-    film.poster_url  ||
-    film.poster      ||
-    mainThumb        ||
-    trailerThumb     ||
-    film.thumbnailUrl ||
-    film.thumbnail   ||
-    film.coverUrl    ||
-    film.imageUrl    ||
-    (typeof film.imageUrls === 'string' && film.imageUrls
-      ? film.imageUrls.split(',')[0].trim()
-      : null) ||
-    null
-
-  const thumbUrl = getWikimediaThumb(rawPosterUrl, 600)
+  // Kartu ini 16:9 (aspect-video), jadi minta bentuk landscape — bukan poster potret.
+  const rawPosterUrl = getFilmCover(film, 'landscape')
+  const thumbUrl     = getWikimediaThumb(rawPosterUrl, 600)
 
   // Hanya retry jika thumbUrl berbeda dari rawPosterUrl (kasus Wikimedia)
   const handleError = (e) => {

@@ -19,6 +19,44 @@ const inputCls = `
 `
 const labelCls = `block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-500 dark:text-slate-400`
 
+// Input URL gambar + tombol preview. Preview-nya memakai rasio slot aslinya di
+// web supaya admin langsung lihat kalau gambar yang dipilih salah bentuk —
+// poster potret dipaksa ke slot 16:9 (atau sebaliknya) baru ketahuan setelah
+// tayang kalau tidak ada preview seperti ini.
+const ImageUrlField = ({ label, hint, value, onChange, disabled, aspectCls, required }) => {
+  const [preview, setPreview] = useState(false)
+  return (
+    <div>
+      <label className={labelCls}>
+        {label}
+        {required && <span className="text-rose-500 ml-1">*</span>}
+      </label>
+      <div className="flex gap-2">
+        <input value={value} onChange={e => onChange(e.target.value)}
+          placeholder="https://..." disabled={disabled}
+          className={inputCls + ' flex-1'} />
+        {value && (
+          <button type="button" onClick={() => setPreview(v => !v)}
+            aria-label={preview ? 'Sembunyikan preview' : 'Tampilkan preview'}
+            className="flex-shrink-0 p-2.5 rounded-xl border border-slate-200 dark:border-slate-600
+                       text-slate-500 hover:text-blue-500 transition-all">
+            {preview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
+      {hint && <p className="text-xs mt-1 text-slate-400 dark:text-slate-500">{hint}</p>}
+      {preview && value && (
+        <div className={`mt-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700
+                         bg-slate-100 dark:bg-slate-800 relative ${aspectCls}`}>
+          <img src={value} alt={`Preview ${label}`}
+            className="w-full h-full object-cover"
+            onError={e => { e.target.style.display = 'none' }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Pill input — array of strings
 const PillInput = ({ value = [], onChange, placeholder, disabled }) => {
   const [input, setInput] = useState('')
@@ -277,7 +315,7 @@ const FormSection = ({ icon: Icon, title, iconColor = 'text-blue-500', children,
 const emptyFilm = () => ({
   judul: '', judulSlug: '', tahunRilis: '', jenis: '', deskripsi: '',
   durasi: '', negaraAsal: '', originalLanguage: '', color: '',
-  posterUrl: '', trailerUrl: '', followedBy: '', partOfSeries: '',
+  posterUrl: '', posterPortraitUrl: '', trailerUrl: '', followedBy: '', partOfSeries: '',
   genre: [], aliasIndonesia: [], narrativeLocation: [], filmingLocation: [], imageUrls: [],
   sutradara: [], penulisSkenario: [], pemeran: [], produser: [],
   filmEditor: [], cinematographer: [], composer: [], narator: [],
@@ -323,7 +361,6 @@ const FilmForm = ({ mode = 'add', initialSlug = '', onSuccess, onCancel }) => {
   const [status, setStatus]   = useState(null)   // 'success' | 'error'
   const [message, setMessage] = useState('')
   const [slugInput, setSlugInput] = useState(initialSlug)
-  const [posterPreview, setPosterPreview] = useState(false)
 
   const isEdit = mode === 'edit'
 
@@ -346,6 +383,7 @@ const FilmForm = ({ mode = 'add', initialSlug = '', onSuccess, onCancel }) => {
         originalLanguage:  d.originalLanguage  || '',
         color:             d.color             || '',
         posterUrl:         d.posterUrl         || '',
+        posterPortraitUrl: d.posterPortraitUrl || '',
         trailerUrl:        d.trailerUrl        || '',
         followedBy:        d.followedBy        || '',
         partOfSeries:      d.partOfSeries      || '',
@@ -385,6 +423,18 @@ const FilmForm = ({ mode = 'add', initialSlug = '', onSuccess, onCancel }) => {
     if (!form.judul.trim()) {
       setStatus('error'); setMessage('Judul film wajib diisi'); return
     }
+    // Dua rasio ini dipakai di slot yang berbeda dan tidak bisa saling gantikan,
+    // jadi film BARU wajib punya keduanya. Untuk edit sengaja tidak dipaksa:
+    // semua film lama poster potretnya masih kosong, dan memaksa di sini berarti
+    // admin yang cuma mau benerin sinopsis ikut terhalang.
+    if (!isEdit) {
+      if (!form.posterPortraitUrl.trim()) {
+        setStatus('error'); setMessage('URL Poster Potret (2:3) wajib diisi untuk film baru'); return
+      }
+      if (!form.posterUrl.trim()) {
+        setStatus('error'); setMessage('URL Cover Landscape (16:9) wajib diisi untuk film baru'); return
+      }
+    }
     setLoading(true); setStatus(null)
     try {
       // Clean empty persons/companies
@@ -410,6 +460,7 @@ const FilmForm = ({ mode = 'add', initialSlug = '', onSuccess, onCancel }) => {
         durasi:             form.durasi     || undefined,
         negaraAsal:         form.negaraAsal || undefined,
         posterUrl:          form.posterUrl  || undefined,
+        posterPortraitUrl:  form.posterPortraitUrl || undefined,
       }
 
       let res
@@ -541,29 +592,24 @@ const FilmForm = ({ mode = 'add', initialSlug = '', onSuccess, onCancel }) => {
       {/* ── SECTION 2: Visual ── */}
       <FormSection icon={ImageIcon} title="Visual & Media" iconColor="text-rose-500">
         <div className="space-y-3 mt-1">
-          <div>
-            <label className={labelCls}>URL Poster / Cover Landscape</label>
-            <div className="flex gap-2">
-              <input value={form.posterUrl} onChange={e => set('posterUrl', e.target.value)}
-                placeholder="https://..." disabled={loading}
-                className={inputCls + ' flex-1'} />
-              {form.posterUrl && (
-                <button type="button" onClick={() => setPosterPreview(v => !v)}
-                  className="flex-shrink-0 p-2.5 rounded-xl border border-slate-200 dark:border-slate-600
-                             text-slate-500 hover:text-blue-500 transition-all">
-                  {posterPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              )}
-            </div>
-            {posterPreview && form.posterUrl && (
-              <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700
-                              bg-slate-100 dark:bg-slate-800 aspect-video relative">
-                <img src={form.posterUrl} alt="Preview poster"
-                  className="w-full h-full object-cover"
-                  onError={e => { e.target.style.display='none' }} />
-              </div>
-            )}
-          </div>
+          <ImageUrlField
+            label="URL Poster Potret (2:3)"
+            hint="Poster bioskop. Dipakai di kartu potret seperti section Terbaru & Terupdate dan hasil pencarian."
+            value={form.posterPortraitUrl}
+            onChange={v => set('posterPortraitUrl', v)}
+            disabled={loading}
+            aspectCls="aspect-[2/3] max-w-[220px]"
+            required={!isEdit}
+          />
+          <ImageUrlField
+            label="URL Cover Landscape (16:9)"
+            hint="Still atau backdrop. Dipakai di hero halaman detail, banner utama, dan kartu 16:9."
+            value={form.posterUrl}
+            onChange={v => set('posterUrl', v)}
+            disabled={loading}
+            aspectCls="aspect-video"
+            required={!isEdit}
+          />
           <div>
             <label className={labelCls}>URL Trailer (direct, opsional)</label>
             <input value={form.trailerUrl} onChange={e => set('trailerUrl', e.target.value)}
