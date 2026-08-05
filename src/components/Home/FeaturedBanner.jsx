@@ -5,36 +5,7 @@ import {
   ArrowRight, ChevronLeft, ChevronRight, Play
 } from 'lucide-react'
 import { sourceHref } from '../../utils/newspaperUtils'
-
-const getWikimediaThumb = (url, w = 900) => {
-  if (!url) return null
-  if (url.includes('/thumb/')) return url
-  if (!url.includes('upload.wikimedia.org')) return url
-  const m = url.match(
-    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/
-  )
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbFilename = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
-}
-
-const getFilmPoster = (film) => {
-  if (!film) return null
-  const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
-  const mainThumb = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
-  const trailerThumb = videoSources.find(v => v.isTrailer)?.thumbnailUrl
-  return (
-    film.posterUrl || film.poster_url || film.poster ||
-    mainThumb || trailerThumb ||
-    film.thumbnailUrl || film.thumbnail || film.coverUrl ||
-    film.imageUrl || film.image ||
-    (typeof film.imageUrls === 'string' && film.imageUrls
-      ? film.imageUrls.split(',')[0].trim() : null) ||
-    null
-  )
-}
+import { getFilmCover, getWikimediaThumb } from '../../utils/filmImages'
 
 const TYPE_CONFIG = {
   book: {
@@ -180,7 +151,8 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
     })),
     ...films.slice(0, 2).map(f => ({
       ...f, _type: 'film',
-      _image: getFilmPoster(f),
+      // Slot film di banner ini 16:9 (POSTER_RATIO.film), jadi pakai landscape.
+      _image: getFilmCover(f, 'landscape'),
       _title: f.judul,
       _sub: f.tahunRilis
         ? (typeof f.tahunRilis === 'string' && f.tahunRilis.length === 4
