@@ -9,6 +9,7 @@ import { sourceHref } from '../utils/newspaperUtils'
 import SEO from '../components/Common/SEO'
 import FeaturedBanner from '../components/Home/FeaturedBanner'
 import { generateWebsiteStructuredData, generateOrganizationStructuredData, combineStructuredData } from '../utils/seoHelpers'
+import { getFilmCover, getFilmPortrait, getWikimediaThumb } from '../utils/filmImages'
 
 if (typeof document !== 'undefined' && !document.head.querySelector('link[data-wikimedia-preconnect]')) {
   const preconnect = document.createElement('link')
@@ -17,32 +18,6 @@ if (typeof document !== 'undefined' && !document.head.querySelector('link[data-w
   preconnect.crossOrigin = 'anonymous'
   preconnect.setAttribute('data-wikimedia-preconnect', '')
   document.head.appendChild(preconnect)
-}
-
-const getWikimediaThumb = (url, w = 300) => {
-  if (!url) return null
-  if (url.includes('/thumb/')) return url
-  const m = url.match(/^(https:\/\/upload\.wikimedia\.org\/wikipedia\/(?:commons|[a-z]+)\/)([^/]\/[^/]{2}\/)(.+)$/)
-  if (!m) return url
-  const [, base, hash, filename] = m
-  const isSvg = filename.toLowerCase().endsWith('.svg')
-  const thumbFilename = isSvg ? `${filename}.png` : filename
-  return `${base}thumb/${hash}${filename}/${w}px-${thumbFilename}`
-}
-
-const getFilmPoster = (film) => {
-  if (!film) return null
-  const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
-  const mainThumb = videoSources.find(v => !v.isTrailer)?.thumbnailUrl
-  const trailerThumb = videoSources.find(v => v.isTrailer)?.thumbnailUrl
-  return (
-    film.posterUrl || film.poster_url || film.poster ||
-    mainThumb || trailerThumb ||
-    film.thumbnailUrl || film.thumbnail || film.coverUrl ||
-    film.imageUrl || film.image ||
-    (typeof film.imageUrls === 'string' && film.imageUrls ? film.imageUrls.split(',')[0].trim() : null) ||
-    null
-  )
 }
 
 const pickDate = (item) =>
@@ -143,11 +118,19 @@ ZineCard.displayName = 'ZineCard'
 const FilmCard = memo(({ film, priority = false, size = 'wide' }) => {
   const [loaded, setLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
-  const rawPosterUrl = getFilmPoster(film)
+  const isCompact = size === 'compact'
+
+  // Kartu compact 2:3 (dipakai section "Terbaru & Terupdate") minta poster
+  // potret. getFilmPortrait sengaja ketat — tanpa fallback — supaya kita tahu
+  // apakah film ini benar-benar punya poster. Kalau punya, poster mengisi
+  // penuh kartu; kalau belum diinput admin, barulah jatuh ke cover landscape
+  // dengan perlakuan letterbox + latar blur seperti sebelumnya.
+  const portraitUrl = isCompact ? getFilmPortrait(film) : null
+  const hasPortrait = Boolean(portraitUrl)
+  const rawPosterUrl = portraitUrl || getFilmCover(film, 'landscape')
   const thumbUrl = rawPosterUrl ? getWikimediaThumb(rawPosterUrl, 300) : null
   const year = film.tahunRilis ? (typeof film.tahunRilis === 'string' && film.tahunRilis.length === 4 ? film.tahunRilis : new Date(film.tahunRilis).getFullYear()) : null
   const showImage = thumbUrl && !imgError
-  const isCompact = size === 'compact'
 
   const handleError = useCallback((e) => {
     if (rawPosterUrl && e.target.src !== rawPosterUrl) { e.target.src = rawPosterUrl; return }
@@ -162,10 +145,13 @@ const FilmCard = memo(({ film, priority = false, size = 'wide' }) => {
         {showImage && !loaded && <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />}
         {showImage ? (
           <>
-            {isCompact && (
+            {/* Latar blur hanya perlu saat gambar tidak mengisi penuh kartu —
+                yaitu ketika poster potret belum ada dan kita terpaksa
+                meletakkan cover 16:9 di slot 2:3. */}
+            {isCompact && !hasPortrait && (
               <img src={thumbUrl} alt="" aria-hidden="true" loading={priority ? 'eager' : 'lazy'} decoding="async" className={`absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60 transition-opacity duration-500 ${loaded ? 'opacity-60' : 'opacity-0'}`} />
             )}
-            <img src={thumbUrl} alt={film.judul} loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} decoding={priority ? 'sync' : 'async'} width={300} height={450} onLoad={handleLoad} onError={handleError} className={`relative w-full h-full transition-all duration-500 ${isCompact ? 'object-contain' : 'object-cover group-hover:scale-110'} ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+            <img src={thumbUrl} alt={film.judul} loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} decoding={priority ? 'sync' : 'async'} width={300} height={450} onLoad={handleLoad} onError={handleError} className={`relative w-full h-full transition-all duration-500 ${isCompact && !hasPortrait ? 'object-contain' : 'object-cover group-hover:scale-110'} ${loaded ? 'opacity-100' : 'opacity-0'}`} />
           </>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-50 to-blue-100/60 dark:from-blue-950 dark:to-slate-900">
