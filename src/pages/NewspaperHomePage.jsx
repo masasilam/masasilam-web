@@ -14,13 +14,27 @@ import SEO from '../components/Common/SEO'
 import { sourceHref, rubrikHref } from '../utils/newspaperUtils'
 import { getGenreIcon } from '../utils/genreIcons'
 
-const SkeletonSource = () => (
-  <div
-    className="animate-pulse rounded-2xl border p-5 bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700"
-  >
-    <div className="h-4 rounded w-2/3 mb-2 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-3 rounded w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
-    <div className="h-3 rounded w-1/2 bg-stone-200 dark:bg-slate-700" />
+// Matches SourceCard's real shape: h-28 image block + padded text block.
+// The previous skeleton had no image placeholder at all, so real cards were
+// noticeably taller once logos loaded — the main CLS source on this page.
+const SkeletonSourceCard = () => (
+  <div className="animate-pulse rounded-2xl border overflow-hidden bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
+    <div className="w-full h-28 bg-stone-200 dark:bg-slate-700" />
+    <div className="p-5 sm:p-6">
+      <div className="h-3 rounded w-1/2 mb-3 bg-stone-200 dark:bg-slate-700" />
+      <div className="h-3 rounded w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
+      <div className="h-3 rounded w-2/3 mb-4 bg-stone-200 dark:bg-slate-700" />
+      <div className="h-3 rounded w-1/3 bg-stone-200 dark:bg-slate-700" />
+    </div>
+  </div>
+)
+
+// Matches the compact rubrik/category card shape (icon box + two short lines).
+const SkeletonCategoryCard = () => (
+  <div className="animate-pulse rounded-2xl border p-4 bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
+    <div className="w-10 h-10 rounded-xl mb-2 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-3 rounded w-4/5 mb-1.5 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-2.5 rounded w-1/2 bg-stone-200 dark:bg-slate-700" />
   </div>
 )
 
@@ -200,6 +214,28 @@ const NewspaperHomePage = () => {
                     className="font-serif text-xl sm:text-2xl font-bold leading-none text-stone-900 dark:text-slate-50"
                     style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
                   >
+                    Surat Kabar
+                  </h2>
+                  <p className="text-xs mt-0.5 text-stone-500 dark:text-slate-400">
+                    {sources.length} surat kabar tersedia dalam arsip
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {loading
+                  ? Array.from({ length: 6 }, (_, i) => <SkeletonSourceCard key={i} />)
+                  : sources.map((src) => <SourceCard key={src.id} source={src} />)}
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between mb-5 pl-4 border-l-4 border-violet-500 dark:border-violet-400">
+                <div>
+                  <h2
+                    className="font-serif text-xl sm:text-2xl font-bold leading-none text-stone-900 dark:text-slate-50"
+                    style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+                  >
                     Rubrik
                   </h2>
                   <p className="text-xs mt-0.5 text-stone-500 dark:text-slate-400">
@@ -208,9 +244,9 @@ const NewspaperHomePage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {loading
-                  ? Array.from({ length: 8 }, (_, i) => <SkeletonSource key={i} />)
+                  ? Array.from({ length: 8 }, (_, i) => <SkeletonCategoryCard key={i} />)
                   : categories.map((cat) => {
                     const Icon = getGenreIcon(cat.slug)
                     return (
@@ -233,28 +269,6 @@ const NewspaperHomePage = () => {
                       </Link>
                     )
                   })}
-              </div>
-            </section>
-
-            <section>
-              <div className="flex items-center justify-between mb-5 pl-4 border-l-4 border-violet-500 dark:border-violet-400">
-                <div>
-                  <h2
-                    className="font-serif text-xl sm:text-2xl font-bold leading-none text-stone-900 dark:text-slate-50"
-                    style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-                  >
-                    Surat Kabar
-                  </h2>
-                  <p className="text-xs mt-0.5 text-stone-500 dark:text-slate-400">
-                    {sources.length} surat kabar tersedia dalam arsip
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {loading
-                  ? Array.from({ length: 6 }, (_, i) => <SkeletonSource key={i} />)
-                  : sources.map((src) => <SourceCard key={src.id} source={src} />)}
               </div>
             </section>
           </div>

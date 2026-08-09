@@ -24,11 +24,11 @@ const FONT_SIZES = [
   { label: 'XXL', value: '1.35rem' },
 ]
 const FONT_FAMILIES = [
-  { key: 'garamond', label: 'Garamond', stack: '"Minion Pro","Adobe Garamond Pro","Garamond","Times New Roman","Liberation Serif",serif' },
-  { key: 'georgia', label: 'Georgia', stack: 'Georgia,"Times New Roman",serif' },
-  { key: 'times', label: 'Times', stack: '"Times New Roman",Times,serif' },
-  { key: 'palatino', label: 'Palatino', stack: '"Palatino Linotype","Book Antiqua",Palatino,serif' },
-  { key: 'system', label: 'Sans', stack: 'ui-sans-serif,system-ui,-apple-system,sans-serif' },
+  { key: 'garamond', label: 'Garamond', stack: '"EB Garamond","Adobe Garamond Pro","Garamond","Times New Roman","Liberation Serif",serif' },
+  { key: 'georgia', label: 'Georgia', stack: '"PT Serif",Georgia,"Times New Roman","Liberation Serif",serif' },
+  { key: 'times', label: 'Times', stack: '"Tinos","Times New Roman",Times,"Liberation Serif",serif' },
+  { key: 'palatino', label: 'Palatino', stack: '"Crimson Pro","Palatino Linotype","Book Antiqua",Palatino,serif' },
+  { key: 'system', label: 'Sans', stack: '"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif' },
 ]
 const READ_MODES = [
   { key: 'light', label: 'Terang', bg: '#ffffff', color: '#1c1917', cardBg: '#fafaf9', border: '#e7e5e4', accent: '#7c3aed' },
@@ -38,6 +38,19 @@ const READ_MODES = [
 const LS_FONT_SIZE_KEY = 'koran_reader_fontSize'
 const LS_FONT_FAMILY_KEY = 'koran_reader_fontFamily'
 const LS_MODE_KEY = 'koran_reader_mode'
+
+const GOOGLE_FONTS_ID = 'koran-reader-webfonts'
+const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Tinos:ital,wght@0,400;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap'
+
+const ensureReaderWebfonts = () => {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(GOOGLE_FONTS_ID)) return
+  const link = document.createElement('link')
+  link.id = GOOGLE_FONTS_ID
+  link.rel = 'stylesheet'
+  link.href = GOOGLE_FONTS_URL
+  document.head.appendChild(link)
+}
 
 const EPUB_SCOPED_CSS = `
   [data-epub] { hyphens: auto; }
@@ -58,6 +71,8 @@ const EPUB_SCOPED_CSS = `
   [data-epub] p:first-child { text-indent: 0 !important; margin-top: 0 !important; }
   [data-epub] h1 + p, [data-epub] h2 + p, [data-epub] h3 + p,
   [data-epub] h4 + p, [data-epub] h5 + p, [data-epub] h6 + p,
+  [data-epub] p.scene-break + p,
+  [data-epub] p.separator + p, [data-epub] p.ornament + p, [data-epub] p.divider + p,
   [data-epub] .first-paragraph,
   [data-epub] section > p:first-of-type { text-indent: 0 !important; margin-top: 2em !important; }
   [data-epub] h1, [data-epub] h2, [data-epub] h3,
@@ -175,21 +190,21 @@ const EPUB_SCOPED_CSS = `
   }
   [data-epub] .letter .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
   [data-epub] .letter .note p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
-  [data-epub] .letter .date { text-align: right; font-style: italic; margin-bottom: 2em; text-indent: 0; }
-  [data-epub] .letter .salutation { margin-bottom: 1.5em; text-indent: 0; font-weight: 500; }
-  [data-epub] .letter .body { text-indent: 1.5em; text-align: justify; }
-  [data-epub] .letter .body:first-of-type { text-indent: 0; margin-top: 0; }
-  [data-epub] .letter .closing { margin-top: 2em; text-align: right; font-style: italic; text-indent: 0; }
-  [data-epub] .letter .signature { text-align: right; font-weight: 600; margin-top: 0.5em; text-indent: 0; }
-  [data-epub] .letter-date { text-align: right; font-style: italic; text-indent: 0; }
+  [data-epub] .letter .date { text-align: right; font-style: italic; margin-bottom: 2em; text-indent: 0 !important; }
+  [data-epub] .letter .salutation { margin-bottom: 1.5em; text-indent: 0 !important; font-weight: 500; }
+  [data-epub] .letter .body { text-indent: 1.5em !important; text-align: justify; }
+  [data-epub] .letter .body:first-of-type { text-indent: 0 !important; margin-top: 0; }
+  [data-epub] .letter .closing { margin-top: 2em; text-align: right; font-style: italic; text-indent: 0 !important; }
+  [data-epub] .letter .signature { text-align: right; font-weight: 600; margin-top: 0.5em; text-indent: 0 !important; }
+  [data-epub] .letter-date { text-align: right; font-style: italic; text-indent: 0 !important; }
 
   [data-epub] .epigraph { font-style: italic; text-align: center; margin: 3em auto; max-width: 32em; hyphens: none; }
   [data-epub] .epigraph cite { display: block; margin-top: 1em; font-size: 0.9em; text-align: right; font-style: normal; }
   [data-epub] .subtitle { font-size: 1.1em; text-align: center; margin: 1.5em 0; }
-  [data-epub] .center { text-align: center; text-indent: 0; }
+  [data-epub] .center { text-align: center; text-indent: 0 !important; }
 
-  [data-epub] .dialog { margin: 1em 0; text-indent: 0; }
-  [data-epub] .dialog p { margin: 0.2em 0; text-indent: -1em; padding-left: 1em; }
+  [data-epub] .dialog { margin: 1em 0; text-indent: 0 !important; }
+  [data-epub] .dialog p { margin: 0.2em 0; text-indent: -1em !important; padding-left: 1em; }
   [data-epub] .dialog .speaker { font-weight: 600; }
   [data-epub] .dialog .note { margin: 2.5em 0 1.5em 0 !important; padding-top: 1em !important; padding-left: 0 !important; position: relative; font-size: 0.9em; }
   [data-epub] .dialog .note::before { content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 0; border-top: 1px solid #999; }
@@ -209,6 +224,7 @@ const EPUB_SCOPED_CSS = `
 
   [data-epub] .scene-break { text-align: center; margin: 2em 0; letter-spacing: 0.3em; color: #666; }
   [data-epub] .scene-break::before { content: "⁂"; }
+  [data-epub] .scene-break.star::before { content: "✭"; }
 
   [data-epub] .info-box { padding: 0.5em 1em; margin: 1.5em 0; background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
   [data-epub] .info-box p { text-align: left !important; text-indent: 0 !important; margin: 0.5em 0 !important; }
@@ -431,7 +447,7 @@ const ArticleContent = ({ html, fontSize, fontFamily, mode }) => {
   return (
     <>
       <style>{EPUB_SCOPED_CSS}</style>
-      <div ref={ref} data-epub lang="id" className="chapter"
+      <div ref={ref} data-epub lang="en" className="chapter"
         style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, backgroundColor: 'transparent', margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em', transition: 'font-size 0.15s, color 0.2s', '--epub-note-color': mode.accent }} />
       {footnote && ReactDOM.createPortal(
         <>
@@ -474,6 +490,10 @@ const NewspaperArticleDetailPage = () => {
     const s = localStorage.getItem(LS_MODE_KEY)
     return READ_MODES.find(m => m.key === s) ? s : 'light'
   })
+
+  useEffect(() => {
+    ensureReaderWebfonts()
+  }, [])
 
   useEffect(() => {
     const prevLang = document.documentElement.lang

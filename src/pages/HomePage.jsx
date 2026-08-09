@@ -39,6 +39,9 @@ const ACCENTS = {
   mixed: { text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-500 dark:border-orange-400', btn: 'hover:border-orange-400 hover:text-orange-600 dark:hover:border-orange-500 dark:hover:text-orange-400', badge: 'bg-orange-500' },
 }
 
+// Skeletons below intentionally mirror the exact width + aspect-ratio of the
+// real card they precede. A mismatch here is a guaranteed CLS hit the moment
+// data arrives and replaces the skeleton with a differently-sized card.
 const SkeletonCard = memo(() => (
   <div className="flex-shrink-0 w-36 sm:w-44 animate-pulse" aria-hidden="true">
     <div className="aspect-[2/3] rounded-xl mb-3 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
@@ -48,9 +51,23 @@ const SkeletonCard = memo(() => (
 ))
 SkeletonCard.displayName = 'SkeletonCard'
 
+// Matches FilmCard's "wide" variant (w-56/64, aspect-video) used in the
+// standalone "Film" section — previously this section reused SkeletonCard
+// (w-36/44, aspect-[2/3]), causing a large shift once films loaded.
+const SkeletonFilmWide = memo(() => (
+  <div className="flex-shrink-0 w-56 sm:w-64 animate-pulse" aria-hidden="true">
+    <div className="aspect-video rounded-xl mb-3 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
+    <div className="h-3 rounded-full w-full mb-1.5 bg-stone-200 dark:bg-slate-700" />
+    <div className="h-2.5 rounded-full w-1/3 bg-stone-200 dark:bg-slate-700" />
+  </div>
+))
+SkeletonFilmWide.displayName = 'SkeletonFilmWide'
+
+// aspect-[576/224] matches NewspaperSourceCard's real image ratio exactly
+// (the previous aspect-video/16:9 placeholder was visibly shorter/rounder).
 const SkeletonNewspaper = memo(() => (
   <div className="flex-shrink-0 w-56 sm:w-64 animate-pulse rounded-xl overflow-hidden border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700" aria-hidden="true">
-    <div className="w-full aspect-video bg-stone-200 dark:bg-slate-700" />
+    <div className="w-full aspect-[576/224] bg-stone-200 dark:bg-slate-700" />
     <div className="p-4">
       <div className="h-2.5 rounded-full w-2/3 mb-3 bg-stone-200 dark:bg-slate-700" />
       <div className="h-2.5 rounded-full w-full bg-stone-200 dark:bg-slate-700" />
@@ -120,11 +137,6 @@ const FilmCard = memo(({ film, priority = false, size = 'wide' }) => {
   const [imgError, setImgError] = useState(false)
   const isCompact = size === 'compact'
 
-  // Kartu compact 2:3 (dipakai section "Terbaru & Terupdate") minta poster
-  // potret. getFilmPortrait sengaja ketat — tanpa fallback — supaya kita tahu
-  // apakah film ini benar-benar punya poster. Kalau punya, poster mengisi
-  // penuh kartu; kalau belum diinput admin, barulah jatuh ke cover landscape
-  // dengan perlakuan letterbox + latar blur seperti sebelumnya.
   const portraitUrl = isCompact ? getFilmPortrait(film) : null
   const hasPortrait = Boolean(portraitUrl)
   const rawPosterUrl = portraitUrl || getFilmCover(film, 'landscape')
@@ -145,9 +157,6 @@ const FilmCard = memo(({ film, priority = false, size = 'wide' }) => {
         {showImage && !loaded && <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />}
         {showImage ? (
           <>
-            {/* Latar blur hanya perlu saat gambar tidak mengisi penuh kartu —
-                yaitu ketika poster potret belum ada dan kita terpaksa
-                meletakkan cover 16:9 di slot 2:3. */}
             {isCompact && !hasPortrait && (
               <img src={thumbUrl} alt="" aria-hidden="true" loading={priority ? 'eager' : 'lazy'} decoding="async" className={`absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60 transition-opacity duration-500 ${loaded ? 'opacity-60' : 'opacity-0'}`} />
             )}
@@ -468,7 +477,7 @@ const HomePage = () => {
           <SectionHeader icon={Film} title="Film" accentText={ACCENTS.film.text} accentBg={ACCENTS.film.bg} accentBorder={ACCENTS.film.border} accentBtn={ACCENTS.film.btn} actionPath="/film" scrollRef={filmsRef} />
           <ScrollRow scrollRef={filmsRef} label="Daftar film">
             {loadingPopularFilms
-              ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
+              ? Array.from({ length: 8 }, (_, i) => <SkeletonFilmWide key={i} />)
               : popularFilms.length > 0
                 ? popularFilms.map((f, i) => <FilmCard key={f.id || i} film={f} priority={i < 2} />)
                 : <EmptyState icon={Film} color={ACCENTS.film} message="Belum ada film tersedia" linkTo="/film" linkLabel="Jelajahi Kumpulan Film" />
