@@ -14,9 +14,6 @@ import SEO from '../components/Common/SEO'
 import { sourceHref, rubrikHref } from '../utils/newspaperUtils'
 import { getGenreIcon } from '../utils/genreIcons'
 
-// Matches SourceCard's real shape: h-28 image block + padded text block.
-// The previous skeleton had no image placeholder at all, so real cards were
-// noticeably taller once logos loaded — the main CLS source on this page.
 const SkeletonSourceCard = () => (
   <div className="animate-pulse rounded-2xl border overflow-hidden bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
     <div className="w-full h-28 bg-stone-200 dark:bg-slate-700" />
@@ -29,7 +26,6 @@ const SkeletonSourceCard = () => (
   </div>
 )
 
-// Matches the compact rubrik/category card shape (icon box + two short lines).
 const SkeletonCategoryCard = () => (
   <div className="animate-pulse rounded-2xl border p-4 bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700">
     <div className="w-10 h-10 rounded-xl mb-2 bg-stone-200 dark:bg-slate-700" />
