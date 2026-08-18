@@ -4,6 +4,7 @@ import { BookOpen, ChevronLeft, ChevronRight, Film, Newspaper, Layers, Building2
 import bookService from '../services/bookService'
 import { filmService } from '../services/filmService'
 import zineService from '../services/zineService'
+import trendingService from '../services/trendingService'
 import api from '../services/api'
 import { sourceHref } from '../utils/newspaperUtils'
 import SEO from '../components/Common/SEO'
@@ -31,6 +32,36 @@ const formatDMY = (iso) => {
   return `${d}-${m}-${y}`
 }
 
+const LATEST_MIXED_LIMIT = 15
+
+const TRENDING_TYPE_MAP = { BOOK: 'book', ZINE: 'zine', FILM: 'film', NEWSPAPER: 'newspaper_source' }
+
+const mapTrendingToCardItem = (item) => {
+  const type = TRENDING_TYPE_MAP[item.contentType]
+  if (!type) return null
+  const shared = { id: item.contentId, slug: item.slug, title: item.title, description: item.description }
+  switch (type) {
+    case 'book':
+      return { ...shared, cover_image: item.coverImageUrl, authorNames: item.authorNames, __type: 'book' }
+    case 'zine':
+      return { ...shared, coverImageUrl: item.coverImageUrl, authorNames: item.authorNames, subtitle: item.subtitle, __type: 'zine' }
+    case 'film':
+      return {
+        ...shared,
+        judul: item.title,
+        posterUrl: item.coverImageUrl,
+        posterPortraitUrl: item.posterPortraitUrl,
+        tahunRilis: item.releaseYear,
+        deskripsi: item.description,
+        __type: 'film',
+      }
+    case 'newspaper_source':
+      return { id: item.contentId, slug: item.slug, name: item.title, logoUrl: item.coverImageUrl, __type: 'newspaper_source' }
+    default:
+      return null
+  }
+}
+
 const ACCENTS = {
   book: { text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-500 dark:border-amber-400', btn: 'hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-400', badge: 'bg-amber-500' },
   zine: { text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-500 dark:border-emerald-400', btn: 'hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400', badge: 'bg-emerald-500' },
@@ -39,9 +70,6 @@ const ACCENTS = {
   mixed: { text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-500 dark:border-orange-400', btn: 'hover:border-orange-400 hover:text-orange-600 dark:hover:border-orange-500 dark:hover:text-orange-400', badge: 'bg-orange-500' },
 }
 
-// Skeletons below intentionally mirror the exact width + aspect-ratio of the
-// real card they precede. A mismatch here is a guaranteed CLS hit the moment
-// data arrives and replaces the skeleton with a differently-sized card.
 const SkeletonCard = memo(() => (
   <div className="flex-shrink-0 w-36 sm:w-44 animate-pulse" aria-hidden="true">
     <div className="aspect-[2/3] rounded-xl mb-3 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
@@ -51,9 +79,6 @@ const SkeletonCard = memo(() => (
 ))
 SkeletonCard.displayName = 'SkeletonCard'
 
-// Matches FilmCard's "wide" variant (w-56/64, aspect-video) used in the
-// standalone "Film" section — previously this section reused SkeletonCard
-// (w-36/44, aspect-[2/3]), causing a large shift once films loaded.
 const SkeletonFilmWide = memo(() => (
   <div className="flex-shrink-0 w-56 sm:w-64 animate-pulse" aria-hidden="true">
     <div className="aspect-video rounded-xl mb-3 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
@@ -63,8 +88,6 @@ const SkeletonFilmWide = memo(() => (
 ))
 SkeletonFilmWide.displayName = 'SkeletonFilmWide'
 
-// aspect-[576/224] matches NewspaperSourceCard's real image ratio exactly
-// (the previous aspect-video/16:9 placeholder was visibly shorter/rounder).
 const SkeletonNewspaper = memo(() => (
   <div className="flex-shrink-0 w-56 sm:w-64 animate-pulse rounded-xl overflow-hidden border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700" aria-hidden="true">
     <div className="w-full aspect-[576/224] bg-stone-200 dark:bg-slate-700" />
@@ -242,6 +265,7 @@ const ContentCard = memo(({ item, priority = false, compact = false }) => {
     case 'zine': return <ZineCard zine={item} priority={priority} />
     case 'film': return <FilmCard film={item} priority={priority} size={compact ? 'compact' : 'wide'} />
     case 'article': return <NewspaperArticleCard article={item} priority={priority} size={compact ? 'compact' : 'wide'} />
+    case 'newspaper_source': return <NewspaperSourceCard source={item} />
     default: return null
   }
 })
@@ -292,21 +316,24 @@ const ScrollRow = memo(({ children, scrollRef, label }) => (
 ScrollRow.displayName = 'ScrollRow'
 
 const HomePage = () => {
-  const [popularBooks, setPopularBooks] = useState([])
   const [newBooks, setNewBooks] = useState([])
   const [latestZines, setLatestZines] = useState([])
-  const [popularFilms, setPopularFilms] = useState([])
-  const [newspaperSources, setNewspaperSources] = useState([])
   const [latestFilms, setLatestFilms] = useState([])
   const [latestArticles, setLatestArticles] = useState([])
 
-  const [loadingPopularBooks, setLoadingPopularBooks] = useState(true)
+  const [popularBooks, setPopularBooks] = useState([])
+  const [popularZines, setPopularZines] = useState([])
+  const [popularFilms, setPopularFilms] = useState([])
+
+  const [newspaperSources, setNewspaperSources] = useState([])
+
   const [loadingNewBooks, setLoadingNewBooks] = useState(true)
   const [loadingZines, setLoadingZines] = useState(true)
-  const [loadingPopularFilms, setLoadingPopularFilms] = useState(true)
-  const [loadingNewspaper, setLoadingNewspaper] = useState(true)
   const [loadingLatestFilms, setLoadingLatestFilms] = useState(true)
   const [loadingLatestArticles, setLoadingLatestArticles] = useState(true)
+  const [loadingNewspaper, setLoadingNewspaper] = useState(true)
+
+  const [loadingTrending, setLoadingTrending] = useState(true)
 
   const [, startTransition] = useTransition()
 
@@ -317,13 +344,16 @@ const HomePage = () => {
   const koranRef = useRef(null)
 
   useEffect(() => {
-    const fetchPopularBooks = async () => {
+    const fetchTrendingPerCategory = async () => {
       try {
-        const res = await bookService.getBooks({ page: 1, limit: 16, sortField: 'viewCount', sortOrder: 'DESC' })
-        const list = (res.data?.list || res.data?.data || []).map(b => ({ ...b, cover_image: b.coverImageUrl || b.cover_image || b.coverImage || b.image }))
-        startTransition(() => setPopularBooks(list))
+        const data = await trendingService.getPerCategory()
+        startTransition(() => {
+          setPopularBooks((data.BOOK || []).map(mapTrendingToCardItem).filter(Boolean))
+          setPopularZines((data.ZINE || []).map(mapTrendingToCardItem).filter(Boolean))
+          setPopularFilms((data.FILM || []).map(mapTrendingToCardItem).filter(Boolean))
+        })
       } catch { }
-      finally { setLoadingPopularBooks(false) }
+      finally { setLoadingTrending(false) }
     }
 
     const fetchZines = async () => {
@@ -332,14 +362,6 @@ const HomePage = () => {
         startTransition(() => setLatestZines(res.data?.data || []))
       } catch { }
       finally { setLoadingZines(false) }
-    }
-
-    const fetchPopularFilms = async () => {
-      try {
-        const res = await filmService.getFilms({ page: 0, size: 16, sortField: 'tahunRilis', sortOrder: 'DESC' })
-        startTransition(() => setPopularFilms(res.data?.data || []))
-      } catch { }
-      finally { setLoadingPopularFilms(false) }
     }
 
     const fetchNewspaperSources = async () => {
@@ -382,7 +404,11 @@ const HomePage = () => {
       fetchLatestArticles()
     }
 
-    Promise.all([fetchPopularBooks(), fetchZines(), fetchPopularFilms(), fetchNewspaperSources()]).then(fetchDeferred)
+    Promise.all([
+      fetchTrendingPerCategory(),
+      fetchZines(),
+      fetchNewspaperSources(),
+    ]).then(fetchDeferred)
   }, [])
 
   const loadingLatest = loadingNewBooks || loadingZines || loadingLatestFilms || loadingLatestArticles || loadingNewspaper
@@ -404,7 +430,7 @@ const HomePage = () => {
         return { ...a, __type: 'article', __date: pickDate(a), imageUrl: ownImage || logoUrl, isLogoFallback: !ownImage && !!logoUrl }
       }),
     ]
-    return items.filter(i => i.__date).sort((a, b) => new Date(b.__date) - new Date(a.__date)).slice(0, 20)
+    return items.filter(i => i.__date).sort((a, b) => new Date(b.__date) - new Date(a.__date)).slice(0, LATEST_MIXED_LIMIT)
   }, [newBooks, latestZines, latestFilms, latestArticles, sourceLogoBySlug])
 
   const structuredData = combineStructuredData(generateWebsiteStructuredData(), generateOrganizationStructuredData())
@@ -425,7 +451,7 @@ const HomePage = () => {
 
         <FeaturedBanner books={popularBooks} films={popularFilms} articles={newspaperSources} zines={latestZines} />
 
-        <section aria-labelledby="section-terbaru" className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2">
+        <section aria-labelledby="section-terbaru" className="container mx-auto px-4 sm:px-6 mt-10 sm:mt-12 md:mt-14 lg:mt-16 pb-2">
           <SectionHeader icon={Sparkles} title="Terbaru & Terupdate" subtitle="Buku, zine, artikel koran, dan film paling baru" accentText={ACCENTS.mixed.text} accentBg={ACCENTS.mixed.bg} accentBorder={ACCENTS.mixed.border} accentBtn={ACCENTS.mixed.btn} scrollRef={latestRef} />
           <ScrollRow scrollRef={latestRef} label="Daftar konten terbaru dan terupdate">
             {loadingLatest
@@ -437,10 +463,10 @@ const HomePage = () => {
           </ScrollRow>
         </section>
 
-        <section aria-labelledby="section-buku-populer" className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2">
-          <SectionHeader icon={BookOpen} title="Buku Terpopuler" accentText={ACCENTS.book.text} accentBg={ACCENTS.book.bg} accentBorder={ACCENTS.book.border} accentBtn={ACCENTS.book.btn} actionPath="/buku?sortField=viewCount&sortOrder=DESC" scrollRef={popBooksRef} />
-          <ScrollRow scrollRef={popBooksRef} label="Daftar buku terpopuler">
-            {loadingPopularBooks
+        <section aria-labelledby="section-buku-populer" className="container mx-auto px-4 sm:px-6 mt-10 sm:mt-12 md:mt-14 lg:mt-16 pb-2">
+          <SectionHeader icon={BookOpen} title="Buku Terpopuler" subtitle="Minggu ini" accentText={ACCENTS.book.text} accentBg={ACCENTS.book.bg} accentBorder={ACCENTS.book.border} accentBtn={ACCENTS.book.btn} actionPath="/buku?sortField=updateAt&sortOrder=DESC" scrollRef={popBooksRef} />
+          <ScrollRow scrollRef={popBooksRef} label="Daftar buku terpopuler minggu ini">
+            {loadingTrending
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
               : popularBooks.length > 0
                 ? popularBooks.map((b, i) => <BookCard key={b.id || i} book={b} priority={i < 2} />)
@@ -449,38 +475,38 @@ const HomePage = () => {
           </ScrollRow>
         </section>
 
-        <section aria-labelledby="section-zine" className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}>
-          <SectionHeader icon={Layers} title="Zine & Magazine" accentText={ACCENTS.zine.text} accentBg={ACCENTS.zine.bg} accentBorder={ACCENTS.zine.border} accentBtn={ACCENTS.zine.btn} actionPath="/zine" scrollRef={zinesRef} />
-          <ScrollRow scrollRef={zinesRef} label="Daftar zine dan magazine">
-            {loadingZines
+        <section aria-labelledby="section-zine" className="container mx-auto px-4 sm:px-6 mt-10 sm:mt-12 md:mt-14 lg:mt-16 pb-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}>
+          <SectionHeader icon={Layers} title="Zine & Majalah Terpopuler" subtitle="Minggu ini" accentText={ACCENTS.zine.text} accentBg={ACCENTS.zine.bg} accentBorder={ACCENTS.zine.border} accentBtn={ACCENTS.zine.btn} actionPath="/zine?sortField=updateAt&sortOrder=DESC" scrollRef={zinesRef} />
+          <ScrollRow scrollRef={zinesRef} label="Daftar zine dan majalah terpopuler minggu ini">
+            {loadingTrending
               ? Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} />)
-              : latestZines.length > 0
-                ? latestZines.map((z, i) => <ZineCard key={z.id || i} zine={z} priority={i < 2} />)
+              : popularZines.length > 0
+                ? popularZines.map((z, i) => <ZineCard key={z.id || i} zine={z} priority={i < 2} />)
                 : <EmptyState icon={Layers} color={ACCENTS.zine} message="Belum ada zine tersedia" linkTo="/zine" linkLabel="Jelajahi Koleksi Zine" />
             }
           </ScrollRow>
         </section>
 
-        <section aria-labelledby="section-koran" className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}>
-          <SectionHeader icon={Newspaper} title="Arsip Koran" accentText={ACCENTS.newspaper.text} accentBg={ACCENTS.newspaper.bg} accentBorder={ACCENTS.newspaper.border} accentBtn={ACCENTS.newspaper.btn} actionPath="/koran" scrollRef={koranRef} />
+        <section aria-labelledby="section-film" className="container mx-auto px-4 sm:px-6 mt-10 sm:mt-12 md:mt-14 lg:mt-16 pb-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}>
+          <SectionHeader icon={Film} title="Film Terpopuler" subtitle="Minggu ini" accentText={ACCENTS.film.text} accentBg={ACCENTS.film.bg} accentBorder={ACCENTS.film.border} accentBtn={ACCENTS.film.btn} actionPath="/film?sortField=tahunRilis&sortOrder=DESC" scrollRef={filmsRef} />
+          <ScrollRow scrollRef={filmsRef} label="Daftar film terpopuler minggu ini">
+            {loadingTrending
+              ? Array.from({ length: 8 }, (_, i) => <SkeletonFilmWide key={i} />)
+              : popularFilms.length > 0
+                ? popularFilms.map((f, i) => <FilmCard key={f.id || i} film={f} priority={i < 2} />)
+                : <EmptyState icon={Film} color={ACCENTS.film} message="Belum ada film tersedia" linkTo="/film" linkLabel="Jelajahi Kumpulan Film" />
+            }
+          </ScrollRow>
+        </section>
+
+        <section aria-labelledby="section-koran" className="container mx-auto px-4 sm:px-6 mt-10 sm:mt-12 md:mt-14 lg:mt-16 pb-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}>
+          <SectionHeader icon={Newspaper} title="Arsip Koran" accentText={ACCENTS.newspaper.text} accentBg={ACCENTS.newspaper.bg} accentBorder={ACCENTS.newspaper.border} accentBtn={ACCENTS.newspaper.btn} actionPath="/koran?sortField=updateAt&sortOrder=DESC" scrollRef={koranRef} />
           <ScrollRow scrollRef={koranRef} label="Daftar surat kabar dalam arsip">
             {loadingNewspaper
               ? Array.from({ length: 5 }, (_, i) => <SkeletonNewspaper key={i} />)
               : newspaperSources.length > 0
                 ? newspaperSources.map((src, i) => <NewspaperSourceCard key={src.id || i} source={src} />)
                 : <EmptyState icon={Newspaper} color={ACCENTS.newspaper} message="Belum ada surat kabar tersedia" linkTo="/koran" linkLabel="Jelajahi Arsip Koran" />
-            }
-          </ScrollRow>
-        </section>
-
-        <section aria-labelledby="section-film" className="container mx-auto px-4 sm:px-6 mt-6 sm:mt-14 lg:mt-16 pb-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 380px' }}>
-          <SectionHeader icon={Film} title="Film" accentText={ACCENTS.film.text} accentBg={ACCENTS.film.bg} accentBorder={ACCENTS.film.border} accentBtn={ACCENTS.film.btn} actionPath="/film" scrollRef={filmsRef} />
-          <ScrollRow scrollRef={filmsRef} label="Daftar film">
-            {loadingPopularFilms
-              ? Array.from({ length: 8 }, (_, i) => <SkeletonFilmWide key={i} />)
-              : popularFilms.length > 0
-                ? popularFilms.map((f, i) => <FilmCard key={f.id || i} film={f} priority={i < 2} />)
-                : <EmptyState icon={Film} color={ACCENTS.film} message="Belum ada film tersedia" linkTo="/film" linkLabel="Jelajahi Kumpulan Film" />
             }
           </ScrollRow>
         </section>

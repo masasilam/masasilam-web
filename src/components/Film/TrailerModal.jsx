@@ -2,17 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize } from 'lucide-react'
 
 const TrailerModal = ({ isOpen, onClose, trailerUrl, filmTitle }) => {
-  const videoRef        = useRef(null)
-  const iframeRef       = useRef(null)
-  const containerRef    = useRef(null)
+  const videoRef = useRef(null)
+  const iframeRef = useRef(null)
+  const containerRef = useRef(null)
   const hideCtrlTimeout = useRef(null)
 
-  const [isPlaying,    setIsPlaying]    = useState(false)
-  const [isMuted,      setIsMuted]      = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
-  const [currentTime,  setCurrentTime]  = useState(0)
-  const [duration,     setDuration]     = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
 
   // Deteksi apakah URL adalah embed YouTube atau video langsung
   const isEmbed = trailerUrl?.includes('youtube') || trailerUrl?.includes('youtu.be')
@@ -29,7 +29,7 @@ const TrailerModal = ({ isOpen, onClose, trailerUrl, filmTitle }) => {
 
       if (!isEmbed) {
         setTimeout(() => {
-          videoRef.current?.play().catch(() => {})
+          videoRef.current?.play().catch(() => { })
         }, 300)
       }
     } else {
@@ -56,20 +56,20 @@ const TrailerModal = ({ isOpen, onClose, trailerUrl, filmTitle }) => {
     const video = videoRef.current
     if (!video || isEmbed) return
 
-    const onPlay     = () => setIsPlaying(true)
-    const onPause    = () => { setIsPlaying(false); setShowControls(true) }
-    const onUpdate   = () => setCurrentTime(video.currentTime)
-    const onMeta     = () => setDuration(video.duration)
+    const onPlay = () => setIsPlaying(true)
+    const onPause = () => { setIsPlaying(false); setShowControls(true) }
+    const onUpdate = () => setCurrentTime(video.currentTime)
+    const onMeta = () => setDuration(video.duration)
 
-    video.addEventListener('play',            onPlay)
-    video.addEventListener('pause',           onPause)
-    video.addEventListener('timeupdate',      onUpdate)
-    video.addEventListener('loadedmetadata',  onMeta)
+    video.addEventListener('play', onPlay)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('timeupdate', onUpdate)
+    video.addEventListener('loadedmetadata', onMeta)
 
     return () => {
-      video.removeEventListener('play',           onPlay)
-      video.removeEventListener('pause',          onPause)
-      video.removeEventListener('timeupdate',     onUpdate)
+      video.removeEventListener('play', onPlay)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('timeupdate', onUpdate)
       video.removeEventListener('loadedmetadata', onMeta)
     }
   }, [isEmbed])
@@ -251,8 +251,8 @@ const TrailerModal = ({ isOpen, onClose, trailerUrl, filmTitle }) => {
                       className="p-2 rounded-full transition-colors hover:bg-white/10 text-white"
                     >
                       {isPlaying
-                        ? <Pause  className="w-5 h-5" />
-                        : <Play   className="w-5 h-5" />
+                        ? <Pause className="w-5 h-5" />
+                        : <Play className="w-5 h-5" />
                       }
                     </button>
 

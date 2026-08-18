@@ -5,7 +5,8 @@ import {
   Globe, X, MessageCircle, ThumbsUp, ArrowLeft, Video as VideoIcon,
   ChevronDown, User, Users, Building2, MapPin, Mic2, Pencil,
   Camera, Music2, Clapperboard, Award, BookOpen, Eye, Bookmark,
-  ExternalLink, ChevronRight, Info, Copyright, Image as ImageIcon
+  ExternalLink, ChevronRight, Info, Copyright, Image as ImageIcon,
+  Palette
 } from 'lucide-react'
 import { filmService } from '../services/filmService'
 import { getFilmCover, getFilmGallery, getWikimediaThumb } from '../utils/filmImages'
@@ -29,6 +30,13 @@ const COPYRIGHT_STATUS_NAME = {
   8: 'Lisensi Artistic',
   9: 'Fair Use',
   10: 'Status Tidak Diketahui',
+}
+
+const formatViewCount = (count) => {
+  const value = Number(count) || 0
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')} jt`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')} rb`
+  return value.toLocaleString('id-ID')
 }
 
 const normalizeFilm = (raw) => {
@@ -59,12 +67,9 @@ const normalizeFilm = (raw) => {
     filmingLocList: Array.isArray(raw.filmingLocation) ? raw.filmingLocation : [],
     genreList: Array.isArray(raw.genre) ? raw.genre : [],
     reviewScores: Array.isArray(raw.reviewScores) ? raw.reviewScores : [],
+    viewCount: Number(raw.viewCount) || 0,
     videoUrl: raw.videoUrl || mainVideo?.embedUrl || mainVideo?.directUrl || null,
     trailerUrl: raw.trailerUrl || trailerVideo?.embedUrl || trailerVideo?.directUrl || null,
-    // posterUrl sengaja TIDAK di-fallback ke thumbnail video di sini. Dulu baris
-    // ini menimpa posterUrl dengan stills sehingga poster asli dan stills jadi
-    // tak terbedakan. Fallback-nya sekarang urusan getFilmCover, yang tetap bisa
-    // membaca videoSources karena ikut ter-spread lewat ...raw.
   }
 }
 
@@ -122,8 +127,8 @@ const RatingModal = ({ isOpen, onClose, onSubmit, filmTitle }) => {
                 return (
                   <div key={star} className="relative cursor-pointer group">
                     <Star className={`w-12 h-12 transition-all ${isFull
-                        ? 'fill-blue-400 text-blue-400 scale-110'
-                        : 'fill-slate-200 text-slate-300 dark:fill-slate-700 dark:text-slate-600'
+                      ? 'fill-blue-400 text-blue-400 scale-110'
+                      : 'fill-slate-200 text-slate-300 dark:fill-slate-700 dark:text-slate-600'
                       } group-hover:scale-110`} />
                     {isHalf && !isFull && (
                       <Star className="w-12 h-12 absolute top-0 left-0 fill-blue-400 text-blue-400"
@@ -523,7 +528,7 @@ const FilmDetailPage = () => {
     }
     init()
     return () => { cancelled = true }
-  }, [filmSlug, isAuthenticated]) // eslint-disable-line
+  }, [filmSlug, isAuthenticated])
 
   useEffect(() => {
     if (film) {
@@ -619,15 +624,17 @@ const FilmDetailPage = () => {
     editorList, cinematographerList, composerList, narratorList,
     productionList, distributorList,
     narrativeLocList, filmingLocList,
-    genreList, reviewScores,
+    genreList, reviewScores, viewCount,
   } = film
 
-  // Hero di halaman ini landscape (aspect-[16/6]), jadi pakai cover landscape.
   const rawPosterUrl = getFilmCover(film, 'landscape')
   const gallery = getFilmGallery(film)
 
   const avgRating = ratingStats?.averageRating
   const avgReviewScore = reviewScores?.[0]?.value || null
+
+  const viewCountDisplay = formatViewCount(viewCount)
+  const viewCountFull = viewCount.toLocaleString('id-ID')
 
   const videoSources = Array.isArray(film.videoSources) ? film.videoSources : []
   const trailerSource = videoSources.find(v => v.isTrailer)
@@ -777,6 +784,11 @@ const FilmDetailPage = () => {
                         </span>
                       </span>
                     )}
+                    <span className="flex items-center gap-1" title={`${viewCountFull} kali dilihat`}>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="font-semibold text-white">{viewCountDisplay}</span>
+                      <span className="hidden sm:inline text-white/60">dilihat</span>
+                    </span>
                   </div>
                 </div>
 
@@ -870,6 +882,16 @@ const FilmDetailPage = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
+            <div className="flex items-center gap-2 p-3 rounded-xl border transition-colors
+                            bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+              <Eye className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Dilihat</div>
+                <div className="text-sm font-semibold text-slate-800 dark:text-slate-200" title={`${viewCountFull} kali`}>
+                  {viewCountDisplay}
+                </div>
+              </div>
+            </div>
             {year && (
               <div className="flex items-center gap-2 p-3 rounded-xl border transition-colors
                               bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700">
@@ -923,7 +945,7 @@ const FilmDetailPage = () => {
             {film.color && (
               <div className="flex items-center gap-2 p-3 rounded-xl border transition-colors
                               bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700">
-                <Eye className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <Palette className="w-4 h-4 text-blue-500 flex-shrink-0" />
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Warna</div>
                   <div className="text-sm font-semibold capitalize text-slate-800 dark:text-slate-200">{film.color}</div>
@@ -1205,9 +1227,6 @@ const FilmDetailPage = () => {
                 </SectionBlock>
               )}
 
-              {/* Galeri — inilah yang akhirnya memakai "URL Gambar Tambahan".
-                  Sebelumnya field itu cuma jadi fallback paling buncit untuk
-                  satu gambar sampul, jadi praktis tidak pernah tampil. */}
               {gallery.length > 1 && (
                 <SectionBlock icon={ImageIcon} title="Galeri" iconColor="text-rose-500">
                   <div className="flex gap-3 overflow-x-auto pb-2 snap-x">

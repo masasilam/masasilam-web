@@ -41,8 +41,8 @@ const SkeletonCard = () => (
 // ── FilmGrid ──────────────────────────────────────────────────────────────────
 const FilmGrid = memo(({
   films,
-  loading       = false,
-  emptyMessage  = 'Tidak ada film ditemukan',
+  loading = false,
+  emptyMessage = 'Tidak ada film ditemukan',
   skeletonCount = 12,
 }) => {
   // Landscape card lebih lebar → lebih sedikit kolom

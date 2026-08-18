@@ -73,9 +73,9 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
 
   const ratingLabels = {
     0.5: '⭐ 0.5 – Sangat Buruk', 1: '⭐ 1.0 – Sangat Buruk',
-    1.5: '⭐ 1.5 – Buruk',        2: '⭐⭐ 2.0 – Buruk',
-    2.5: '⭐⭐ 2.5 – Kurang',     3: '⭐⭐⭐ 3.0 – Cukup',
-    3.5: '⭐⭐⭐ 3.5 – Lumayan',  4: '⭐⭐⭐⭐ 4.0 – Bagus',
+    1.5: '⭐ 1.5 – Buruk', 2: '⭐⭐ 2.0 – Buruk',
+    2.5: '⭐⭐ 2.5 – Kurang', 3: '⭐⭐⭐ 3.0 – Cukup',
+    3.5: '⭐⭐⭐ 3.5 – Lumayan', 4: '⭐⭐⭐⭐ 4.0 – Bagus',
     4.5: '⭐⭐⭐⭐ 4.5 – Sangat Bagus', 5: '⭐⭐⭐⭐⭐ 5.0 – Sempurna',
   }
 
@@ -166,7 +166,7 @@ const RatingSummary = ({ ratingStats, onRate, userRating }) => {
         <div className="text-center flex-shrink-0">
           <div className="text-3xl font-bold text-stone-200 dark:text-slate-700">—</div>
           <div className="flex gap-0.5 mt-1 justify-center">
-            {[1,2,3,4,5].map(s => <Star key={s} className="w-3.5 h-3.5 text-stone-200 dark:text-slate-700" />)}
+            {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-3.5 h-3.5 text-stone-200 dark:text-slate-700" />)}
           </div>
         </div>
         <div className="flex-1">
@@ -501,7 +501,7 @@ const BookDetailPage = () => {
     try {
       const { hostname, pathname } = new URL(url)
       const domain = hostname.replace('www.', '')
-      const social = ['x.com','twitter.com','instagram.com','threads.com','facebook.com','tiktok.com','youtube.com']
+      const social = ['x.com', 'twitter.com', 'instagram.com', 'threads.com', 'facebook.com', 'tiktok.com', 'youtube.com']
       if (social.includes(domain)) {
         const username = pathname.split('/').filter(Boolean)[0]
         return username ? `${domain}/${username}` : domain
@@ -517,17 +517,17 @@ const BookDetailPage = () => {
   }
 
   const formatDate = (dateStr) => {
-      if (!dateStr) return null
-      // Kalau cuma tahun (mis. "1925"), jangan dipaksa jadi tanggal lengkap —
-      // new Date("1925") akan salah diinterpretasikan sebagai 1 Januari 1925.
-      if (/^\d{4}$/.test(String(dateStr).trim())) return String(dateStr).trim()
-      try {
-        const d = new Date(dateStr)
-        if (isNaN(d.getTime())) return dateStr
-        return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
-      }
-      catch { return dateStr }
+    if (!dateStr) return null
+    // Kalau cuma tahun (mis. "1925"), jangan dipaksa jadi tanggal lengkap —
+    // new Date("1925") akan salah diinterpretasikan sebagai 1 Januari 1925.
+    if (/^\d{4}$/.test(String(dateStr).trim())) return String(dateStr).trim()
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return dateStr
+      return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
     }
+    catch { return dateStr }
+  }
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return null
@@ -544,17 +544,17 @@ const BookDetailPage = () => {
 
   const authorList = book.authorNames
     ? book.authorNames.split(',').map((name, i) => {
-        const slug = book.authorSlugs?.split(',')[i]?.trim()
-        const photoUrl = authorPhotos[slug] || null
-        return { name: name.trim(), slug, photoUrl }
-      })
+      const slug = book.authorSlugs?.split(',')[i]?.trim()
+      const photoUrl = authorPhotos[slug] || null
+      return { name: name.trim(), slug, photoUrl }
+    })
     : []
 
   const contributorList = book.contributors
     ? book.contributors.split(',').map(contributor => {
-        const match = contributor.trim().match(/(.+?)\s*\((.+?)\)/)
-        return match ? { name: match[1].trim(), role: match[2].trim() } : { name: contributor.trim(), role: '' }
-      })
+      const match = contributor.trim().match(/(.+?)\s*\((.+?)\)/)
+      return match ? { name: match[1].trim(), role: match[2].trim() } : { name: contributor.trim(), role: '' }
+    })
     : []
 
   const genreList = book.genres ? book.genres.split(',').map(g => g.trim()).filter(Boolean) : []
@@ -1043,10 +1043,10 @@ const BookDetailPage = () => {
               <div>
                 <SectionTitle icon={Layers} title="Buku dalam seri ini" iconColor="text-violet-500" />
                 {seriesLoading ? (
-                  <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-16 rounded-xl animate-pulse bg-stone-100 dark:bg-slate-800" />)}</div>
+                  <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl animate-pulse bg-stone-100 dark:bg-slate-800" />)}</div>
                 ) : seriesBooks.length > 0 ? (
                   <div className="space-y-2">
-                    {[...seriesBooks].sort((a,b) => (a.seriesOrder||0)-(b.seriesOrder||0)).map((sb,i) => (
+                    {[...seriesBooks].sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0)).map((sb, i) => (
                       <SeriesBookCard key={sb.id || i} seriesBook={sb} currentSlug={bookSlug} />
                     ))}
                   </div>
@@ -1079,7 +1079,7 @@ const BookDetailPage = () => {
                 </div>
               </div>
               {reviewsLoading ? (
-                <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 rounded-xl animate-pulse bg-stone-100 dark:bg-slate-800" />)}</div>
+                <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-xl animate-pulse bg-stone-100 dark:bg-slate-800" />)}</div>
               ) : recentReviews.length === 0 ? (
                 <div className="rounded-2xl p-10 text-center border border-dashed bg-stone-50 border-stone-200 dark:bg-slate-800/60 dark:border-slate-700">
                   <MessageCircle className="w-10 h-10 mx-auto mb-3 text-stone-300 dark:text-slate-600" />
@@ -1105,7 +1105,7 @@ const BookDetailPage = () => {
                             <span className="font-semibold text-sm text-stone-900 dark:text-slate-100 truncate">{review.userName}</span>
                             {review.isOwner && <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">Anda</span>}
                             <time className="text-xs ml-auto flex-shrink-0 text-stone-400 dark:text-slate-500" dateTime={review.createdAt}>
-                              {new Date(review.createdAt).toLocaleDateString('id-ID', { year:'numeric', month:'short', day:'numeric' })}
+                              {new Date(review.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </time>
                           </div>
                         </div>

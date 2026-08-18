@@ -9,17 +9,17 @@ import {
 } from 'lucide-react'
 
 const SORTS = [
-  { v: 'updateAt',          l: 'Terbaru'    },
-  { v: 'publishedAt',       l: 'Terbit'     },
-  { v: 'averageRating',     l: 'Rating'     },
-  { v: 'viewCount',         l: 'Views'      },
-  { v: 'readCount',         l: 'Dibaca'     },
-  { v: 'downloadCount',     l: 'Download'   },
-  { v: 'title',             l: 'Judul A–Z'  },
-  { v: 'estimatedReadTime', l: 'Durasi'     },
-  { v: 'totalWord',         l: 'Kata'       },
-  { v: 'fileSize',          l: 'Ukuran'     },
-  { v: 'totalPages',        l: 'Halaman'    },
+  { v: 'updateAt', l: 'Terbaru' },
+  { v: 'publishedAt', l: 'Terbit' },
+  { v: 'averageRating', l: 'Rating' },
+  { v: 'viewCount', l: 'Views' },
+  { v: 'readCount', l: 'Dibaca' },
+  { v: 'downloadCount', l: 'Download' },
+  { v: 'title', l: 'Judul A–Z' },
+  { v: 'estimatedReadTime', l: 'Durasi' },
+  { v: 'totalWord', l: 'Kata' },
+  { v: 'fileSize', l: 'Ukuran' },
+  { v: 'totalPages', l: 'Halaman' },
 ]
 
 const EMPTY_CRIT = {
@@ -76,15 +76,15 @@ const FilterPanel = memo(({ crit, onChange, onApply, onReset, onClose }) => (
           onChange={(e) => onChange(f, e.target.value)} className={inputCls} />
       ))}
       <Sel val={crit.isFeatured} onChange={(e) => onChange('isFeatured', e.target.value)}
-        ph="Status" opts={[{ v:'true',l:'Pilihan Editor' },{ v:'false',l:'Reguler' }]} />
+        ph="Status" opts={[{ v: 'true', l: 'Pilihan Editor' }, { v: 'false', l: 'Reguler' }]} />
       <Sel val={crit.languageId} onChange={(e) => onChange('languageId', e.target.value)}
-        ph="Bahasa" opts={[{ v:'1',l:'Bahasa Indonesia' },{ v:'2',l:'English' },{ v:'3',l:'Jawa' }]} />
+        ph="Bahasa" opts={[{ v: '1', l: 'Bahasa Indonesia' }, { v: '2', l: 'English' }, { v: '3', l: 'Jawa' }]} />
       <Sel val={crit.minRating} onChange={(e) => onChange('minRating', e.target.value)}
         ph="Rating Minimum"
-        opts={[{ v:'4.5',l:'4.5+ ⭐ Luar Biasa' },{ v:'4.0',l:'4.0+ ⭐ Sangat Bagus' },{ v:'3.5',l:'3.5+ ⭐ Bagus' }]} />
+        opts={[{ v: '4.5', l: '4.5+ ⭐ Luar Biasa' }, { v: '4.0', l: '4.0+ ⭐ Sangat Bagus' }, { v: '3.5', l: '3.5+ ⭐ Bagus' }]} />
       {[
-        [{ ph:'Tahun dari', f:'publicationYearFrom' }, { ph:'Tahun sampai', f:'publicationYearTo' }],
-        [{ ph:'Min Views', f:'minViewCount' }, { ph:'Min Dibaca', f:'minReadCount' }],
+        [{ ph: 'Tahun dari', f: 'publicationYearFrom' }, { ph: 'Tahun sampai', f: 'publicationYearTo' }],
+        [{ ph: 'Min Views', f: 'minViewCount' }, { ph: 'Min Dibaca', f: 'minReadCount' }],
       ].map((pair, i) => (
         <div key={i} className="flex gap-2">
           {pair.map(({ ph, f }) => (
@@ -118,9 +118,9 @@ const SortBtn = memo(({ opt, active, order, loading, onClick }) => (
     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                 transition-all duration-200 disabled:opacity-50 whitespace-nowrap
                 ${active
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200/80 dark:shadow-emerald-900/50'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200'
-                }`}>
+        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200/80 dark:shadow-emerald-900/50'
+        : 'bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200'
+      }`}>
     {opt.l}
     {active
       ? order === 'DESC' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
@@ -167,25 +167,25 @@ const FilterPill = ({ label, onRemove }) => (
 )
 
 const ctrlBtnBase = `flex-shrink-0 flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium border transition-all`
-const ctrlBtnOff  = `bg-white border-stone-200 text-stone-600 hover:border-emerald-300 hover:text-emerald-700 shadow-sm
+const ctrlBtnOff = `bg-white border-stone-200 text-stone-600 hover:border-emerald-300 hover:text-emerald-700 shadow-sm
                      dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:border-emerald-600 dark:hover:text-emerald-400 dark:shadow-none`
-const ctrlBtnOn   = `bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200/80 dark:shadow-emerald-900/40`
+const ctrlBtnOn = `bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200/80 dark:shadow-emerald-900/40`
 
 const ZinesPage = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const pageFromUrl  = parseInt(searchParams.get('page') || '1', 10)
-  const sortFromUrl  = searchParams.get('sortField') || 'updateAt'
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
+  const sortFromUrl = searchParams.get('sortField') || 'updateAt'
   const orderFromUrl = searchParams.get('sortOrder') || 'DESC'
 
-  const [zines,       setZines]       = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [totalPages,  setTotalPages]  = useState(1)
-  const [totalZines,  setTotalZines]  = useState(0)
-  const [showAdv,     setShowAdv]     = useState(false)
-  const [showSort,    setShowSort]    = useState(false)
-  const [crit,        setCrit]        = useState(EMPTY_CRIT)
+  const [zines, setZines] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalZines, setTotalZines] = useState(0)
+  const [showAdv, setShowAdv] = useState(false)
+  const [showSort, setShowSort] = useState(false)
+  const [crit, setCrit] = useState(EMPTY_CRIT)
   const [appliedCrit, setAppliedCrit] = useState(EMPTY_CRIT)
 
   const activeFilters = Object.entries(appliedCrit)
@@ -238,10 +238,10 @@ const ZinesPage = () => {
     updateParams({ sortField: field, sortOrder: newOrder, page: null })
   }, [sortFromUrl, orderFromUrl, updateParams])
 
-  const handleChange  = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
-  const handleApply   = useCallback(() => { setAppliedCrit({ ...crit }); updateParams({ page: null }) }, [crit, updateParams])
-  const handleReset   = useCallback(() => { setCrit(EMPTY_CRIT); setAppliedCrit(EMPTY_CRIT); updateParams({ page: null }) }, [updateParams])
-  const removeFilter  = useCallback((key) => {
+  const handleChange = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
+  const handleApply = useCallback(() => { setAppliedCrit({ ...crit }); updateParams({ page: null }) }, [crit, updateParams])
+  const handleReset = useCallback(() => { setCrit(EMPTY_CRIT); setAppliedCrit(EMPTY_CRIT); updateParams({ page: null }) }, [updateParams])
+  const removeFilter = useCallback((key) => {
     const nc = { ...crit, [key]: '' }; const na = { ...appliedCrit, [key]: '' }
     setCrit(nc); setAppliedCrit(na)
   }, [crit, appliedCrit])

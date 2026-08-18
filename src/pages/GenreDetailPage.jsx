@@ -15,22 +15,22 @@ import { BookOpen, ChevronRight, Home, ChevronLeft, ArrowUpDown, Tag } from 'luc
 const LIMIT = 24
 
 const sortButtons = [
-  { field: 'viewCount',    label: 'Terpopuler' },
-  { field: 'publishedAt',  label: 'Terbaru'    },
-  { field: 'averageRating', label: 'Rating'    },
-  { field: 'title',        label: 'Judul'      },
+  { field: 'viewCount', label: 'Terpopuler' },
+  { field: 'publishedAt', label: 'Terbaru' },
+  { field: 'averageRating', label: 'Rating' },
+  { field: 'title', label: 'Judul' },
 ]
 
 const GenreDetailPage = () => {
-  const { genreSlug }                       = useParams()
-  const [genre,       setGenre]             = useState(null)
-  const [books,       setBooks]             = useState([])
-  const [loading,     setLoading]           = useState(true)
-  const [currentPage, setCurrentPage]       = useState(1)
-  const [totalPages,  setTotalPages]        = useState(1)
-  const [totalBooks,  setTotalBooks]        = useState(0)
-  const [sortBy,      setSortBy]            = useState('viewCount')
-  const [sortOrder,   setSortOrder]         = useState('DESC')
+  const { genreSlug } = useParams()
+  const [genre, setGenre] = useState(null)
+  const [books, setBooks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalBooks, setTotalBooks] = useState(0)
+  const [sortBy, setSortBy] = useState('viewCount')
+  const [sortOrder, setSortOrder] = useState('DESC')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,16 +66,16 @@ const GenreDetailPage = () => {
 
   // SEO
   const breadcrumbs = genre ? [
-    { name: 'Beranda',  url: '/' },
+    { name: 'Beranda', url: '/' },
     { name: 'Kategori', url: '/kategori' },
     { name: genre.name, url: '#' },
   ] : []
   const metaDescription = genre?.description
     ? generateMetaDescription(genre.description, 160)
     : `Temukan ${totalBooks} buku ${genre?.name || genreSlug} domain publik. Baca gratis di MasasilaM.`
-  const pageUrl     = currentPage > 1 ? `/kategori/${genreSlug}?page=${currentPage}` : `/kategori/${genreSlug}`
-  const prevUrl     = currentPage > 1 ? (currentPage === 2 ? `/kategori/${genreSlug}` : `/kategori/${genreSlug}?page=${currentPage - 1}`) : null
-  const nextUrl     = currentPage < totalPages ? `/kategori/${genreSlug}?page=${currentPage + 1}` : null
+  const pageUrl = currentPage > 1 ? `/kategori/${genreSlug}?page=${currentPage}` : `/kategori/${genreSlug}`
+  const prevUrl = currentPage > 1 ? (currentPage === 2 ? `/kategori/${genreSlug}` : `/kategori/${genreSlug}?page=${currentPage - 1}`) : null
+  const nextUrl = currentPage < totalPages ? `/kategori/${genreSlug}?page=${currentPage + 1}` : null
   const structuredData = genre && books.length > 0
     ? combineStructuredData(generateBreadcrumbStructuredData(breadcrumbs), generateCollectionPageStructuredData('books', books, currentPage, totalBooks, LIMIT))
     : null
@@ -181,11 +181,10 @@ const GenreDetailPage = () => {
                 key={field}
                 onClick={() => handleSort(field)}
                 aria-pressed={sortBy === field}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  sortBy === field
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${sortBy === field
                     ? 'bg-amber-500 text-stone-900 shadow-md shadow-amber-200/60 dark:shadow-amber-900/30'
                     : 'bg-white dark:bg-slate-900 text-stone-600 dark:text-slate-400 border border-stone-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400'
-                }`}
+                  }`}
               >
                 {label} {sortBy === field && (sortOrder === 'DESC' ? '↓' : '↑')}
               </button>
@@ -228,11 +227,10 @@ const GenreDetailPage = () => {
                     key={p}
                     onClick={() => handlePage(p)}
                     aria-current={currentPage === p ? 'page' : undefined}
-                    className={`w-10 h-10 rounded-xl text-sm font-medium transition-all ${
-                      currentPage === p
+                    className={`w-10 h-10 rounded-xl text-sm font-medium transition-all ${currentPage === p
                         ? 'bg-amber-500 text-stone-900 shadow-md shadow-amber-200/60 dark:shadow-amber-900/30'
                         : 'bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400'
-                    }`}
+                      }`}
                   >
                     {p}
                   </button>
