@@ -10,9 +10,11 @@ import {
 
 // ── Sort options ──────────────────────────────────────────────────────────────
 const SORTS = [
-  { v: 'tahunRilis', l: 'Tahun'    },
-  { v: 'judul',      l: 'Judul A–Z' },
-  { v: 'durasi',     l: 'Durasi'   },
+  { v: 'tahunRilis', l: 'Tahun' },
+  { v: 'judul', l: 'Judul A–Z' },
+  { v: 'durasi', l: 'Durasi' },
+  { v: 'viewCount', l: 'Terpopuler' },
+  { v: 'updatedAt', l: 'Terbaru Ditambahkan' },
 ]
 
 const EMPTY_CRIT = {
@@ -20,10 +22,10 @@ const EMPTY_CRIT = {
 }
 
 const FILTER_LABELS = {
-  genre:    'Genre',
-  negara:   'Negara',
+  genre: 'Genre',
+  negara: 'Negara',
   yearFrom: 'Tahun Dari',
-  yearTo:   'Tahun Sampai',
+  yearTo: 'Tahun Sampai',
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -110,10 +112,10 @@ const SortBtn = memo(({ opt, active, order, loading, onClick }) => (
     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                 transition-all duration-200 disabled:opacity-50 whitespace-nowrap
                 ${active
-                  ? 'bg-blue-500 text-white shadow-md shadow-blue-200/80 dark:shadow-blue-900/50'
-                  : `bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800
+        ? 'bg-blue-500 text-white shadow-md shadow-blue-200/80 dark:shadow-blue-900/50'
+        : `bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800
                      dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200`
-                }`}>
+      }`}>
     {opt.l}
     {active
       ? order === 'DESC'
@@ -182,10 +184,10 @@ const FilterPill = ({ label, onRemove }) => (
 // DARK:  bg-slate-900 border-slate-700 text-slate-400
 // ─────────────────────────────────────────────────────────────────────────────
 const ctrlBtnBase = `flex-shrink-0 flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium border transition-all`
-const ctrlBtnOff  = `bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 shadow-sm
+const ctrlBtnOff = `bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 shadow-sm
                      dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400
                      dark:hover:border-blue-600 dark:hover:text-blue-400 dark:shadow-none`
-const ctrlBtnOn   = `bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200/80 dark:shadow-blue-900/40`
+const ctrlBtnOn = `bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200/80 dark:shadow-blue-900/40`
 
 // ── FilmsPage ─────────────────────────────────────────────────────────────────
 const FilmsPage = () => {
@@ -193,17 +195,17 @@ const FilmsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
 
   // URL adalah sumber kebenaran untuk page, sort, order
-  const pageFromUrl  = parseInt(searchParams.get('page') || '1', 10)
-  const sortFromUrl  = searchParams.get('sortField') || 'tahunRilis'
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
+  const sortFromUrl = searchParams.get('sortField') || 'tahunRilis'
   const orderFromUrl = searchParams.get('sortOrder') || 'DESC'
 
-  const [films,       setFilms]       = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [totalPages,  setTotalPages]  = useState(1)
-  const [totalFilms,  setTotalFilms]  = useState(0)
-  const [showAdv,     setShowAdv]     = useState(false)
-  const [showSort,    setShowSort]    = useState(false)
-  const [crit,        setCrit]        = useState(EMPTY_CRIT)
+  const [films, setFilms] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalFilms, setTotalFilms] = useState(0)
+  const [showAdv, setShowAdv] = useState(false)
+  const [showSort, setShowSort] = useState(false)
+  const [crit, setCrit] = useState(EMPTY_CRIT)
   const [appliedCrit, setAppliedCrit] = useState(EMPTY_CRIT)
 
   const abortRef = useRef(null)
@@ -232,8 +234,8 @@ const FilmsPage = () => {
       try {
         setLoading(true)
         const params = {
-          page:      pageFromUrl - 1, // 0-indexed API
-          size:      12,
+          page: pageFromUrl - 1, // 0-indexed API
+          size: 12,
           sortField: sortFromUrl,
           sortOrder: orderFromUrl,
           ...Object.fromEntries(Object.entries(appliedCrit).filter(([, v]) => v))
@@ -274,11 +276,11 @@ const FilmsPage = () => {
   }, [sortFromUrl, orderFromUrl, updateParams])
 
   const handleChange = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
-  const handleApply  = useCallback(() => {
+  const handleApply = useCallback(() => {
     setAppliedCrit({ ...crit })
     updateParams({ page: null })
   }, [crit, updateParams])
-  const handleReset  = useCallback(() => {
+  const handleReset = useCallback(() => {
     setCrit(EMPTY_CRIT)
     setAppliedCrit(EMPTY_CRIT)
     updateParams({ page: null })

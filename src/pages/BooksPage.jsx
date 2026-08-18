@@ -12,17 +12,17 @@ import {
 
 // ── Sort options ──────────────────────────────────────────────────────────────
 const SORTS = [
-  { v: 'updateAt',          l: 'Terbaru'    },
-  { v: 'publishedAt',       l: 'Terbit'     },
-  { v: 'averageRating',     l: 'Rating'     },
-  { v: 'viewCount',         l: 'Views'      },
-  { v: 'readCount',         l: 'Dibaca'     },
-  { v: 'downloadCount',     l: 'Download'   },
-  { v: 'title',             l: 'Judul A–Z'  },
-  { v: 'estimatedReadTime', l: 'Durasi'     },
-  { v: 'totalWord',         l: 'Kata'       },
-  { v: 'fileSize',          l: 'Ukuran'     },
-  { v: 'totalPages',        l: 'Bab'        },
+  { v: 'updateAt', l: 'Terbaru' },
+  { v: 'publishedAt', l: 'Terbit' },
+  { v: 'averageRating', l: 'Rating' },
+  { v: 'viewCount', l: 'Views' },
+  { v: 'readCount', l: 'Dibaca' },
+  { v: 'downloadCount', l: 'Download' },
+  { v: 'title', l: 'Judul A–Z' },
+  { v: 'estimatedReadTime', l: 'Durasi' },
+  { v: 'totalWord', l: 'Kata' },
+  { v: 'fileSize', l: 'Ukuran' },
+  { v: 'totalPages', l: 'Bab' },
 ]
 
 const EMPTY_CRIT = {
@@ -98,31 +98,31 @@ const FilterPanel = memo(({ crit, onChange, onApply, onReset, onClose }) => (
 
       <Sel val={crit.difficultyLevel} onChange={(e) => onChange('difficultyLevel', e.target.value)}
         ph="Tingkat Kesulitan"
-        opts={[{v:'BEGINNER',l:'Pemula'},{v:'INTERMEDIATE',l:'Menengah'},{v:'ADVANCED',l:'Lanjutan'}]} />
+        opts={[{ v: 'BEGINNER', l: 'Pemula' }, { v: 'INTERMEDIATE', l: 'Menengah' }, { v: 'ADVANCED', l: 'Lanjutan' }]} />
       <Sel val={crit.fileFormat} onChange={(e) => onChange('fileFormat', e.target.value)}
-        ph="Format File" opts={[{v:'epub',l:'EPUB'},{v:'pdf',l:'PDF'},{v:'mobi',l:'MOBI'}]} />
+        ph="Format File" opts={[{ v: 'epub', l: 'EPUB' }, { v: 'pdf', l: 'PDF' }, { v: 'mobi', l: 'MOBI' }]} />
       <Sel val={crit.isFeatured} onChange={(e) => onChange('isFeatured', e.target.value)}
-        ph="Status" opts={[{v:'true',l:'Pilihan Editor'},{v:'false',l:'Reguler'}]} />
+        ph="Status" opts={[{ v: 'true', l: 'Pilihan Editor' }, { v: 'false', l: 'Reguler' }]} />
       <Sel val={crit.languageId} onChange={(e) => onChange('languageId', e.target.value)}
-        ph="Bahasa" opts={[{v:'1',l:'Bahasa Indonesia'},{v:'2',l:'English'},{v:'3',l:'Jawa'}]} />
+        ph="Bahasa" opts={[{ v: '1', l: 'Bahasa Indonesia' }, { v: '2', l: 'English' }, { v: '3', l: 'Jawa' }]} />
       <Sel val={crit.minRating} onChange={(e) => onChange('minRating', e.target.value)}
         ph="Rating Minimum"
-        opts={[{v:'4.5',l:'4.5+ ⭐ Luar Biasa'},{v:'4.0',l:'4.0+ ⭐ Sangat Bagus'},{v:'3.5',l:'3.5+ ⭐ Bagus'},{v:'3.0',l:'3.0+ ⭐ Cukup'}]} />
+        opts={[{ v: '4.5', l: '4.5+ ⭐ Luar Biasa' }, { v: '4.0', l: '4.0+ ⭐ Sangat Bagus' }, { v: '3.5', l: '3.5+ ⭐ Bagus' }, { v: '3.0', l: '3.0+ ⭐ Cukup' }]} />
 
       {[
-        [{ph:'Bab min',f:'minChapters'},{ph:'Bab maks',f:'maxChapters'}],
-        [{ph:'Ukuran min (MB)',f:'minFileSize'},{ph:'Ukuran maks (MB)',f:'maxFileSize'}],
-        [{ph:'Tahun dari',f:'publicationYearFrom'},{ph:'Tahun sampai',f:'publicationYearTo'}],
+        [{ ph: 'Bab min', f: 'minChapters' }, { ph: 'Bab maks', f: 'maxChapters' }],
+        [{ ph: 'Ukuran min (MB)', f: 'minFileSize' }, { ph: 'Ukuran maks (MB)', f: 'maxFileSize' }],
+        [{ ph: 'Tahun dari', f: 'publicationYearFrom' }, { ph: 'Tahun sampai', f: 'publicationYearTo' }],
       ].map((pair, i) => (
         <div key={i} className="flex gap-2">
-          {pair.map(({ph,f}) => (
+          {pair.map(({ ph, f }) => (
             <input key={f} type="number" placeholder={ph} value={crit[f]}
               onChange={(e) => onChange(f, e.target.value)} className={inputCls} />
           ))}
         </div>
       ))}
 
-      {[{ph:'Minimal views',f:'minViewCount'},{ph:'Minimal dibaca',f:'minReadCount'}].map(({ph,f}) => (
+      {[{ ph: 'Minimal views', f: 'minViewCount' }, { ph: 'Minimal dibaca', f: 'minReadCount' }].map(({ ph, f }) => (
         <input key={f} type="number" placeholder={ph} value={crit[f]}
           onChange={(e) => onChange(f, e.target.value)} className={inputCls} />
       ))}
@@ -158,10 +158,10 @@ const SortBtn = memo(({ opt, active, order, loading, onClick }) => (
     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                 transition-all duration-200 disabled:opacity-50 whitespace-nowrap
                 ${active
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-200/80 dark:shadow-amber-900/50'
-                  : `bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-800
+        ? 'bg-amber-500 text-white shadow-md shadow-amber-200/80 dark:shadow-amber-900/50'
+        : `bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-800
                      dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200`
-                }`}>
+      }`}>
     {opt.l}
     {active
       ? order === 'DESC' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
@@ -223,26 +223,26 @@ const FilterPill = ({ label, onRemove }) => (
 // DARK:  bg-slate-900 border-slate-700 text-slate-400
 // ─────────────────────────────────────────────────────────────────────────────
 const ctrlBtnBase = `flex-shrink-0 flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium border transition-all`
-const ctrlBtnOff  = `bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 shadow-sm
+const ctrlBtnOff = `bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 shadow-sm
                      dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:border-amber-600 dark:hover:text-amber-400 dark:shadow-none`
-const ctrlBtnOn   = `bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/40`
+const ctrlBtnOn = `bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/40`
 
 // ── BooksPage ─────────────────────────────────────────────────────────────────
 const BooksPage = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const pageFromUrl  = parseInt(searchParams.get('page') || '1', 10)
-  const sortFromUrl  = searchParams.get('sortField') || 'updateAt'
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
+  const sortFromUrl = searchParams.get('sortField') || 'updateAt'
   const orderFromUrl = searchParams.get('sortOrder') || 'DESC'
 
-  const [books,       setBooks]       = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [totalPages,  setTotalPages]  = useState(1)
-  const [totalBooks,  setTotalBooks]  = useState(0)
-  const [showAdv,     setShowAdv]     = useState(false)
-  const [showSort,    setShowSort]    = useState(false)
-  const [crit,        setCrit]        = useState(EMPTY_CRIT)
+  const [books, setBooks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalBooks, setTotalBooks] = useState(0)
+  const [showAdv, setShowAdv] = useState(false)
+  const [showSort, setShowSort] = useState(false)
+  const [crit, setCrit] = useState(EMPTY_CRIT)
   const [appliedCrit, setAppliedCrit] = useState(EMPTY_CRIT)
 
   const activeFilters = Object.entries(appliedCrit)
@@ -299,26 +299,26 @@ const BooksPage = () => {
     updateParams({ sortField: field, sortOrder: newOrder, page: null })
   }, [sortFromUrl, orderFromUrl, updateParams])
 
-  const handleChange  = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
-  const handleApply   = useCallback(() => { setAppliedCrit({ ...crit }); updateParams({ page: null }) }, [crit, updateParams])
-  const handleReset   = useCallback(() => { setCrit(EMPTY_CRIT); setAppliedCrit(EMPTY_CRIT); updateParams({ page: null }) }, [updateParams])
-  const removeFilter  = useCallback((key) => {
+  const handleChange = useCallback((f, v) => setCrit(p => ({ ...p, [f]: v })), [])
+  const handleApply = useCallback(() => { setAppliedCrit({ ...crit }); updateParams({ page: null }) }, [crit, updateParams])
+  const handleReset = useCallback(() => { setCrit(EMPTY_CRIT); setAppliedCrit(EMPTY_CRIT); updateParams({ page: null }) }, [updateParams])
+  const removeFilter = useCallback((key) => {
     const nc = { ...crit, [key]: '' }; const na = { ...appliedCrit, [key]: '' }
     setCrit(nc); setAppliedCrit(na)
   }, [crit, appliedCrit])
 
-  const breadcrumbs      = [{ name: 'Beranda', url: '/' }, { name: 'Koleksi Buku', url: '#' }]
+  const breadcrumbs = [{ name: 'Beranda', url: '/' }, { name: 'Koleksi Buku', url: '#' }]
   const collectionSchema = generateCollectionPageStructuredData(
     'books', books.map(b => ({ ...b, slug: b.slug || b.id })), pageFromUrl, totalBooks, 12
   )
   const breadcrumbSchema = generateBreadcrumbStructuredData(breadcrumbs)
-  const pageTitle        = appliedCrit.searchTitle ? `${appliedCrit.searchTitle} - Koleksi Buku` : `Koleksi Ebook - Halaman ${pageFromUrl}`
-  const pageDescription  = appliedCrit.searchTitle
+  const pageTitle = appliedCrit.searchTitle ? `${appliedCrit.searchTitle} - Koleksi Buku` : `Koleksi Ebook - Halaman ${pageFromUrl}`
+  const pageDescription = appliedCrit.searchTitle
     ? `Hasil pencarian "${appliedCrit.searchTitle}" — Temukan buku di perpustakaan digital kami`
     : `Jelajahi ${totalBooks.toLocaleString('id-ID')} buku digital gratis. Halaman ${pageFromUrl} dari ${totalPages}.`
-  const pageUrl  = pageFromUrl > 1 ? `/buku?page=${pageFromUrl}` : '/buku'
-  const prevUrl  = pageFromUrl > 1 ? (pageFromUrl === 2 ? '/buku' : `/buku?page=${pageFromUrl - 1}`) : null
-  const nextUrl  = pageFromUrl < totalPages ? `/buku?page=${pageFromUrl + 1}` : null
+  const pageUrl = pageFromUrl > 1 ? `/buku?page=${pageFromUrl}` : '/buku'
+  const prevUrl = pageFromUrl > 1 ? (pageFromUrl === 2 ? '/buku' : `/buku?page=${pageFromUrl - 1}`) : null
+  const nextUrl = pageFromUrl < totalPages ? `/buku?page=${pageFromUrl + 1}` : null
 
   const paginationPages = (() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)

@@ -133,11 +133,11 @@ const CopyrightIcon = ({ status }) => {
 
 // ── BookCard ──────────────────────────────────────────────────────────────────
 const BookCard = ({ book }) => {
-  const hasRating   = book.averageRating != null && Number(book.averageRating) > 0
-  const rating      = hasRating ? Number(book.averageRating) : 0
-  const ratingStr   = hasRating ? rating.toFixed(1) : null
+  const hasRating = book.averageRating != null && Number(book.averageRating) > 0
+  const rating = hasRating ? Number(book.averageRating) : 0
+  const ratingStr = hasRating ? rating.toFixed(1) : null
   const ratingCount = book.totalRatings || book.ratingCount || 0
-  const readTime    = book.estimatedReadTime
+  const readTime = book.estimatedReadTime
     ? book.estimatedReadTime >= 60
       ? `${Math.round(book.estimatedReadTime / 60)}j`
       : `${book.estimatedReadTime}m`
@@ -146,10 +146,10 @@ const BookCard = ({ book }) => {
   // Semua genre → array of { name, slug, Icon }
   const genreList = book.genres
     ? book.genres.split(',').map((g) => {
-        const name = g.trim()
-        const slug = genreNameToSlug(name)
-        return { name, slug, Icon: getGenreIcon(slug) }
-      })
+      const name = g.trim()
+      const slug = genreNameToSlug(name)
+      return { name, slug, Icon: getGenreIcon(slug) }
+    })
     : []
 
   return (
@@ -274,8 +274,8 @@ const BookCard = ({ book }) => {
         {/* Stats strip */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto pt-1.5
                         border-t border-stone-100 dark:border-slate-800">
-          <Stat icon={Eye}      value={book.viewCount     || 0} className="text-stone-400 dark:text-slate-600" />
-          <Stat icon={BookOpen} value={book.readCount     || 0} className="text-stone-400 dark:text-slate-600" />
+          <Stat icon={Eye} value={book.viewCount || 0} className="text-stone-400 dark:text-slate-600" />
+          <Stat icon={BookOpen} value={book.readCount || 0} className="text-stone-400 dark:text-slate-600" />
           <Stat icon={Download} value={book.downloadCount || 0} className="text-stone-400 dark:text-slate-600" />
           {book.totalComments > 0 && (
             <Stat icon={MessageCircle} value={book.totalComments} className="text-stone-400 dark:text-slate-600" />

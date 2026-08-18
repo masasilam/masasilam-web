@@ -50,20 +50,19 @@ const filterFilms = (films, { genre, negara, yearFrom, yearTo }) => {
 
 export const filmService = {
   getFilms: async (params = {}) => {
-    const { searchTitle = '', page = 0, size = 12, sortField, sortOrder = 'DESC', genre = '', negara = '', yearFrom = '', yearTo = '' } = params;
+    const { searchTitle = '', page = 0, size = 12, sortField = 'tahunRilis', sortOrder = 'DESC', genre = '', negara = '', yearFrom = '', yearTo = '' } = params;
     try {
       let raw;
       if (searchTitle.trim()) {
-        const res = await api.get('/films/search', { params: cleanParams({ q: searchTitle.trim(), page, size }) });
+        const res = await api.get('/films/search', { params: cleanParams({ q: searchTitle.trim(), page, size, sortBy: sortField, sortOrder }) });
         raw = res.data;
       } else {
-        const res = await api.get('/films', { params: cleanParams({ page, size }) });
+        const res = await api.get('/films', { params: cleanParams({ page, size, sortBy: sortField, sortOrder }) });
         raw = res.data;
       }
       let films = raw?.films || [];
-      if (genre || negara || yearFrom || yearTo) films = filterFilms(films, { genre, negara, yearFrom, yearTo });
-      if (sortField) films = sortFilms(films, sortField, sortOrder);
       const hasClientFilter = genre || negara || yearFrom || yearTo;
+      if (hasClientFilter) films = filterFilms(films, { genre, negara, yearFrom, yearTo });
       const total = hasClientFilter ? films.length : (raw?.totalItems ?? 0);
       return {
         data: {

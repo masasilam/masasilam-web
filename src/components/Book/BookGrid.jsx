@@ -38,8 +38,8 @@ const SkeletonCard = () => (
 // ── BookGrid ──────────────────────────────────────────────────────────────────
 const BookGrid = ({
   books,
-  loading       = false,
-  emptyMessage  = 'Tidak ada buku ditemukan',
+  loading = false,
+  emptyMessage = 'Tidak ada buku ditemukan',
   skeletonCount = 12,
 }) => {
   const gridClass = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4'

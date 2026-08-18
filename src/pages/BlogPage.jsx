@@ -20,21 +20,21 @@ const inputCls = `
 
 // ── Sort options ─────────────────────────────────────────────────────────────
 const SORTS = [
-  { v: 'publishedAt', l: 'Terbaru'   },
-  { v: 'viewCount',   l: 'Views'     },
-  { v: 'likeCount',   l: 'Disukai'   },
-  { v: 'commentCount',l: 'Komentar'  },
-  { v: 'title',       l: 'Judul A–Z' },
+  { v: 'publishedAt', l: 'Terbaru' },
+  { v: 'viewCount', l: 'Views' },
+  { v: 'likeCount', l: 'Disukai' },
+  { v: 'commentCount', l: 'Komentar' },
+  { v: 'title', l: 'Judul A–Z' },
 ]
 
 // ── Category pills ────────────────────────────────────────────────────────────
 const CATEGORY_ACCENTS = {
-  default:   { pill: 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700/50 dark:text-amber-300', active: 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/50' },
-  Buku:      { pill: 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-700/40 dark:text-amber-300', active: 'bg-amber-500 text-white border-amber-500' },
-  Film:      { pill: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700/40 dark:text-blue-300', active: 'bg-blue-500 text-white border-blue-500' },
-  Budaya:    { pill: 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-700/40 dark:text-purple-300', active: 'bg-purple-500 text-white border-purple-500' },
+  default: { pill: 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700/50 dark:text-amber-300', active: 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/50' },
+  Buku: { pill: 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-700/40 dark:text-amber-300', active: 'bg-amber-500 text-white border-amber-500' },
+  Film: { pill: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700/40 dark:text-blue-300', active: 'bg-blue-500 text-white border-blue-500' },
+  Budaya: { pill: 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-700/40 dark:text-purple-300', active: 'bg-purple-500 text-white border-purple-500' },
   Teknologi: { pill: 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-700/40 dark:text-emerald-300', active: 'bg-emerald-500 text-white border-emerald-500' },
-  Sejarah:   { pill: 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-700/40 dark:text-rose-300', active: 'bg-rose-500 text-white border-rose-500' },
+  Sejarah: { pill: 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-700/40 dark:text-rose-300', active: 'bg-rose-500 text-white border-rose-500' },
 }
 
 const getCatAccent = (cat) => CATEGORY_ACCENTS[cat] || CATEGORY_ACCENTS.default
@@ -45,10 +45,10 @@ const SortBtn = memo(({ opt, active, order, loading, onClick }) => (
     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                 transition-all duration-200 disabled:opacity-50 whitespace-nowrap
                 ${active
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-200/80 dark:shadow-amber-900/50'
-                  : `bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-800
+        ? 'bg-amber-500 text-white shadow-md shadow-amber-200/80 dark:shadow-amber-900/50'
+        : `bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-800
                      dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200`
-                }`}>
+      }`}>
     {opt.l}
     {active
       ? order === 'DESC' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
@@ -92,7 +92,7 @@ PageInput.displayName = 'PageInput'
 const readTime = (content) => {
   if (!content) return null
   const words = content.trim().split(/\s+/).length
-  const mins  = Math.ceil(words / 200)
+  const mins = Math.ceil(words / 200)
   return mins
 }
 
@@ -194,7 +194,7 @@ const BlogCard = memo(({ post, featured = false }) => {
                   {post.authorName || 'Tim Redaksi'}
                 </div>
                 <div className="text-[10px] text-stone-400 dark:text-slate-500">
-                  {formatDate(post.publishedAt, { day:'numeric', month:'short', year:'numeric' })}
+                  {formatDate(post.publishedAt, { day: 'numeric', month: 'short', year: 'numeric' })}
                   {mins && ` · ${mins} mnt baca`}
                 </div>
               </div>
@@ -289,7 +289,7 @@ const BlogCard = memo(({ post, featured = false }) => {
                           border-stone-100 dark:border-slate-800">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {formatDate(post.publishedAt, { day:'numeric', month:'short' })}
+              {formatDate(post.publishedAt, { day: 'numeric', month: 'short' })}
               {mins && ` · ${mins}m`}
             </span>
             <div className="flex items-center gap-2.5">
@@ -332,21 +332,21 @@ const BlogPage = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const pageFromUrl  = parseInt(searchParams.get('page') || '1', 10)
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
   const queryFromUrl = searchParams.get('q') || ''
-  const catFromUrl   = searchParams.get('category') || ''
-  const tagFromUrl   = searchParams.get('tag') || ''
-  const sortFromUrl  = searchParams.get('sort') || 'publishedAt'
+  const catFromUrl = searchParams.get('category') || ''
+  const tagFromUrl = searchParams.get('tag') || ''
+  const sortFromUrl = searchParams.get('sort') || 'publishedAt'
   const orderFromUrl = searchParams.get('order') || 'DESC'
-  const modeFromUrl  = searchParams.get('mode') || 'latest'
+  const modeFromUrl = searchParams.get('mode') || 'latest'
 
-  const [posts,      setPosts]      = useState([])
-  const [loading,    setLoading]    = useState(true)
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
   const [totalPosts, setTotalPosts] = useState(0)
-  const [showSort,   setShowSort]   = useState(false)
+  const [showSort, setShowSort] = useState(false)
   const [searchInput, setSearchInput] = useState(queryFromUrl)
-  const [categories,  setCategories]  = useState([])
+  const [categories, setCategories] = useState([])
 
   const updateParams = useCallback((updates) => {
     setSearchParams(prev => {
@@ -399,7 +399,7 @@ const BlogPage = () => {
   useEffect(() => {
     api.get('/blog/categories').then(r => {
       setCategories(r.data?.data || [])
-    }).catch(() => {})
+    }).catch(() => { })
   }, [])
 
   useEffect(() => { fetchPosts() }, [fetchPosts])
@@ -439,15 +439,15 @@ const BlogPage = () => {
   })()
 
   const featuredPost = pageFromUrl === 1 && modeFromUrl !== 'trending' && !queryFromUrl ? posts[0] : null
-  const gridPosts    = featuredPost ? posts.slice(1) : posts
+  const gridPosts = featuredPost ? posts.slice(1) : posts
 
   const pageTitle = queryFromUrl
     ? `"${queryFromUrl}" — Blog`
     : catFromUrl
-    ? `Kategori: ${catFromUrl} — Blog`
-    : modeFromUrl === 'trending'
-    ? 'Artikel Trending — Blog'
-    : `Blog & Artikel — Halaman ${pageFromUrl}`
+      ? `Kategori: ${catFromUrl} — Blog`
+      : modeFromUrl === 'trending'
+        ? 'Artikel Trending — Blog'
+        : `Blog & Artikel — Halaman ${pageFromUrl}`
 
   const pageDescription = queryFromUrl
     ? `Hasil pencarian "${queryFromUrl}" di blog Perpustakaan Digital MasasilaM`
@@ -564,10 +564,10 @@ const BlogPage = () => {
                 onClick={() => handleMode(modeFromUrl === 'trending' ? 'latest' : 'trending')}
                 className={`flex-shrink-0 flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium border transition-all
                             ${modeFromUrl === 'trending'
-                              ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/40'
-                              : `bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 shadow-sm
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/40'
+                    : `bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 shadow-sm
                                  dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:border-amber-600 dark:hover:text-amber-400 dark:shadow-none`
-                            }`}>
+                  }`}>
                 <Flame className="w-4 h-4" />
                 <span className="hidden sm:inline">Trending</span>
               </button>
@@ -576,10 +576,10 @@ const BlogPage = () => {
               <button onClick={() => setShowSort(!showSort)}
                 className={`flex-shrink-0 flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium border transition-all
                             ${showSort
-                              ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/40'
-                              : `bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 shadow-sm
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200/80 dark:shadow-amber-900/40'
+                    : `bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 shadow-sm
                                  dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:border-amber-600 dark:hover:text-amber-400 dark:shadow-none`
-                            }`}>
+                  }`}>
                 <ArrowUpDown className="w-4 h-4" />
                 <span className="hidden sm:inline">Urutkan</span>
               </button>
@@ -617,9 +617,9 @@ const BlogPage = () => {
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-xs text-stone-400 dark:text-slate-500 flex-shrink-0">Kategori:</span>
                 {categories.map((cat) => {
-                  const name   = typeof cat === 'string' ? cat : cat.name || cat.slug
+                  const name = typeof cat === 'string' ? cat : cat.name || cat.slug
                   const active = catFromUrl === name
-                  const a      = getCatAccent(name)
+                  const a = getCatAccent(name)
                   return (
                     <button key={name} onClick={() => handleCategory(name)}
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all
