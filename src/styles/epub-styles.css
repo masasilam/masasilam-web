@@ -1,0 +1,1029 @@
+/* ================================================================
+   1️⃣ CHAPTER CONTENT WRAPPER
+   ================================================================ */
+.chapter-content {
+  font-family: "Minion Pro", "Adobe Garamond Pro", "Garamond", "Times New Roman", "Liberation Serif", serif;
+  font-size: 1em;
+  line-height: 1.5;
+  max-width: 39.5em;
+  margin: 0 auto;
+  padding: 0;
+  text-align: justify;
+
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+
+  -webkit-hyphenate-limit-before: 3;
+  -webkit-hyphenate-limit-after: 3;
+  -webkit-hyphenate-limit-chars: 6 3 3;
+  -moz-hyphenate-limit-chars: 6 3 3;
+  hyphenate-limit-chars: 6 3 3;
+  hyphenate-limit-lines: 2;
+  -webkit-hyphenate-limit-last: always;
+  hyphenate-limit-last: always;
+
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* ================================================================
+   2️⃣ STRUKTUR TEKS UTAMA
+   ================================================================ */
+
+/* Judul - NO hyphenation */
+.chapter-content h1,
+.chapter-content h2,
+.chapter-content h3,
+.chapter-content h4,
+.chapter-content h5,
+.chapter-content h6 {
+  font-family: inherit;
+  text-align: center;
+  margin: 2.5em 0 0.25em 0;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  hyphens: none;
+  page-break-after: avoid;
+}
+
+.chapter-content h1 { font-size: 1.5em; font-weight: 700; }
+.chapter-content h2 { font-size: 1.3em; font-weight: 650; }
+.chapter-content h3 { font-size: 1.2em; font-weight: 600; }
+.chapter-content h4 { font-size: 1.1em; font-weight: 550; }
+.chapter-content h5 { font-size: 1.05em; font-weight: 500; }
+.chapter-content h6 { font-size: 1em; font-weight: 450; }
+
+/* Paragraf - WITH hyphenation, WITH indent */
+.chapter-content p {
+  margin: 0;
+  text-align: justify;
+  text-indent: 1.5em;
+  orphans: 2;
+  widows: 2;
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ── FIX INDENT ─────────────────────────────────────────────────
+   Paragraf yang TIDAK perlu indent:
+   1. Setelah heading (konvensi tipografi)
+   2. Class .first-paragraph
+   3. Paragraf pertama di section
+   4. Paragraf yang berdiri sebagai label/keterangan sebelum h1
+      (kasus "Surat Terbuka untuk Mas Emha Ainun Najib")
+   ─────────────────────────────────────────────────────────────── */
+.chapter-content h1 + p,
+.chapter-content h2 + p,
+.chapter-content h3 + p,
+.chapter-content h4 + p,
+.chapter-content h5 + p,
+.chapter-content h6 + p,
+.chapter-content .first-paragraph,
+.chapter-content section > p:first-of-type {
+  text-indent: 0;
+  margin-top: 2em;
+}
+
+/* Paragraf pertama langsung di dalam .chapter (sebelum ada heading) */
+.chapter-content .chapter > p:first-child,
+/* Paragraf pertama langsung di dalam .chapter-content sendiri */
+.chapter-content > p:first-child,
+/* Fallback: p yang tepat sebelum h1 (tidak bisa di CSS murni,
+   ditangani via injectSoftHyphens di JSX — lihat preprocessContent) */
+.chapter-content p.no-indent {
+  text-indent: 0 !important;
+  text-align: left;
+}
+
+/* Separator / Ornament */
+.chapter-content p.separator,
+.chapter-content p.ornament,
+.chapter-content p.divider {
+  text-align: center !important;
+  text-indent: 0 !important;
+  margin: 2em 0 !important;
+  color: #666;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content p.ornament-flower {
+  letter-spacing: 0.3em;
+  font-size: 1.1em;
+  text-align: center;
+  text-indent: 0;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+/* ================================================================
+   3️⃣ ELEMEN KHUSUS TEKS - PUISI
+   ================================================================ */
+.chapter-content .poem {
+  margin: 2em 0;
+  text-align: left;
+  text-indent: 0;
+  line-height: 1.4;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content .poem p,
+.chapter-content .poem div,
+.chapter-content .poem span {
+  text-align: left;
+  text-indent: 0;
+  margin: 0;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content .poem .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .poem .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .poem .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .poem h1,
+.chapter-content .poem h2,
+.chapter-content .poem h3,
+.chapter-content .poem h4 {
+  text-align: center;
+  font-weight: 600;
+  margin: 1.5em 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.chapter-content .poem .author {
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.1em;
+  margin: 2em 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.chapter-content .poem span {
+  display: block;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.chapter-content .poem div + div {
+  margin-top: 1.5em;
+}
+
+.chapter-content .poem p:last-child {
+  text-align: right;
+  font-style: italic;
+  margin-top: 2em;
+  font-size: 0.9em;
+}
+
+.chapter-content .indent {
+  margin-left: 2em;
+}
+
+/* ================================================================
+   4️⃣ DAFTAR, KUTIPAN, DAN FORMAT TEKS LAINNYA
+   ================================================================ */
+.chapter-content ol,
+.chapter-content ul {
+  margin: 0 !important;
+  padding-left: 2.5em !important;
+  text-align: justify;
+  -webkit-hyphens: auto !important;
+  hyphens: auto !important;
+  list-style-position: outside !important;
+  display: block !important;
+}
+
+.chapter-content ol {
+  list-style-type: decimal !important;
+}
+
+.chapter-content ol[type="A"] { list-style-type: upper-alpha !important; }
+.chapter-content ol[type="a"] { list-style-type: lower-alpha !important; }
+.chapter-content ol[type="I"] { list-style-type: upper-roman !important; }
+.chapter-content ol[type="i"] { list-style-type: lower-roman !important; }
+.chapter-content ol[type="1"] { list-style-type: decimal !important; }
+
+.chapter-content ul {
+  list-style-type: disc !important;
+}
+
+.chapter-content li {
+  margin: 0 !important;
+  padding-left: 0.3em !important;
+  display: list-item !important;
+}
+
+.chapter-content ol > li::before,
+.chapter-content ul > li::before {
+  content: none !important;
+  display: none !important;
+}
+
+.chapter-content ul.dash-list {
+  list-style: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
+}
+
+.chapter-content ul.dash-list li {
+  text-indent: -0.7em !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+}
+
+.chapter-content ul.dash-list li::before {
+  content: "– " !important;
+  display: inline !important;
+}
+
+.chapter-content strong,
+.chapter-content b {
+  font-weight: 600;
+}
+
+.chapter-content em,
+.chapter-content i {
+  font-style: italic;
+}
+
+.chapter-content q::before { content: open-quote; }
+.chapter-content q::after  { content: close-quote; }
+
+.chapter-content blockquote {
+  margin: 0.25em 0;
+  padding: 0 0.25em;
+  border-left: 3px solid #ccc;
+  font-style: italic;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+.chapter-content blockquote p { text-indent: 0; }
+.chapter-content blockquote p + p { text-indent: 1.5em; }
+
+.chapter-content blockquote .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+  border-left: none !important;
+  font-style: normal !important;
+}
+
+.chapter-content blockquote .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content blockquote .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  font-style: normal !important;
+}
+
+.chapter-content a {
+  text-decoration: underline;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content a:hover { opacity: 0.8; }
+
+/* ================================================================
+   5️⃣ NAVIGASI, HALAMAN ISI & HALAMAN KHUSUS
+   ================================================================ */
+.chapter-content nav {
+  padding: 0;
+  max-width: 39.5em;
+  margin: 0 auto;
+}
+
+.chapter-content nav h1 { margin: 2.5em 0 0.25em 0; }
+
+.chapter-content nav ol,
+.chapter-content nav li {
+  list-style: none;
+  margin: 0;
+  text-align: left;
+  text-indent: 0;
+}
+
+.chapter-content nav a {
+  text-decoration: none;
+  display: block;
+  line-height: 1.6;
+  padding: 0.2em 0;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content nav a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.chapter-content .titlepage {
+  text-align: center;
+  padding: 0;
+  max-width: 39.5em;
+  margin: 0 auto;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chapter-content .titlepage h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content .titlepage .subtitle {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0 2em 0;
+  text-align: center;
+}
+
+.chapter-content .titlepage h2 {
+  font-size: 1.3em;
+  font-weight: 650;
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content .titlepage h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 2.5em 0 0.25em 0;
+}
+
+.chapter-content .chapter,
+.chapter-content .colophon,
+.chapter-content .imprint,
+.chapter-content .uncopyright {
+  padding: 0;
+  max-width: 39.5em;
+  margin: 0 auto;
+}
+
+.chapter-content .colophon p { text-indent: 0; }
+.chapter-content .colophon > p:first-of-type { text-align: center; }
+
+.chapter-content .colophon,
+.chapter-content .imprint,
+.chapter-content .uncopyright {
+  text-align: justify;
+}
+
+.chapter-content .info-box p,
+.chapter-content .info-box p:first-of-type {
+  text-align: left !important;
+  text-indent: 0 !important;
+}
+
+/* ================================================================
+   6️⃣ GAMBAR & TATA LETAK RESPONSIF
+   ================================================================ */
+.chapter-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.chapter-content .image-inline {
+  display: inline;
+  vertical-align: middle;
+  height: 2em;
+  width: auto;
+  margin: 0 0.3em;
+}
+
+.chapter-content .image-with-caption {
+  margin: 2em auto;
+  text-align: center;
+}
+
+.chapter-content .image-with-caption img { margin: 0 auto; }
+
+.chapter-content .image-caption {
+  text-align: center;
+  font-size: 0.9em;
+  margin: 0.5em 0 0 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+.chapter-content section.colophon img,
+.chapter-content section.imprint img,
+.chapter-content .colophon img,
+.chapter-content .imprint img {
+  max-width: 150px !important;
+  max-height: 150px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto 2em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-small {
+  max-width: 120px !important;
+  max-height: 120px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-medium {
+  max-width: 200px !important;
+  max-height: 200px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.chapter-content .image-container {
+  margin: 0.25em 0;
+  overflow: hidden;
+  clear: both;
+}
+
+.chapter-content .image-left {
+  float: left;
+  margin: 0 0.5em 0.25em 0;
+  max-width: 45%;
+}
+
+.chapter-content .image-right {
+  float: right;
+  margin: 0 0 0.25em 0.5em;
+  max-width: 45%;
+}
+
+.chapter-content .image-top,
+.chapter-content .image-bottom {
+  display: block;
+  margin: 0.25em auto;
+  max-width: 100%;
+}
+
+.chapter-content .image-container::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* ================================================================
+   7️⃣ FORMAT SURAT
+   ================================================================ */
+.chapter-content .letter {
+  margin: 3em auto;
+  padding: 2em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fdfcf8;
+  max-width: 36em;
+  line-height: 1.6;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+.chapter-content .letter p {
+  margin: 0;
+  text-align: justify;
+}
+
+.chapter-content .letter .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.chapter-content .letter .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .letter .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .letter .date {
+  text-align: right;
+  font-style: italic;
+  margin-bottom: 2em;
+  text-indent: 0;
+}
+
+.chapter-content .letter .salutation {
+  margin-bottom: 1.5em;
+  text-indent: 0;
+  font-weight: 500;
+}
+
+.chapter-content .letter .body {
+  text-indent: 1.5em;
+  text-align: justify;
+}
+
+.chapter-content .letter .body:first-of-type {
+  text-indent: 0;
+  margin-top: 0;
+}
+
+.chapter-content .letter .closing {
+  margin-top: 2em;
+  text-align: right;
+  font-style: italic;
+  text-indent: 0;
+}
+
+.chapter-content .letter .signature {
+  text-align: right;
+  font-weight: 600;
+  margin-top: 0.5em;
+  text-indent: 0;
+}
+
+.chapter-content .letter-date {
+  text-align: right;
+  font-style: italic;
+  text-indent: 0;
+}
+
+/* ================================================================
+   8️⃣ UNSUR TAMBAHAN & GAYA KHUSUS
+   ================================================================ */
+.chapter-content .epigraph {
+  font-style: italic;
+  text-align: center;
+  margin: 3em auto;
+  max-width: 32em;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content .epigraph cite {
+  display: block;
+  margin-top: 1em;
+  font-size: 0.9em;
+  text-align: right;
+  font-style: normal;
+}
+
+.chapter-content .subtitle {
+  font-size: 1.1em;
+  text-align: center;
+  margin: 1.5em 0;
+}
+
+.chapter-content .dialog {
+  margin: 1em 0;
+  text-indent: 0;
+}
+
+.chapter-content .dialog p {
+  margin: 0.2em 0;
+  text-indent: -1em;
+  padding-left: 1em;
+}
+
+.chapter-content .dialog .speaker { font-weight: 600; }
+
+.chapter-content .dialog .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .dialog .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .dialog .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  padding-left: 0 !important;
+}
+
+.chapter-content .scene-break {
+  text-align: center;
+  margin: 2em 0;
+  letter-spacing: 0.3em;
+  color: #666;
+}
+
+.chapter-content .scene-break::before { content: "⁂"; }
+
+/* ================================================================
+   🎯 NOTE & INFO-BOX
+   ================================================================ */
+.chapter-content .info-box {
+  padding: 0.5em 1em;
+  margin: 1.5em 0;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chapter-content .info-box p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .info-box p:first-child { margin-top: 0 !important; }
+.chapter-content .info-box p:last-child  { margin-bottom: 0 !important; }
+
+.chapter-content .note {
+  margin: 2.5em 0 1.5em 0;
+  padding-top: 1em;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.chapter-content .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.chapter-content .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.chapter-content .note p:first-child { margin-top: 0 !important; }
+.chapter-content .note p:last-child  { margin-bottom: 0 !important; }
+
+/* ================================================================
+   9️⃣ TABEL, KODE, DAN TEKS KHUSUS
+   ================================================================ */
+.chapter-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+
+.chapter-content th,
+.chapter-content td {
+  border: 1px solid #ccc;
+  padding: 0.4em 0.6em;
+  text-align: left;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+.chapter-content th {
+  background-color: #f0f0f0;
+  font-weight: 600;
+}
+
+.chapter-content code,
+.chapter-content pre {
+  font-family: "Courier New", monospace;
+  background-color: #f6f6f6;
+  border-radius: 4px;
+}
+
+.chapter-content pre {
+  padding: 0.5em;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+.chapter-content .smallcaps {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+}
+
+.chapter-content .uppercase { text-transform: uppercase; }
+
+/* ================================================================
+   🎯 FORMULA LIST
+   ================================================================ */
+.formula-list {
+  margin-left: 2em;
+  max-width: 30em;
+}
+
+.formula-list p {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.5em 1em;
+  align-items: baseline;
+}
+
+@media screen and (max-width: 600px) {
+  .formula-list { margin-left: 0.5em; }
+  .formula-list p {
+    grid-template-columns: auto auto 1fr;
+    gap: 0.3em 0.5em;
+    font-size: 0.9em;
+  }
+}
+
+/* ================================================================
+   🔟 MODE GELAP
+   ================================================================ */
+.dark .chapter-content blockquote { border-left-color: #666; }
+
+.dark .chapter-content .letter {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+.dark .chapter-content th { background-color: #222; }
+
+.dark .chapter-content td,
+.dark .chapter-content th { border-color: #444; }
+
+.dark .chapter-content pre  { background-color: #1e1e1e; }
+.dark .chapter-content code { background-color: #1e1e1e; }
+
+.dark .chapter-content .info-box {
+  background-color: #2d2d2d;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .chapter-content .note::before,
+.dark .chapter-content .poem .note::before,
+.dark .chapter-content .blockquote .note::before,
+.dark .chapter-content .letter .note::before,
+.dark .chapter-content .dialog .note::before {
+  border-top-color: #666;
+}
+
+.dark .chapter-content img { filter: invert(1); }
+
+.dark .chapter-content .image-inline {
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+.dark .chapter-content img.photo,
+.dark .chapter-content img.illustration,
+.dark .chapter-content img.colored,
+.dark .chapter-content .chapter img.no-invert {
+  filter: none;
+  opacity: 0.9;
+}
+
+.dark .chapter-content .image-caption { color: #aaa; }
+
+.dark .chapter-content p.separator,
+.dark .chapter-content p.ornament,
+.dark .chapter-content p.divider { color: #999; }
+
+.dark .chapter-content .scene-break { color: #999; }
+
+/* ================================================================
+   1️⃣1️⃣ RESPONSIVE ADJUSTMENTS
+   ================================================================ */
+@media screen and (max-width: 600px) {
+  .chapter-content .image-left,
+  .chapter-content .image-right {
+    float: none;
+    display: block;
+    margin: 0.25em auto;
+    max-width: 90%;
+  }
+
+  .chapter-content .indent { margin-left: 1em; }
+}
+
+/* ================================================================
+   1️⃣2️⃣ FOOTNOTE POPUP
+   ================================================================ */
+.footnote-popup {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  max-width: 90vw;
+  width: 400px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  animation: slideUp 0.2s ease-out;
+}
+
+.dark .footnote-popup {
+  background: #1f2937;
+  border-color: #3b82f6;
+  color: #e5e7eb;
+}
+
+.footnote-popup-content {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: left;
+  margin-bottom: 0.75rem;
+}
+
+.footnote-popup-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  transition: color 0.2s;
+  padding: 0.25rem;
+}
+
+.footnote-popup-close:hover { color: #1f2937; }
+.dark .footnote-popup-close:hover { color: #f3f4f6; }
+
+.footnote-popup-goto {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.footnote-popup-goto:hover { background: #2563eb; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.chapter-content sup a {
+  text-decoration: none;
+  color: #3b82f6;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chapter-content sup a:hover { text-decoration: underline; }
+.dark .chapter-content sup a { color: #60a5fa; }
+
+/* ================================================================
+   1️⃣3️⃣ READING MODE FIXES (sepia, dark override)
+   ================================================================ */
+.reading-mode-bg { background-color: #FFF8DC !important; }
+
+.reading-mode-bg .chapter-content { color: #2d2d2d !important; }
+
+.reading-mode-bg .chapter-content h1,
+.reading-mode-bg .chapter-content h2,
+.reading-mode-bg .chapter-content h3,
+.reading-mode-bg .chapter-content h4,
+.reading-mode-bg .chapter-content h5,
+.reading-mode-bg .chapter-content h6 { color: #1a1a1a !important; }
+
+.reading-mode-bg .chapter-content p,
+.reading-mode-bg .chapter-content span,
+.reading-mode-bg .chapter-content div,
+.reading-mode-bg .chapter-content li { color: #2d2d2d !important; }
+
+.reading-mode-bg .chapter-content a { color: #0066cc !important; }
+
+.reading-mode-bg .chapter-content blockquote {
+  background-color: #f9f6f0 !important;
+  color: #444 !important;
+  border-left-color: #999 !important;
+}
+
+.reading-mode-bg .chapter-content .info-box {
+  background-color: #f5f0e8 !important;
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.reading-mode-bg .chapter-content .note { color: #555 !important; }
+.reading-mode-bg .chapter-content .note::before { border-top-color: #999 !important; }
+.reading-mode-bg .chapter-content .note p { color: #555 !important; }
+
+.reading-mode-bg .chapter-content .letter {
+  background-color: #f9f6f0 !important;
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+}
+
+.reading-mode-bg .chapter-content pre,
+.reading-mode-bg .chapter-content code {
+  background-color: #f5f0e8 !important;
+  color: #2d2d2d !important;
+}
+
+.reading-mode-bg .chapter-content table { color: #2d2d2d !important; }
+
+.reading-mode-bg .chapter-content th {
+  background-color: #f5f0e8 !important;
+  color: #1a1a1a !important;
+  border-color: #d4c5b0 !important;
+}
+
+.reading-mode-bg .chapter-content td {
+  border-color: #d4c5b0 !important;
+  color: #2d2d2d !important;
+}
+
+.reading-mode-bg .chapter-content p.separator,
+.reading-mode-bg .chapter-content p.ornament,
+.reading-mode-bg .chapter-content p.divider,
+.reading-mode-bg .chapter-content .scene-break { color: #999 !important; }
+
+.reading-mode-bg .chapter-content .image-caption { color: #666 !important; }
+
+.reading-mode-bg .chapter-content img {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+.reading-mode-bg .chapter-content strong,
+.reading-mode-bg .chapter-content b { color: #1a1a1a !important; }
+
+.reading-mode-bg .chapter-content em,
+.reading-mode-bg .chapter-content i { color: #2d2d2d !important; }
+
+.reading-mode-bg .chapter-content .dialog .speaker { color: #1a1a1a !important; }
+.reading-mode-bg .chapter-content .poem { color: #2d2d2d !important; }
+.reading-mode-bg .chapter-content .poem .author { color: #1a1a1a !important; }
+.reading-mode-bg .chapter-content .epigraph { color: #444 !important; }
+.reading-mode-bg .chapter-content .epigraph cite { color: #555 !important; }

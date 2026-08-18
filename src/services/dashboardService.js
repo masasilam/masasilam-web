@@ -1,0 +1,93 @@
+import api from './api'
+
+const normalize = (res, isArray = false) => {
+  if (!res?.data) return { success: false, message: 'No data', data: isArray ? [] : null }
+
+  const { result, detail, code, data } = res.data
+
+  if (!isArray) {
+    return { success: result === 'Success', message: detail || '', code: code || 200, data }
+  }
+
+  const items = data?.list || data?.items || (Array.isArray(data) ? data : [])
+
+  const total = data?.totalData ?? data?.total ?? items.length
+
+  return {
+    success: result === 'Success',
+    message: detail || '',
+    code:    code   || 200,
+    data: {
+      items,
+      total,
+      totalData: total,
+      page:  data?.page  || 1,
+      limit: data?.limit || 12,
+    }
+  }
+}
+
+export const dashboardService = {
+  getMainDashboard: () =>
+    api.get('/dashboard').then(res => normalize(res)),
+
+  getLibrary: (filter = 'all', page = 1, limit = 16, sortBy = 'last_read') =>
+    api.get('/dashboard/library', { params: { filter, page, limit, sortBy } })
+      .then(res => normalize(res, true)),
+
+  getReadingHistory: (days = 7, page = 1, limit = 20) =>
+    api.get('/dashboard/history', { params: { days, page, limit } })
+      .then(res => normalize(res, true)),
+
+  getStatistics: (period = 30) =>
+    api.get('/dashboard/statistics', { params: { period } })
+      .then(res => normalize(res)),
+
+  getAnnotations: (type = 'all', page = 1, limit = 20, sortBy = 'recent') =>
+    api.get('/dashboard/annotations', { params: { type, page, limit, sortBy } })
+      .then(res => normalize(res, true)),
+
+  getReviews: (page = 1, limit = 10) =>
+    api.get('/dashboard/reviews', { params: { page, limit } })
+      .then(res => normalize(res, true)),
+
+  getQuickStats: () =>
+    api.get('/dashboard/quick-stats').then(res => normalize(res)),
+
+  getCalendar: (year, month) =>
+    api.get('/dashboard/calendar', { params: { year, month } })
+      .then(res => normalize(res)),
+
+  getGoals: () =>
+    api.get('/dashboard/goals').then(res => normalize(res)),
+
+  createGoal: (payload) =>
+    api.post('/dashboard/goals', payload).then(res => normalize(res)),
+
+  updateGoal: (id, payload) =>
+    api.put(`/dashboard/goals/${id}`, payload).then(res => normalize(res)),
+
+  deleteGoal: (id) =>
+    api.delete(`/dashboard/goals/${id}`).then(res => normalize(res)),
+
+  getAchievements: () =>
+    api.get('/dashboard/achievements').then(res => normalize(res)),
+
+  getRecommendations: (limit = 10) =>
+    api.get('/dashboard/recommendations', { params: { limit } })
+      .then(res => normalize(res, true)),
+
+  getCorrections: (status = 'PENDING', page = 1, limit = 20) =>
+    api.get('/dashboard/corrections', { params: { status, page, limit } })
+      .then(res => normalize(res, true)),
+
+  approveCorrection: (correctionId) =>
+    api.post(`/dashboard/corrections/${correctionId}/approve`)
+      .then(res => normalize(res)),
+
+  rejectCorrection: (correctionId, note = null) =>
+    api.post(`/dashboard/corrections/${correctionId}/reject`, { note })
+      .then(res => normalize(res)),
+}
+
+export default dashboardService
