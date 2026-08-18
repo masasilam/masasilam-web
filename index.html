@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="id" prefix="og: https://ogp.me/ns#" class="dark">
+<head>
+  <!-- Essential Meta Tags -->
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+
+  <!-- Primary Meta Tags - Will be replaced by React Helmet -->
+  <title>MasasilaM - Perpustakaan Digital Domain Publik dan Yang Terbengkalai dan Yang Terdegradasi</title>
+  <meta name="title" content="MasasilaM - Perpustakaan Digital Domain Publik dan Yang Terbengkalai dan Yang Terdegradasi" />
+  <meta name="description" content="Perpustakaan digital gratis untuk buku klasik. Akses buku-buku domain publik dengan smart reading, bookmark, dan highlight." />
+  <meta name="keywords" content="perpustakaan digital Indonesia, perpustakaan digital, buku gratis, domain publik, buku klasik, literasi digital, MasasilaM" />
+  <meta name="author" content="MasasilaM - KajanK" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+  <!-- Geo Tags -->
+  <meta name="geo.region" content="ID" />
+  <meta name="geo.placename" content="Indonesia" />
+
+  <!-- Language -->
+  <meta name="language" content="Indonesian" />
+  <meta http-equiv="content-language" content="id" />
+
+  <!-- public/index.html atau index.html di root -->
+  <link rel="related"
+        type="application/atom+xml;profile=opds-catalog"
+        title="Masasilam OPDS Catalog"
+        href="https://api.masasilam.com/opds" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://masasilam.com/" />
+
+  <!-- Favicon & App Icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#f59e0b" />
+  <meta name="msapplication-TileColor" content="#f59e0b" />
+  <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+
+  <!-- Mobile App Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://masasilam.com/" />
+  <meta property="og:site_name" content="MasasilaM" />
+  <meta property="og:title" content="MasasilaM - Perpustakaan Digital Domain Publik dan Yang Terbengkalai dan Yang Terdegradasi" />
+  <meta property="og:description" content="Perpustakaan digital gratis untuk buku klasik. Akses buku-buku domain publik dengan smart reading." />
+  <meta property="og:image" content="https://masasilam.com/og-image.jpg" />
+  <meta property="og:locale" content="id_ID" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://masasilam.com/" />
+  <meta name="twitter:title" content="MasasilaM - Perpustakaan Digital Domain Publik dan Yang Terbengkalai dan Yang Terdegradasi" />
+  <meta name="twitter:description" content="Perpustakaan digital gratis untuk buku klasik." />
+  <meta name="twitter:image" content="https://masasilam.com/twitter-card.jpg" />
+
+  <!-- Security Headers -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+  <meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <!-- DNS Prefetch & Preconnect -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z6VFRV9H6G"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Z6VFRV9H6G', {
+      'send_page_view': false,
+      'anonymize_ip': true
+    });
+  </script>
+
+  <!-- Theme Detection Script - BEFORE CRITICAL CSS -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'dark';
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
+  <!-- Critical CSS -->
+  <style>
+    html {
+      background-color: #111827;
+      scroll-behavior: smooth;
+    }
+
+    html:not(.dark) {
+      background-color: #ffffff;
+    }
+
+    body {
+      background-color: transparent;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Prevent FOUC */
+    #root:empty {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #111827;
+    }
+
+    html:not(.dark) #root:empty {
+      background-color: #ffffff;
+    }
+
+    /* Loading Spinner - Inline (Not Fixed) */
+    #root:empty::before {
+      content: '';
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(245, 158, 11, 0.2);
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #root:not(:empty)::before {
+      display: none;
+    }
+
+    /* Accessibility: Skip to main content */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    .sr-only:focus {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: auto;
+      height: auto;
+      padding: 1rem 2rem;
+      margin: 0;
+      overflow: visible;
+      clip: auto;
+      white-space: normal;
+      background-color: #f59e0b;
+      color: white;
+      font-weight: bold;
+      z-index: 10000;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+<!-- Skip to Main Content -->
+<a href="#main-content" class="sr-only">Skip to main content</a>
+
+<!-- Main App Root -->
+<div id="root"></div>
+
+<!-- Module Script -->
+<script type="module" src="/src/main.jsx"></script>
+
+<!-- Noscript Fallback -->
+<noscript>
+  <div style="text-align: center; padding: 50px; font-family: sans-serif; background: #111827; color: white; min-height: 100vh;">
+    <h1>JavaScript Required</h1>
+    <p>MasasilaM memerlukan JavaScript untuk berfungsi dengan baik.</p>
+    <p>Silakan aktifkan JavaScript di browser Anda.</p>
+  </div>
+</noscript>
+</body>
+</html>
