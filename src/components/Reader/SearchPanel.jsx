@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { X, Search, BookOpen } from 'lucide-react'
 import { COLOR_MODES } from '../../constants/readerConstants'
-import { isLinearSpineItem } from '../../utils/epubUtils'
+import { isLinearSpineItem, normalizeSectionDocument } from '../../utils/epubUtils'
 
 const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
   const [query,        setQuery]        = useState('')
@@ -87,6 +87,7 @@ const SearchPanel = ({ onClose, onNavigate, colorMode, bookRef, tocRef }) => {
           if (!section) continue
 
           await section.load(book.load.bind(book))
+          normalizeSectionDocument(section.document)
           const doc   = section.document
           const found = []
 
