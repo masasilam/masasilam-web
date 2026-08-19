@@ -174,6 +174,7 @@ export const resolveAnchorToCfi = async (epubBook, canonicalHref, anchor) => {
     console.log('  sectionDoc loaded:', sectionDoc ? '✅' : '❌ null')
 
     if (!sectionDoc) throw new Error('sectionDoc null')
+    normalizeSectionDocument(sectionDoc)
 
     let allIds = []
     try {
@@ -204,6 +205,22 @@ export const resolveAnchorToCfi = async (epubBook, canonicalHref, anchor) => {
     console.groupEnd()
     return { cfi: null, method: 'direct-href', canonicalHref }
   }
+}
+
+// ── Document normalization ─────────────────────────────────────────────────
+export const normalizeSectionDocument = (doc) => {
+  if (!doc?.body) return doc
+  try {
+    const serialized = new XMLSerializer().serializeToString(doc)
+    const htmlDoc = new DOMParser().parseFromString(serialized, 'text/html')
+    if (!htmlDoc?.body) return doc
+
+    const importedBody = doc.importNode(htmlDoc.body, true)
+    doc.body.parentNode.replaceChild(importedBody, doc.body)
+  } catch (err) {
+    console.warn('[normalizeSectionDocument] gagal normalisasi:', err.message)
+  }
+  return doc
 }
 
 // ── Local storage keys ─────────────────────────────────────────────────────
