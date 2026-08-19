@@ -609,10 +609,12 @@ const ZineDetailPage = () => {
       })
     : []
 
-  // Genre list
-  const genreList = zine.genres
-    ? zine.genres.split(',').map(g => g.trim()).filter(Boolean)
-    : []
+  // Genre list — API bisa mengirim string "A, B, C" atau array objek genre
+  const genreList = Array.isArray(zine.genres)
+    ? zine.genres.map(g => (typeof g === 'string' ? g : g?.name)).map(g => g?.trim()).filter(Boolean)
+    : typeof zine.genres === 'string'
+      ? zine.genres.split(',').map(g => g.trim()).filter(Boolean)
+      : []
 
   const tabs = [
     { id:'info',      label:'Info',        icon: Info  },
@@ -745,7 +747,7 @@ const ZineDetailPage = () => {
                       {zine.category}
                     </span>
                   )}
-                  {genreList.slice(0,2).map((g, i) => (
+                  {genreList.filter(g => g !== zine.category).slice(0,2).map((g, i) => (
                     <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-semibold
                                              bg-white/10 text-white/70 border border-white/20">
                       {g}
