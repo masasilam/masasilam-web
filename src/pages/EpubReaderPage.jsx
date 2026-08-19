@@ -214,7 +214,7 @@ const EpubReaderPage = () => {
       } catch { }
     }
     loadFromServer()
-  }, [slug, isAuthenticated]) // eslint-disable-line
+  }, [slug, isAuthenticated])
 
   useEffect(() => {
     if (!isAuthenticated || !slug) return
@@ -238,7 +238,7 @@ const EpubReaderPage = () => {
       } catch { }
     }
     loadPendingCorrections()
-  }, [slug, isAuthenticated]) // eslint-disable-line
+  }, [slug, isAuthenticated])
 
   const calcProgress = useCallback((cfi, epubBook) => {
     if (!cfi) return
@@ -654,7 +654,7 @@ const EpubReaderPage = () => {
     })
 
     return () => { try { epubBook.destroy() } catch { } }
-  }, [book]) // eslint-disable-line
+  }, [book])
 
   useEffect(() => {
     const el = touchWrapperRef.current
@@ -697,7 +697,7 @@ const EpubReaderPage = () => {
         )
       } catch { }
     })
-  }, [isReady, annotations]) // eslint-disable-line
+  }, [isReady, annotations])
 
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
@@ -710,7 +710,7 @@ const EpubReaderPage = () => {
         )
       } catch { }
     })
-  }, [isReady, pendingCorrections]) // eslint-disable-line
+  }, [isReady, pendingCorrections])
 
   const prevFontSizeRef = useRef(fontSize)
   useEffect(() => {
@@ -735,10 +735,10 @@ const EpubReaderPage = () => {
       try { renditionRef.current?.resize('100%', '100%') } catch { }
     }, 80)
     return () => clearTimeout(timer)
-  }, [colorMode, fontSize, fontFamily, applyTheme]) // eslint-disable-line
+  }, [colorMode, fontSize, fontFamily, applyTheme])
 
-  useEffect(() => { localStorage.setItem(keys.annotations, JSON.stringify(annotations)) }, [annotations]) // eslint-disable-line
-  useEffect(() => { localStorage.setItem(keys.bookmarks, JSON.stringify(bookmarks)) }, [bookmarks])   // eslint-disable-line
+  useEffect(() => { localStorage.setItem(keys.annotations, JSON.stringify(annotations)) }, [annotations])
+  useEffect(() => { localStorage.setItem(keys.bookmarks, JSON.stringify(bookmarks)) }, [bookmarks])
 
   useEffect(() => {
     if (!renditionRef.current || isNavigatingRef.current) return
@@ -753,7 +753,7 @@ const EpubReaderPage = () => {
       }, 80)
     }, 120)
     return () => clearTimeout(timer)
-  }, [showSettings, showSidebar, showSearch]) // eslint-disable-line
+  }, [showSettings, showSidebar, showSearch])
 
   const handleNext = useCallback(() => {
     if (!acquireNavLock(700)) return
@@ -893,7 +893,7 @@ const EpubReaderPage = () => {
     } finally {
       setTimeout(() => { navLockRef.current = false }, isMobile ? 700 : 400)
     }
-  }, [acquireNavLock, fontSize]) // eslint-disable-line
+  }, [acquireNavLock, fontSize])
 
   const handleNextRef = useRef(handleNext)
   const handlePrevRef = useRef(handlePrev)
@@ -955,43 +955,41 @@ const EpubReaderPage = () => {
         if (p) { p.replaceChild(doc.createTextNode(el.textContent || ''), el); p.normalize() }
       })
 
-      const lowerQ = q.toLowerCase()
-      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null)
-      const textNodes = []
-      let n = walker.nextNode()
-      while (n) {
-        if (n.nodeValue?.toLowerCase().includes(lowerQ)) textNodes.push(n)
-        n = walker.nextNode()
-      }
+      let targetRange = null
+      try {
+        const contents = renditionRef.current.getContents?.()?.[0]
+        if (contents?.range) targetRange = contents.range(cfi)
+      } catch { }
 
-      let firstMark = null
-      textNodes.forEach(textNode => {
+      if (targetRange) {
         try {
-          const parent = textNode.parentNode
-          if (!parent || ['SCRIPT', 'STYLE'].includes(parent.tagName)) return
-          const text = textNode.nodeValue
-          const lowerText = text.toLowerCase()
-          let pos = lowerText.indexOf(lowerQ)
-          if (pos === -1) return
-
-          const frag = doc.createDocumentFragment()
-          let last = 0
-          while (pos !== -1) {
-            if (pos > last) frag.appendChild(doc.createTextNode(text.slice(last, pos)))
+          const span = doc.createElement('mark')
+          span.className = 'epub-search-highlight'
+          targetRange.surroundContents(span)
+        } catch { }
+      } else {
+        const lowerQ = q.toLowerCase()
+        const startContainer = targetRange?.startContainer?.parentElement
+        const scope = startContainer || doc.body
+        const walker = doc.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null)
+        let n = walker.nextNode()
+        while (n) {
+          if (n.nodeValue?.toLowerCase().includes(lowerQ)) {
+            const parent = n.parentNode
+            const idx = n.nodeValue.toLowerCase().indexOf(lowerQ)
             const mark = doc.createElement('mark')
             mark.className = 'epub-search-highlight'
-            mark.textContent = text.slice(pos, pos + q.length)
-            if (!firstMark) firstMark = mark
-            frag.appendChild(mark)
-            last = pos + q.length
-            pos = lowerText.indexOf(lowerQ, last)
+            mark.textContent = n.nodeValue.slice(idx, idx + q.length)
+            const before = doc.createTextNode(n.nodeValue.slice(0, idx))
+            const after = doc.createTextNode(n.nodeValue.slice(idx + q.length))
+            const frag = doc.createDocumentFragment()
+            frag.appendChild(before); frag.appendChild(mark); frag.appendChild(after)
+            parent.replaceChild(frag, n)
+            break
           }
-          if (last < text.length) frag.appendChild(doc.createTextNode(text.slice(last)))
-          parent.replaceChild(frag, textNode)
-        } catch { }
-      })
-
-      if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          n = walker.nextNode()
+        }
+      }
 
       setTimeout(() => {
         try {
