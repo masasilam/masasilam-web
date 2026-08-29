@@ -166,7 +166,7 @@ const ZineCard = ({ zine }) => {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto pt-1.5
                         border-t border-stone-100 dark:border-slate-800">
           <Stat icon={Eye}      value={zine.viewCount     || 0} className="text-stone-400 dark:text-slate-600" />
-          <Stat icon={BookOpen} value={zine.readCount     || 0} className="text-stone-400 dark:text-slate-600" />
+          <Stat icon={BookOpen} value={(zine.readCount || 0) + (zine.guestReadCount || 0)} className="text-stone-400 dark:text-slate-600" />
           <Stat icon={Download} value={zine.downloadCount || 0} className="text-stone-400 dark:text-slate-600" />
         </div>
       </div>

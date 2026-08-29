@@ -27,6 +27,7 @@ import { COLOR_MODES, HIGHLIGHT_COLORS } from '../constants/readerConstants'
 import {
   generateSessionId,
   getDeviceType,
+  getOrCreateGuestId,
   extractSpineIndex,
   isLinearSpineItem,
   normalizeHref,
@@ -371,7 +372,7 @@ const EpubReaderPage = () => {
         setIsReady(true)
         calcProgress(currentCfiRef.current, epubBook)
 
-        if (isAuthenticated && !startReadingCalledRef.current) {
+        if (!startReadingCalledRef.current) {
           startReadingCalledRef.current = true
           await navigationPromise.catch(() => { })
           try {
@@ -382,10 +383,15 @@ const EpubReaderPage = () => {
               chapterLabel: currentChapterLabelRef.current,
               chapterIndex: currentChapterIndexRef.current,
               totalChapters: totalChaptersRef.current,
+              guestId: isAuthenticated ? undefined : getOrCreateGuestId(),
             }, isZineMode)
 
             const data = res?.data?.data ?? res?.data
-            if (data && !data.firstTime && data.lastCfi) {
+            if (data && typeof data.lastProgress === 'number' && !locationsReadyRef.current) {
+              setProgress(Math.round(data.lastProgress))
+            }
+
+            if (isAuthenticated && data && !data.firstTime && data.lastCfi) {
               const serverCfi = data.lastCfi
               const localCfi = localStorage.getItem(keys.progress)
               const localCfiAt = parseInt(localStorage.getItem(keys.progressAt) || '0', 10)
@@ -395,7 +401,9 @@ const EpubReaderPage = () => {
                 renditionRef.current?.display(serverCfi).catch(() => { })
               }
             }
-          } catch { }
+          } catch (e) {
+            console.error('epubStartReading gagal:', e)
+          }
         }
 
         try {

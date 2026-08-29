@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Library, History, BarChart3, Calendar, Award, Settings,
   Target, Highlighter, Home, LogOut, Menu, X, Moon, Sun, BookOpen,
   Database, PenSquare, Newspaper, AlertTriangle, Layers, Clock, TrendingUp,
-  Rss, UserPen, Bell, ChevronRight, Film,
+  Rss, UserPen, Bell, ChevronRight, Film, Archive,
 } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
@@ -34,6 +34,7 @@ const ADMIN_MENU = [
   { path: '/dasbor/koreksi', icon: AlertTriangle, label: 'Koreksi Teks',       badge: 'Admin' },
   { path: '/dasbor/blog',    icon: PenSquare,     label: 'Posting Blog',        badge: 'Admin' },
   { path: '/dasbor/koran',   icon: Newspaper,     label: 'Kelola Koran',        badge: 'Admin' },
+  { path: '/dasbor/koran/monograf', icon: Archive, label: 'Kelola Monograf',   badge: 'Admin' },
   { path: '/dasbor/kelola',  icon: Database,      label: 'Kelola Perpustakaan', badge: 'Admin' },
 ]
 

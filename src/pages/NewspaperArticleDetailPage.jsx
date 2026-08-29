@@ -258,23 +258,27 @@ const EPUB_SCOPED_CSS = `
   [data-epub] .smallcaps { font-variant: small-caps; letter-spacing: 0.05em; }
   [data-epub] .uppercase { text-transform: uppercase; }
 
-  @media (prefers-color-scheme: dark) {
-    [data-epub] { background-color: #121212; color: #e0e0e0; }
-    [data-epub] blockquote { border-left-color: #666; }
-    [data-epub] .letter { background-color: #1e1e1e; border-color: #444; }
-    [data-epub] th { background-color: #222; }
-    [data-epub] td, [data-epub] th { border-color: #444; }
-    [data-epub] pre { background-color: #1e1e1e; }
-    [data-epub] .info-box { background-color: #2d2d2d; border: 1px solid #555; color: #e0e0e0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
-    [data-epub] .note::before { border-top-color: #666; }
-    [data-epub] img { filter: invert(1); }
-    [data-epub] .image-inline { filter: invert(1); opacity: 0.9; }
-    [data-epub] img.photo, [data-epub] img.illustration, [data-epub] img.colored, [data-epub] .chapter img.no-invert { filter: none; opacity: 0.9; }
-    [data-epub] img.logo, [data-epub] .colophon img, [data-epub] .imprint img { filter: invert(1) hue-rotate(180deg); }
-    [data-epub] .image-caption { color: #aaa; }
-    [data-epub] p.separator, [data-epub] p.ornament, [data-epub] p.divider { color: #999; }
-    [data-epub] .scene-break { color: #999; }
-  }
+    [data-epub][data-reader-mode="dark"] blockquote { border-left-color: #666; }
+    [data-epub][data-reader-mode="dark"] .letter { background-color: #1e1e1e; border-color: #444; }
+    [data-epub][data-reader-mode="dark"] th { background-color: #222; }
+    [data-epub][data-reader-mode="dark"] td, [data-epub][data-reader-mode="dark"] th { border-color: #444; }
+    [data-epub][data-reader-mode="dark"] pre { background-color: #1e1e1e; }
+    [data-epub][data-reader-mode="dark"] .info-box { background-color: #2d2d2d; border: 1px solid #555; color: #e0e0e0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+    [data-epub][data-reader-mode="dark"] .note::before { border-top-color: #666; }
+    [data-epub][data-reader-mode="dark"] img { filter: invert(1); }
+    [data-epub][data-reader-mode="dark"] .image-inline { filter: invert(1); opacity: 0.9; }
+    [data-epub][data-reader-mode="dark"] img.photo,
+    [data-epub][data-reader-mode="dark"] img.illustration,
+    [data-epub][data-reader-mode="dark"] img.colored,
+    [data-epub][data-reader-mode="dark"] .chapter img.no-invert { filter: none; opacity: 0.9; }
+    [data-epub][data-reader-mode="dark"] img.logo,
+    [data-epub][data-reader-mode="dark"] .colophon img,
+    [data-epub][data-reader-mode="dark"] .imprint img { filter: invert(1) hue-rotate(180deg); }
+    [data-epub][data-reader-mode="dark"] .image-caption { color: #aaa; }
+    [data-epub][data-reader-mode="dark"] p.separator,
+    [data-epub][data-reader-mode="dark"] p.ornament,
+    [data-epub][data-reader-mode="dark"] p.divider { color: #999; }
+    [data-epub][data-reader-mode="dark"] .scene-break { color: #999; }
 
   @media screen and (max-width: 600px) {
     [data-epub] .image-left, [data-epub] .image-right { float: none; display: block; margin: 0.25em auto; max-width: 90%; }
@@ -402,7 +406,7 @@ const ReaderToolbar = ({ fontIdx, setFontIdx, fontFamilyKey, setFontFamilyKey, m
   )
 }
 
-const ArticleContent = ({ html, fontSize, fontFamily, mode }) => {
+const ArticleContent = ({ html, fontSize, fontFamily, mode, modeKey }) => {
   const ref = useRef(null)
   const [footnote, setFootnote] = useState(null)
 
@@ -444,11 +448,11 @@ const ArticleContent = ({ html, fontSize, fontFamily, mode }) => {
     }
   }, [footnote])
 
-  return (
-    <>
-      <style>{EPUB_SCOPED_CSS}</style>
-      <div ref={ref} data-epub lang="en" className="chapter"
-        style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, backgroundColor: 'transparent', margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em', transition: 'font-size 0.15s, color 0.2s', '--epub-note-color': mode.accent }} />
+    return (
+      <>
+        <style>{EPUB_SCOPED_CSS}</style>
+        <div ref={ref} data-epub data-reader-mode={modeKey} lang="en" className="chapter"
+          style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, backgroundColor: 'transparent', margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em', transition: 'font-size 0.15s, color 0.2s', '--epub-note-color': mode.accent }} />
       {footnote && ReactDOM.createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setFootnote(null)} />
@@ -678,11 +682,11 @@ const NewspaperArticleDetailPage = () => {
               )}
 
               {htmlContent ? (
-                <ArticleContent html={htmlContent} fontSize={fontSize} fontFamily={fontFamily} mode={mode} />
+                <ArticleContent html={htmlContent} fontSize={fontSize} fontFamily={fontFamily} mode={mode} modeKey={modeKey} />
               ) : plainContent ? (
                 <>
                   <style>{EPUB_SCOPED_CSS}</style>
-                  <div data-epub lang="en" className="chapter" style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em' }}>
+                  <div data-epub data-reader-mode={modeKey} lang="en" className="chapter" style={{ fontFamily, fontSize, lineHeight: 1.7, color: mode.color, margin: '0 auto', padding: '0 1.25em 1.5em', maxWidth: '38em' }}>
                     {plainContent.split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
                   </div>
                 </>

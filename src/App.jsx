@@ -58,6 +58,10 @@ import NewspaperDatePage from './pages/NewspaperDatePage'
 import NewspaperArticleDetailPage from './pages/NewspaperArticleDetailPage'
 import NewspaperSearchPage from './pages/NewspaperSearchPage'
 import NewspaperOnThisDayPage from './pages/NewspaperOnThisDayPage'
+import MonographsPage from './pages/MonographsPage'
+import MonographDetailPage from './pages/MonographDetailPage'
+import MonographManagePage from './pages/dashboard/MonographManagePage'
+import MonographEditorPage from './pages/dashboard/MonographEditorPage'
 import DashboardLayout from './pages/dashboard/DashboardLayout'
 import DashboardOverview from './pages/dashboard/DashboardOverview'
 import MyLibraryPage from './pages/dashboard/MyLibraryPage'
@@ -157,6 +161,10 @@ function App() {
         <Route path="/koran/hari-ini" element={<PublicLayout><NewspaperOnThisDayPage /></PublicLayout>} />
         <Route path="/koran/tanggal/:date" element={<PublicLayout><NewspaperDatePage /></PublicLayout>} />
         <Route path="/koran/rubrik/:genreSlug" element={<PublicLayout><NewspaperRubrikPage /></PublicLayout>} />
+        {/* PENTING: rute /koran/monograf HARUS berada di atas /koran/:sourceSlug,
+            kalau tidak React Router akan mencocokkan "monograf" sebagai :sourceSlug lebih dulu. */}
+        <Route path="/koran/monograf" element={<PublicLayout><MonographsPage /></PublicLayout>} />
+        <Route path="/koran/monograf/:slug" element={<PublicLayout><MonographDetailPage /></PublicLayout>} />
         <Route path="/koran/:sourceSlug" element={<PublicLayout><NewspaperSourceDetailPage /></PublicLayout>} />
         <Route path="/koran/:sourceSlug/:second" element={<PublicLayout><NewspaperSecondSegment /></PublicLayout>} />
         <Route path="/koran/:sourceSlug/:year/:edition" element={<PublicLayout><NewspaperEditionPage /></PublicLayout>} />
@@ -203,6 +211,9 @@ function App() {
           <Route path="koran" element={<NewspaperManagePage />} />
           <Route path="koran/baru" element={<NewspaperEditorPage />} />
           <Route path="koran/edit/:id" element={<NewspaperEditorPage />} />
+          <Route path="koran/monograf" element={<MonographManagePage />} />
+          <Route path="koran/monograf/baru" element={<MonographEditorPage />} />
+          <Route path="koran/monograf/edit/:slug" element={<MonographEditorPage />} />
           <Route path="profil-sosial" element={<SocialProfileSettingsPage />} />
         </Route>
 

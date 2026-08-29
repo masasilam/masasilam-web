@@ -275,7 +275,7 @@ const BookCard = ({ book }) => {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-auto pt-1.5
                         border-t border-stone-100 dark:border-slate-800">
           <Stat icon={Eye} value={book.viewCount || 0} className="text-stone-400 dark:text-slate-600" />
-          <Stat icon={BookOpen} value={book.readCount || 0} className="text-stone-400 dark:text-slate-600" />
+          <Stat icon={BookOpen} value={(book.readCount || 0) + (book.guestReadCount || 0)} className="text-stone-400 dark:text-slate-600" />
           <Stat icon={Download} value={book.downloadCount || 0} className="text-stone-400 dark:text-slate-600" />
           {book.totalComments > 0 && (
             <Stat icon={MessageCircle} value={book.totalComments} className="text-stone-400 dark:text-slate-600" />

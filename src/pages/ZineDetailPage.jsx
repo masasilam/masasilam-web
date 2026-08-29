@@ -6,7 +6,7 @@ import {
   ArrowLeft, ChevronDown, ChevronRight, Layers, Hash,
   ExternalLink, Database, Info, Tag, AlignLeft, List,
   Activity, Award, BarChart2, TrendingUp, Printer, Newspaper,
-  Users, Bookmark,
+  Users, Bookmark, RotateCcw,
 } from 'lucide-react'
 import zineService from '../services/zineService'
 import { useAuth } from '../hooks/useAuth'
@@ -16,9 +16,6 @@ import SEO from '../components/Common/SEO'
 import ZineDetailSocialSection from '../components/Social/ZineDetailSocialSection'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CoverImage
-// ─────────────────────────────────────────────────────────────────────────────
 const CoverImage = ({ url, alt, className = '' }) => {
   const [loaded, setLoaded] = useState(false)
   const [error,  setError]  = useState(false)
@@ -53,9 +50,6 @@ const CoverImage = ({ url, alt, className = '' }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StarDisplay
-// ─────────────────────────────────────────────────────────────────────────────
 const StarDisplay = ({ avg, size = 'sm' }) => {
   const filled   = Math.floor(avg)
   const hasHalf  = avg - filled >= 0.25 && avg - filled < 0.75
@@ -80,9 +74,6 @@ const StarDisplay = ({ avg, size = 'sm' }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RatingModal
-// ─────────────────────────────────────────────────────────────────────────────
 const RatingModal = ({ isOpen, onClose, onSubmit, zineTitle }) => {
   const [rating,      setRating]      = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
@@ -177,9 +168,6 @@ const RatingModal = ({ isOpen, onClose, onSubmit, zineTitle }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RatingSummary
-// ─────────────────────────────────────────────────────────────────────────────
 const RatingSummary = ({ ratingStats, onRate, userRating }) => {
   const hasStats = ratingStats?.totalRatings > 0
 
@@ -269,9 +257,6 @@ const RatingSummary = ({ ratingStats, onRate, userRating }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// InfoRow
-// ─────────────────────────────────────────────────────────────────────────────
 const InfoRow = ({ label, value, icon: Icon, accent = false }) => {
   if (!value && value !== 0) return null
   return (
@@ -292,9 +277,6 @@ const InfoRow = ({ label, value, icon: Icon, accent = false }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StatCard
-// ─────────────────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, color = 'text-emerald-500', bg = 'bg-emerald-50 dark:bg-emerald-900/20' }) => {
   if (!value && value !== 0) return null
   return (
@@ -308,9 +290,6 @@ const StatCard = ({ icon: Icon, label, value, color = 'text-emerald-500', bg = '
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SectionTitle
-// ─────────────────────────────────────────────────────────────────────────────
 const SectionTitle = ({ icon: Icon, title, iconColor = 'text-emerald-500' }) => (
   <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2
                  text-stone-500 dark:text-slate-400">
@@ -318,9 +297,6 @@ const SectionTitle = ({ icon: Icon, title, iconColor = 'text-emerald-500' }) => 
   </h2>
 )
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SeriesIssueCard — edisi lain dalam koleksi yang sama
-// ─────────────────────────────────────────────────────────────────────────────
 const SeriesIssueCard = ({ issue, currentSlug }) => {
   const isCurrent = issue.slug === currentSlug
   return (
@@ -364,9 +340,6 @@ const SeriesIssueCard = ({ issue, currentSlug }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ZineDetailPage
-// ─────────────────────────────────────────────────────────────────────────────
 const ZineDetailPage = () => {
   const { zineSlug }       = useParams()
   const navigate           = useNavigate()
@@ -389,10 +362,12 @@ const ZineDetailPage = () => {
   const [isFavorited,      setIsFavorited]      = useState(false)
   const [seriesIssues,     setSeriesIssues]     = useState([])
   const [seriesLoading,    setSeriesLoading]    = useState(false)
+  const [hasProgress,      setHasProgress]      = useState(false)
+  const [lastCfi,          setLastCfi]          = useState(null)
+  const [progressPercent,  setProgressPercent]  = useState(null)
 
   const [, startTransition] = useTransition()
 
-  // ── Fetch helpers ──────────────────────────────────────────────────────────
   const fetchUserRating = useCallback(async () => {
     try { const r = await zineService.getMyRating(zineSlug); setUserRating(r.data || null) }
     catch { setUserRating(null) }
@@ -416,7 +391,6 @@ const ZineDetailPage = () => {
     try { const d = await zineService.getZineBySlug(zineSlug); setZine(d) } catch {}
   }, [zineSlug])
 
-  // Ambil edisi lain dalam koleksi yang sama
   const fetchSeriesIssues = useCallback(async (collectionName) => {
     if (!collectionName) return
     try {
@@ -427,7 +401,6 @@ const ZineDetailPage = () => {
         searchTitle: collectionName,
       })
       const list = res.data?.data || []
-      // Filter yang benar-benar satu koleksi
       const filtered = list.filter(z =>
         (z.collectionName || z.title) === collectionName
       )
@@ -436,7 +409,6 @@ const ZineDetailPage = () => {
     finally { setSeriesLoading(false) }
   }, []) // eslint-disable-line
 
-  // ── Main init ──────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
     const init = async () => {
@@ -464,11 +436,40 @@ const ZineDetailPage = () => {
     return () => { cancelled = true }
   }, [zineSlug, isAuthenticated]) // eslint-disable-line
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+    const checkProgress = async () => {
+      if (isAuthenticated) {
+        try {
+          const res = await zineService.getReadingProgress(zineSlug)
+          if (!cancelled && res?.hasProgress) {
+            setHasProgress(true)
+            setLastCfi(res.lastCfi || null)
+            setProgressPercent(typeof res.percentageCompleted === 'number' ? Math.round(res.percentageCompleted) : null)
+          } else if (!cancelled) {
+            setHasProgress(false)
+            setLastCfi(null)
+            setProgressPercent(null)
+          }
+        } catch {
+          if (!cancelled) { setHasProgress(false); setLastCfi(null); setProgressPercent(null) }
+        }
+      } else {
+        const savedCfi = localStorage.getItem(`epub_progress_${zineSlug}`)
+        if (!cancelled) {
+          if (savedCfi) { setHasProgress(true); setLastCfi(savedCfi); setProgressPercent(null) }
+          else { setHasProgress(false); setLastCfi(null); setProgressPercent(null) }
+        }
+      }
+    }
+    checkProgress()
+    return () => { cancelled = true }
+  }, [zineSlug, isAuthenticated])
+
   const handleRead = async () => {
     try {
       setReadingLoading(true)
-      navigate(`/zine/${zineSlug}/baca`)
+      navigate(`/zine/${zineSlug}/baca`, hasProgress && lastCfi ? { state: { lastCfi } } : undefined)
       feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, {
         activityType: 'started_reading',
         entityType:   'ZINE',
@@ -505,8 +506,8 @@ const ZineDetailPage = () => {
       document.body.appendChild(link); link.click()
       document.body.removeChild(link); window.URL.revokeObjectURL(url)
       await fetchZineDetail(); setDownloadProgress(null)
-    } catch (e) {
-      console.error(e); setDownloadProgress(null); alert('❌ Gagal mengunduh zine.')
+    } catch {
+      setDownloadProgress(null); alert('❌ Gagal mengunduh zine.')
     } finally { setDownloadLoading(false) }
   }
 
@@ -551,7 +552,6 @@ const ZineDetailPage = () => {
     } catch (e) { alert(`❌ Gagal: ${e.response?.data?.detail || e.message}`) }
   }
 
-  // ── Utils ─────────────────────────────────────────────────────────────────
   const formatBytes = (bytes) => {
     if (!bytes) return null
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
@@ -583,7 +583,6 @@ const ZineDetailPage = () => {
     } catch { return url }
   }
 
-  // ── Loading / Error ────────────────────────────────────────────────────────
   if (loading) return <LoadingSpinner fullScreen />
   if (error || !zine) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -591,17 +590,14 @@ const ZineDetailPage = () => {
     </div>
   )
 
-  // ── Derived data ──────────────────────────────────────────────────────────
   const avgRating   = ratingStats?.averageRating || zine.averageRating || 0
   const totalRatings = ratingStats?.totalRatings || zine.totalRatings || 0
   const hasCollection = !!(zine.collectionName && zine.collectionName !== zine.title)
 
-  // Slug seri dari collectionName
   const seriesSlug = zine.collectionName
     ? zine.collectionName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-')
     : null
 
-  // Kontributor (dari field contributors jika ada)
   const contributorList = zine.contributors
     ? zine.contributors.split(',').map(c => {
         const match = c.trim().match(/(.+?)\s*\((.+?)\)/)
@@ -609,12 +605,18 @@ const ZineDetailPage = () => {
       })
     : []
 
-  // Genre list — API bisa mengirim string "A, B, C" atau array objek genre
   const genreList = Array.isArray(zine.genres)
     ? zine.genres.map(g => (typeof g === 'string' ? g : g?.name)).map(g => g?.trim()).filter(Boolean)
     : typeof zine.genres === 'string'
       ? zine.genres.split(',').map(g => g.trim()).filter(Boolean)
       : []
+
+  const ReadIcon = hasProgress ? RotateCcw : BookOpen
+  const readLabel = readingLoading
+    ? 'Memuat...'
+    : hasProgress
+      ? (progressPercent != null ? `Lanjutkan · ${progressPercent}%` : 'Lanjutkan Membaca')
+      : 'Baca Sekarang'
 
   const tabs = [
     { id:'info',      label:'Info',        icon: Info  },
@@ -623,7 +625,6 @@ const ZineDetailPage = () => {
     { id:'ulasan',    label:'Ulasan',      icon: MessageCircle },
   ].filter(t => !t.hidden)
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <SEO
@@ -634,17 +635,9 @@ const ZineDetailPage = () => {
         image={zine.coverImageUrl}
       />
 
-      {/*
-        ROOT WRAPPER
-        overflow-x-hidden → cegah elemen manapun memicu scrollbar horizontal
-      */}
       <div className="min-h-screen overflow-x-hidden transition-colors duration-300 bg-stone-50 dark:bg-slate-950">
 
-        {/* ════════════════════════════════════════════════════════════
-            HERO — blurred cover backdrop, sama seperti BookDetailPage
-        ════════════════════════════════════════════════════════════ */}
         <div className="relative overflow-hidden">
-          {/* Blurred backdrop */}
           {zine.coverImageUrl && (
             <div
               className="absolute inset-0 h-64 sm:h-72 pointer-events-none"
@@ -658,14 +651,12 @@ const ZineDetailPage = () => {
               }}
             />
           )}
-          {/* Gradient overlay */}
           <div
             className="absolute inset-0 h-64 sm:h-72 pointer-events-none bg-gradient-to-b from-transparent via-stone-50/40 to-stone-50 dark:via-slate-950/40 dark:to-slate-950"
             aria-hidden="true"
           />
 
           <div className="relative container mx-auto px-3 sm:px-4 max-w-5xl">
-            {/* Breadcrumb */}
             <div className="pt-4 pb-2">
               <nav className="flex items-center gap-1.5 text-xs mb-2 overflow-x-auto scrollbar-none text-stone-300 dark:text-slate-600">
                 <Link to="/" className="transition hover:text-stone-100 whitespace-nowrap">Beranda</Link>
@@ -692,16 +683,13 @@ const ZineDetailPage = () => {
               </button>
             </div>
 
-            {/* Cover + Info */}
             <div className="flex gap-4 sm:gap-6 pt-2 pb-6">
-              {/* COVER */}
               <div className="flex-shrink-0">
                 <div className="relative w-[110px] sm:w-[160px] lg:w-[192px]">
                   <div className="w-full rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 dark:border-white/5"
                     style={{ aspectRatio:'2/3' }}>
                     <CoverImage url={zine.coverImageUrl} alt={`Cover ${zine.title}`} className="w-full h-full" />
                   </div>
-                  {/* Badges di bawah cover */}
                   <div className="mt-2 flex flex-wrap gap-1">
                     {zine.isFeatured && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -723,8 +711,12 @@ const ZineDetailPage = () => {
                         <Hash className="w-2 h-2" />No.{zine.issueNumber}
                       </span>
                     )}
+                    {hasProgress && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white text-[9px] font-bold">
+                        <RotateCcw className="w-2 h-2" />Dilanjutkan
+                      </span>
+                    )}
                   </div>
-                  {/* Rating pill (desktop) */}
                   {avgRating > 0 && (
                     <div className="hidden sm:flex mt-2 items-center gap-1 justify-center px-2 py-1.5 rounded-lg border
                                     bg-white/80 dark:bg-slate-900/80 border-stone-200 dark:border-slate-700 backdrop-blur-sm">
@@ -736,9 +728,7 @@ const ZineDetailPage = () => {
                 </div>
               </div>
 
-              {/* INFO */}
               <div className="flex-1 min-w-0 pt-1">
-                {/* Kategori pills */}
                 <div className="flex flex-wrap gap-1 mb-2">
                   {zine.category && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold
@@ -755,7 +745,6 @@ const ZineDetailPage = () => {
                   ))}
                 </div>
 
-                {/* Judul koleksi (collectionName) */}
                 {hasCollection && (
                   <Link to={`/zine/seri/${seriesSlug}`}
                     className="inline-flex items-center gap-1.5 mb-1.5 px-2.5 py-1 rounded-lg
@@ -767,19 +756,19 @@ const ZineDetailPage = () => {
                   </Link>
                 )}
 
-                {/* Title — dari subtitle (lebih deskriptif) atau title */}
                 <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold leading-tight mb-1 text-white dark:text-slate-50 drop-shadow-md">
-                  {zine.subtitle || zine.title}
+                  {zine.title}
                 </h1>
+                {zine.subtitle && (
+                  <p className="text-sm text-white/70 mb-2 leading-snug italic">{zine.subtitle}</p>
+                )}
 
-                {/* Penerbit asli */}
                 {(zine.firstPublisher || zine.publisher) && (
                   <p className="text-sm text-white/70 mb-2 leading-snug">
                     {zine.firstPublisher || zine.publisher}
                   </p>
                 )}
 
-                {/* Meta baris */}
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-white/60">
                   {zine.publicationYear && (
                     <span className="flex items-center gap-1">
@@ -803,7 +792,6 @@ const ZineDetailPage = () => {
                   )}
                 </div>
 
-                {/* Rating mobile */}
                 {avgRating > 0 && (
                   <div className="sm:hidden flex items-center gap-2 mt-2">
                     <StarDisplay avg={avgRating} />
@@ -812,14 +800,13 @@ const ZineDetailPage = () => {
                   </div>
                 )}
 
-                {/* Desktop action buttons */}
                 <div className="hidden sm:flex flex-wrap gap-2 mt-4">
                   <button onClick={handleRead} disabled={readingLoading}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all
                                active:scale-[0.98] disabled:opacity-60
                                bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-900/40">
-                    <BookOpen className="w-4 h-4" />
-                    {readingLoading ? 'Memuat...' : 'Baca Sekarang'}
+                    <ReadIcon className="w-4 h-4" />
+                    {readLabel}
                   </button>
                   {zine.fileUrl && (
                     <button onClick={handleDownload} disabled={downloadLoading}
@@ -857,15 +844,9 @@ const ZineDetailPage = () => {
             </div>
           </div>
         </div>
-        {/* ── END HERO ── */}
 
-        {/* ════════════════════════════════════════════════════════════
-            MAIN CONTENT
-            pb-[88px] → ruang untuk fixed bottom bar di mobile
-        ════════════════════════════════════════════════════════════ */}
         <div className="container mx-auto px-3 sm:px-4 max-w-5xl pb-[88px] lg:pb-10">
 
-          {/* Download progress bar */}
           {downloadLoading && downloadProgress && (
             <div className="w-full h-1.5 rounded-full overflow-hidden bg-stone-200 dark:bg-slate-700 mb-4">
               {downloadProgress.percent != null
@@ -876,7 +857,6 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* User rating pill */}
           {userRating && (
             <div className="flex items-center justify-between p-3 rounded-xl border mb-4
                             bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800">
@@ -893,12 +873,11 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* Engagement stats */}
           {(zine.viewCount > 0 || zine.readCount > 0 || zine.downloadCount > 0) && (
             <div className="mb-5">
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                 {zine.viewCount     > 0 && <StatCard icon={Eye}        label="Dilihat"  value={zine.viewCount}     color="text-blue-500"    bg="bg-blue-50 dark:bg-blue-900/20"    />}
-                {zine.readCount     > 0 && <StatCard icon={BookOpen}   label="Pembaca"  value={zine.readCount}     color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
+                {(zine.readCount > 0 || zine.guestReadCount > 0) && <StatCard icon={BookOpen}   label="Pembaca" value={(zine.readCount || 0) + (zine.guestReadCount || 0)} color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
                 {zine.downloadCount > 0 && <StatCard icon={Download}   label="Diunduh"  value={zine.downloadCount} color="text-teal-500"    bg="bg-teal-50 dark:bg-teal-900/20"    />}
                 {totalRatings       > 0 && <StatCard icon={Star}       label="Rating"   value={totalRatings}       color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
                 {zine.totalWord     > 0 && <StatCard icon={AlignLeft}  label="Kata"     value={zine.totalWord}     color="text-violet-500"  bg="bg-violet-50 dark:bg-violet-900/20"  />}
@@ -906,12 +885,10 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* Rating summary */}
           <div className="mb-5">
             <RatingSummary ratingStats={ratingStats} onRate={handleOpenRatingModal} userRating={userRating} />
           </div>
 
-          {/* Koleksi banner (setara series banner di BookDetailPage) */}
           {hasCollection && (
             <div className="mb-5 p-4 rounded-2xl border overflow-hidden
                             bg-gradient-to-r from-emerald-50 to-teal-50
@@ -948,7 +925,6 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* TABS */}
           <div className="flex gap-1 p-1 rounded-xl mb-5 overflow-x-auto scrollbar-none
                           bg-stone-100 dark:bg-slate-800/60">
             {tabs.map(tab => {
@@ -967,13 +943,9 @@ const ZineDetailPage = () => {
             })}
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              TAB: INFO
-          ══════════════════════════════════════════════════════════ */}
           {activeTab === 'info' && (
             <div className="space-y-5">
 
-              {/* Deskripsi */}
               <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
                 <div className="px-4 sm:px-5 pt-4 pb-1">
                   <SectionTitle icon={BookOpen} title="Deskripsi (Dibikin Otomatis)" />
@@ -1001,7 +973,6 @@ const ZineDetailPage = () => {
                 </div>
               </div>
 
-              {/* Genre */}
               {genreList.length > 0 && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
                   <SectionTitle icon={Tag} title="Genre & Kategori" />
@@ -1025,14 +996,12 @@ const ZineDetailPage = () => {
                 </div>
               )}
 
-              {/* Riwayat Penerbitan */}
               {(zine.firstPublisher || zine.publisher || zine.firstPublishedDate) && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
                   <div className="px-4 sm:px-5 pt-4 pb-0">
                     <SectionTitle icon={Printer} title="Riwayat Penerbitan" iconColor="text-stone-500" />
                   </div>
 
-                  {/* Penerbit asli */}
                   {(zine.firstPublisher || zine.firstPublishedDate) && (
                     <div className="px-4 sm:px-5 pb-4">
                       <div className="text-[10px] uppercase tracking-wider font-semibold mb-3
@@ -1070,7 +1039,6 @@ const ZineDetailPage = () => {
                     </div>
                   )}
 
-                  {/* Edisi digital (publisher MasasilaM) */}
                   {zine.publisher && (
                     <>
                       {(zine.firstPublisher || zine.firstPublishedDate) && (
@@ -1101,7 +1069,6 @@ const ZineDetailPage = () => {
                 </div>
               )}
 
-              {/* Detail Zine */}
               <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
                 <div className="px-4 sm:px-5 pt-4 pb-2">
                   <SectionTitle icon={FileText} title="Detail Zine" />
@@ -1181,14 +1148,13 @@ const ZineDetailPage = () => {
                 </button>
               </div>
 
-              {/* Statistik interaksi */}
               {(zine.viewCount > 0 || zine.readCount > 0 || totalRatings > 0) && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
                   <SectionTitle icon={BarChart2} title="Statistik Interaksi" iconColor="text-violet-500" />
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                     {totalRatings       > 0 && <StatCard icon={Star}      label="Total Rating" value={totalRatings}       color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-900/20"   />}
                     {zine.viewCount     > 0 && <StatCard icon={Eye}       label="Dilihat"      value={zine.viewCount}     color="text-blue-500"    bg="bg-blue-50 dark:bg-blue-900/20"         />}
-                    {zine.readCount     > 0 && <StatCard icon={BookOpen}  label="Pembaca"      value={zine.readCount}     color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/20"   />}
+                    {(zine.readCount > 0 || zine.guestReadCount > 0) && <StatCard icon={BookOpen}  label="Pembaca" value={(zine.readCount || 0) + (zine.guestReadCount || 0)} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/20"   />}
                     {zine.downloadCount > 0 && <StatCard icon={Download}  label="Diunduh"      value={zine.downloadCount} color="text-teal-500"    bg="bg-teal-50 dark:bg-teal-900/20"         />}
                     {zine.totalWord     > 0 && <StatCard icon={AlignLeft} label="Total Kata"   value={zine.totalWord}     color="text-violet-500"  bg="bg-violet-50 dark:bg-violet-900/20"     />}
                   </div>
@@ -1197,13 +1163,9 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════
-              TAB: KONTRIBUTOR
-          ══════════════════════════════════════════════════════════ */}
           {activeTab === 'kontributor' && (
             <div className="space-y-5">
 
-              {/* Sumber digitalisasi */}
               {zine.source && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
                   <SectionTitle icon={Database} title="Sumber & Digitalisasi" iconColor="text-teal-500" />
@@ -1227,7 +1189,6 @@ const ZineDetailPage = () => {
                 </div>
               )}
 
-              {/* Kontributor list */}
               {contributorList.length > 0 && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
                   <SectionTitle icon={Users} title="Kontributor" iconColor="text-purple-500" />
@@ -1250,7 +1211,6 @@ const ZineDetailPage = () => {
                 </div>
               )}
 
-              {/* Empty state */}
               {!zine.source && contributorList.length === 0 && (
                 <div className="rounded-2xl p-10 text-center border border-dashed
                                 bg-stone-50 border-stone-200 dark:bg-slate-800/60 dark:border-slate-700">
@@ -1261,13 +1221,9 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════
-              TAB: EDISI LAIN (Koleksi)
-          ══════════════════════════════════════════════════════════ */}
           {activeTab === 'koleksi' && hasCollection && (
             <div className="space-y-4">
 
-              {/* Koleksi info header */}
               <div className="p-4 sm:p-5 rounded-2xl border bg-white border-emerald-200
                               dark:bg-slate-900 dark:border-emerald-800/50">
                 <div className="flex items-start gap-3 mb-3">
@@ -1298,7 +1254,6 @@ const ZineDetailPage = () => {
                 </div>
               </div>
 
-              {/* Daftar edisi */}
               <div>
                 <SectionTitle icon={Layers} title="Semua Edisi dalam Koleksi" iconColor="text-emerald-500" />
                 {seriesLoading ? (
@@ -1337,9 +1292,6 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════
-              TAB: ULASAN
-          ══════════════════════════════════════════════════════════ */}
           {activeTab === 'ulasan' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1442,16 +1394,11 @@ const ZineDetailPage = () => {
             </div>
           )}
 
-          {/* Social Integration */}
           <div className="mt-8">
             <ZineDetailSocialSection zine={zine} />
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════════════
-            FIXED BOTTOM BAR — mobile & tablet (< lg)
-            overflow-x-hidden di root + inset-x-0 di sini
-        ════════════════════════════════════════════════════════════ */}
         <div
           className="lg:hidden fixed inset-x-0 bottom-0 z-40
                      bg-white/95 dark:bg-slate-950/95 backdrop-blur-md
@@ -1464,7 +1411,6 @@ const ZineDetailPage = () => {
           }}
         >
           <div className="flex gap-2">
-            {/* Baca — flex-1 */}
             <button
               onClick={handleRead}
               disabled={readingLoading}
@@ -1473,11 +1419,10 @@ const ZineDetailPage = () => {
                          bg-emerald-500 hover:bg-emerald-400 text-white
                          shadow-md shadow-emerald-200/80 dark:shadow-emerald-900/40"
             >
-              <BookOpen className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{readingLoading ? 'Memuat...' : 'Baca Sekarang'}</span>
+              <ReadIcon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{readLabel}</span>
             </button>
 
-            {/* Unduh */}
             {zine.fileUrl && (
               <button
                 onClick={handleDownload}
@@ -1491,7 +1436,6 @@ const ZineDetailPage = () => {
               </button>
             )}
 
-            {/* Favorit */}
             <button
               onClick={handleFavorite}
               className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border transition-all active:scale-95
@@ -1503,7 +1447,6 @@ const ZineDetailPage = () => {
               <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
             </button>
 
-            {/* Bagikan */}
             <button
               onClick={handleShare}
               className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border transition-all active:scale-95

@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Film, Newspaper, Layers, ArrowRight, ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { BookOpen, Film, Newspaper, Layers, ArrowRight, ChevronLeft, ChevronRight, Play, RotateCcw } from 'lucide-react'
 import { sourceHref } from '../../utils/newspaperUtils'
+import { useAuth } from '../../hooks/useAuth'
+import bookService from '../../services/bookService'
+import zineService from '../../services/zineService'
 
 const getWikimediaThumb = (url, w = 900) => {
   if (!url) return null
@@ -37,15 +40,25 @@ const TYPE_CONFIG = {
   zine: { label: 'Zine & Majalah', icon: Layers, color: '#059669', colorDark: '#34D399', colorDim: '#064E3B', colorMid: '#059669', glow: 'rgba(5,150,105,0.2)', gradientLight: 'linear-gradient(135deg, rgba(209,250,229,0.97) 0%, rgba(236,253,245,0.92) 55%, rgba(255,255,255,0.0) 100%)', gradientDark: 'linear-gradient(135deg, rgba(6,78,59,0.95) 0%, rgba(17,24,39,0.85) 60%, transparent 100%)', fallbackLight: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 60%, #F0FDF4 100%)', fallbackDark: 'linear-gradient(135deg, #064E3B 0%, #111827 60%, #030712 100%)', badgeBgLight: 'rgba(5,150,105,0.08)', badgeBgDark: 'rgba(52,211,153,0.15)', badgeBorderLight: 'rgba(5,150,105,0.25)', badgeBorderDark: 'rgba(52,211,153,0.35)', btnBg: '#059669', btnText: '#ffffff', link: (item) => `/zine/${item.slug || item.id}`, cta: 'Baca Zine' },
 }
 
+const READER_PATH = {
+  book: (item) => `/buku/${item.slug || item.id}/baca`,
+  zine: (item) => `/zine/${item.slug || item.id}/baca`,
+  film: (item) => `/film/${item.slug || item.id}/tonton`,
+}
+
 const POSTER_RATIO = { book: '2 / 3', zine: '2 / 3', film: '16 / 9', newspaper: '576 / 224' }
 
+const READABLE_TYPES = ['book', 'zine']
+
 const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) => {
+  const { isAuthenticated } = useAuth()
   const [activeIdx, setActiveIdx] = useState(0)
   const [phase, setPhase] = useState('visible')
   const [bgLoaded, setBgLoaded] = useState({})
   const [posterLoaded, setPosterLoaded] = useState({})
   const [posterError, setPosterError] = useState({})
   const [isPaused, setIsPaused] = useState(false)
+  const [progressMap, setProgressMap] = useState({})
 
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'))
   useEffect(() => {
@@ -59,11 +72,44 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
   const autoplayRef = useRef(null)
 
   const featured = [
-    ...books.slice(0, 2).map(b => ({ ...b, _type: 'book', _image: b.cover_image || b.coverImageUrl || b.coverImage || b.image || null, _title: b.title, _sub: b.authorNames || b.author || 'Anonim', _desc: b.description, _extra: null })),
-    ...zines.slice(0, 2).map(z => ({ ...z, _type: 'zine', _image: z.coverImageUrl || z.cover_image || z.coverImage || z.image || null, _title: z.title, _sub: z.authorNames || z.author || z.publisher || 'Anonim', _desc: z.description, _extra: z.volume ? `Vol. ${z.volume}` : (z.issueNumber || null) })),
-    ...articles.slice(0, 1).map(a => ({ ...a, _type: 'newspaper', _image: a.logoUrl || null, _title: a.name, _sub: a.location || null, _desc: a.description, _extra: a.totalArticles ? `${a.totalArticles.toLocaleString('id-ID')} Artikel` : null })),
-    ...films.slice(0, 2).map(f => ({ ...f, _type: 'film', _image: getFilmPoster(f), _title: f.judul, _sub: f.tahunRilis ? (typeof f.tahunRilis === 'string' && f.tahunRilis.length === 4 ? f.tahunRilis : new Date(f.tahunRilis).getFullYear()) : '', _desc: f.deskripsi || f.sinopsis || f.description, _extra: f.genre || f.genres || null })),
+    ...books.slice(0, 2).map(b => ({ ...b, _type: 'book', _image: b.cover_image || b.coverImageUrl || b.coverImage || b.image || null, _title: b.title, _sub: b.authorNames || b.author || 'Anonim', _desc: b.description, _extra: null, _progressKey: `book:${b.slug || b.id}` })),
+    ...zines.slice(0, 2).map(z => ({ ...z, _type: 'zine', _image: z.coverImageUrl || z.cover_image || z.coverImage || z.image || null, _title: z.title, _sub: z.authorNames || z.author || z.publisher || 'Anonim', _desc: z.description, _extra: z.volume ? `Vol. ${z.volume}` : (z.issueNumber || null), _progressKey: `zine:${z.slug || z.id}` })),
+    ...articles.slice(0, 1).map(a => ({ ...a, _type: 'newspaper', _image: a.logoUrl || null, _title: a.name, _sub: a.location || null, _desc: a.description, _extra: a.totalArticles ? `${a.totalArticles.toLocaleString('id-ID')} Artikel` : null, _progressKey: null })),
+    ...films.slice(0, 2).map(f => ({ ...f, _type: 'film', _image: getFilmPoster(f), _title: f.judul, _sub: f.tahunRilis ? (typeof f.tahunRilis === 'string' && f.tahunRilis.length === 4 ? f.tahunRilis : new Date(f.tahunRilis).getFullYear()) : '', _desc: f.deskripsi || f.sinopsis || f.description, _extra: f.genre || f.genres || null, _progressKey: null })),
   ].filter(Boolean).slice(0, 6)
+
+  const readableKey = featured.filter(f => READABLE_TYPES.includes(f._type)).map(f => f._progressKey).join('|')
+
+  useEffect(() => {
+    let cancelled = false
+    const targets = featured.filter(f => READABLE_TYPES.includes(f._type) && (f.slug || f.id))
+
+    const load = async () => {
+      const entries = await Promise.all(targets.map(async (t) => {
+        const slug = t.slug || t.id
+        if (isAuthenticated) {
+          try {
+            const service = t._type === 'book' ? bookService : zineService
+            const res = await service.getReadingProgress(slug)
+            if (res?.hasProgress) {
+              return [t._progressKey, { hasProgress: true, percent: typeof res.percentageCompleted === 'number' ? Math.round(res.percentageCompleted) : null }]
+            }
+            return [t._progressKey, { hasProgress: false, percent: null }]
+          } catch {
+            return [t._progressKey, { hasProgress: false, percent: null }]
+          }
+        }
+        const savedCfi = localStorage.getItem(`epub_progress_${slug}`)
+        return [t._progressKey, { hasProgress: !!savedCfi, percent: null }]
+      }))
+      if (!cancelled) setProgressMap(Object.fromEntries(entries))
+    }
+
+    if (targets.length) load()
+    else setProgressMap({})
+
+    return () => { cancelled = true }
+  }, [readableKey, isAuthenticated]) // eslint-disable-line
 
   const goTo = useCallback((idx) => {
     if (phase !== 'visible' || !featured.length) return
@@ -118,6 +164,10 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
   const item = featured[activeIdx]
   const cfg = TYPE_CONFIG[item._type]
   const Icon = cfg.icon
+  const progress = item._progressKey ? progressMap[item._progressKey] : null
+  const isContinuing = READABLE_TYPES.includes(item._type) && !!progress?.hasProgress
+  const CtaIcon = isContinuing ? RotateCcw : (item._type === 'film' ? Play : Icon)
+  const ctaLabel = isContinuing ? (progress.percent != null ? `Lanjutkan · ${progress.percent}%` : 'Lanjutkan Membaca') : cfg.cta
 
   const accentColor = isDark ? cfg.colorDark : cfg.color
   const gradient = isDark ? cfg.gradientDark : cfg.gradientLight
@@ -139,6 +189,7 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
   const bgThumb = rawImage ? getWikimediaThumb(rawImage, 1200) : null
   const posterThumb = rawImage ? getWikimediaThumb(rawImage, 500) : null
   const isOut = phase === 'out'
+  const ctaHref = READER_PATH[item._type] ? READER_PATH[item._type](item) : cfg.link(item)
 
   return (
     <section className="relative w-full overflow-hidden select-none mb-8 sm:mb-12 lg:mb-16 bg-stone-50 dark:bg-[#0a0a0f]" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} aria-label="Featured content carousel" aria-roledescription="carousel">
@@ -238,9 +289,9 @@ const FeaturedBanner = ({ books = [], films = [], articles = [], zines = [] }) =
 
               {item._desc && <p className="leading-relaxed mb-2 sm:mb-3.5 line-clamp-1 sm:line-clamp-2" style={{ fontSize: 'clamp(10px, 1.5vw, 12px)', color: descColor, maxWidth: '480px' }}>{item._desc}</p>}
 
-              <Link to={cfg.link(item)} className="inline-flex items-center gap-1.5 font-bold rounded-full transition-all duration-200 active:scale-95 hover:scale-105 group" style={{ background: cfg.btnBg, color: cfg.btnText, padding: 'clamp(6px,1.5vw,9px) clamp(12px,3vw,20px)', fontSize: 'clamp(10px, 1.6vw, 12px)', boxShadow: `0 4px 16px ${cfg.glow}, 0 2px 6px rgba(0,0,0,${isDark ? 0.4 : 0.15})`, textDecoration: 'none' }} aria-label={`${cfg.cta}: ${item._title}`}>
-                {item._type === 'film' ? <Play style={{ width: 'clamp(10px, 2vw, 13px)', height: 'clamp(10px, 2vw, 13px)', fill: 'currentColor' }} /> : <Icon style={{ width: 'clamp(10px, 2vw, 12px)', height: 'clamp(10px, 2vw, 12px)' }} />}
-                {cfg.cta}
+              <Link to={ctaHref} className="inline-flex items-center gap-1.5 font-bold rounded-full transition-all duration-200 active:scale-95 hover:scale-105 group" style={{ background: cfg.btnBg, color: cfg.btnText, padding: 'clamp(6px,1.5vw,9px) clamp(12px,3vw,20px)', fontSize: 'clamp(10px, 1.6vw, 12px)', boxShadow: `0 4px 16px ${cfg.glow}, 0 2px 6px rgba(0,0,0,${isDark ? 0.4 : 0.15})`, textDecoration: 'none' }} aria-label={`${ctaLabel}: ${item._title}`}>
+                <CtaIcon style={{ width: 'clamp(10px, 2vw, 13px)', height: 'clamp(10px, 2vw, 13px)', fill: item._type === 'film' && !isContinuing ? 'currentColor' : 'none' }} />
+                {ctaLabel}
                 <ArrowRight className="transition-transform duration-200 group-hover:translate-x-0.5" style={{ width: 'clamp(10px, 2vw, 12px)', height: 'clamp(10px, 2vw, 12px)' }} />
               </Link>
             </div>

@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   Menu, Moon, Search, Sun, User, X,
   BookOpen, Layers, Film, Newspaper, PenLine,
-  Rss, Tag, Users, ChevronDown
+  Rss, Tag, Users, ChevronDown, Archive
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useAuth } from '../../hooks/useAuth'
@@ -56,9 +56,13 @@ const PRIMARY_NAV = [
   { to: '/sosial', label: 'Sosial', icon: Rss, color: 'sky' },
 ]
 
+// PERBAIKAN: entri "Monograf" ditambahkan di sini (bukan di PRIMARY_NAV) karena secara
+// logis ini sub-fitur kurasi dari Koran, bukan kategori konten setara level-atas —
+// menambahkannya ke PRIMARY_NAV akan membuat header terlalu ramai.
 const SECONDARY_NAV = [
   { to: '/penulis', label: 'Penulis', icon: Users, color: 'stone' },
   { to: '/kategori', label: 'Kategori', icon: Tag, color: 'stone' },
+  { to: '/koran/monograf', label: 'Monograf', icon: Archive, color: 'rose' },
 ]
 
 const SEARCH_PLACEHOLDER = 'Cari buku, zine, koran, film...'

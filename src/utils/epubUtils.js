@@ -33,6 +33,16 @@ export const generateSessionId = () =>
 export const getDeviceType = () =>
   /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
 
+export const getOrCreateGuestId = () => {
+  const KEY = 'masasilam_guest_id'
+  let id = localStorage.getItem(KEY)
+  if (!id) {
+    id = 'guest_' + crypto.randomUUID()
+    localStorage.setItem(KEY, id)
+  }
+  return id
+}
+
 // ── CFI / Spine helpers ────────────────────────────────────────────────────
 export const extractSpineIndex = (cfi) => {
   if (!cfi) return 0

@@ -1,17 +1,14 @@
 import api from './api';
 
-// ── FIX: Convert string values ke tipe yang backend expect ───────────────────
 const cleanParams = (params) => {
   const entries = Object.entries(params).filter(([, v]) => v != null && v !== '')
 
   return Object.fromEntries(
     entries.map(([k, v]) => {
       switch (k) {
-        // Boolean
         case 'isFeatured':
           return [k, v === 'true' || v === true]
 
-        // Integer
         case 'languageId':
         case 'minChapters':
         case 'maxChapters':
@@ -21,12 +18,10 @@ const cleanParams = (params) => {
         case 'minReadCount':
           return [k, parseInt(v, 10)]
 
-        // Long — backend terima bytes, frontend input MB → konversi
         case 'minFileSize':
         case 'maxFileSize':
           return [k, Math.round(parseFloat(v) * 1024 * 1024)]
 
-        // Double
         case 'minRating':
           return [k, parseFloat(v)]
 
@@ -47,13 +42,11 @@ const formatResponse = (data, limit) => ({
 })
 
 export const bookService = {
-  // Books with advanced filtering — matches backend exactly
   getBooks: async (params = {}) => {
     try {
       const response = await api.get('/books', { params: cleanParams(params) })
       return formatResponse(response.data?.data, params.limit)
     } catch (error) {
-      console.error('bookService.getBooks error:', error)
       return formatResponse(null, params.limit)
     }
   },
@@ -61,6 +54,19 @@ export const bookService = {
   getBookBySlug: async (slug) => {
     const response = await api.get(`/books/${slug}`)
     return response.data?.data || response.data
+  },
+
+  getBookForEdit: async (slug) => {
+    const response = await api.get(`/books/${slug}/edit`)
+    return response.data?.data || response.data
+  },
+
+  updateBookAdmin: async (id, formData) => {
+    const response = await api.put('/books', formData, {
+      params: { id },
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
   },
 
   getTableOfContents: async (slug) => {
@@ -71,10 +77,18 @@ export const bookService = {
 
   getDownloadUrl: async (slug) => {
     const response = await api.get(`/books/${slug}/download`)
-    return response.data // { downloadUrl, filename }
+    return response.data
   },
 
-  // Series
+  getReadingProgress: async (slug) => {
+    try {
+      const response = await api.get(`/books/${slug}/reading/progress`)
+      return response.data?.data || response.data
+    } catch (error) {
+      return null
+    }
+  },
+
   getBooksBySeries: async (seriesSlug, page = 1, limit = 50) => {
     try {
       const response = await api.get(`/books/series/${seriesSlug}`, {
@@ -87,12 +101,10 @@ export const bookService = {
         page: data?.page || 1,
       }
     } catch (error) {
-      console.error('getBooksBySeries error:', error)
       return { data: [], total: 0, page: 1 }
     }
   },
 
-  // Rating operations
   addRating: async (slug, ratingData) => {
     const response = await api.post(`/books/${slug}/rating`, { rating: ratingData.rating })
     return response.data
@@ -113,7 +125,6 @@ export const bookService = {
     return response.data
   },
 
-  // Review operations
   getReviews: async (slug, page = 1, limit = 10, sortBy = 'helpful') => {
     try {
       const response = await api.get(`/books/${slug}/reviews`, { params: { page, limit, sortBy } })
@@ -149,7 +160,6 @@ export const bookService = {
     return response.data
   },
 
-  // Reply operations
   addReply: async (slug, reviewId, replyData) => {
     const response = await api.post(`/books/${slug}/reviews/${reviewId}/replies`, { content: replyData.content })
     return response.data
@@ -165,7 +175,6 @@ export const bookService = {
     return response.data
   },
 
-  // Feedback operations
   addFeedback: async (slug, reviewId, feedbackData) => {
     const response = await api.post(`/books/${slug}/reviews/${reviewId}/feedback`, { isHelpful: feedbackData.isHelpful })
     return response.data
@@ -176,7 +185,6 @@ export const bookService = {
     return response.data
   },
 
-  // Metadata operations
   getMyAnnotations: async (slug) => {
     const response = await api.get(`/books/${slug}/my-annotations`)
     return response.data
