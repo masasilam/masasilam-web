@@ -73,6 +73,7 @@ export const groupZinesBySeries = (zines) => {
         viewCount:   zine.viewCount    || 0,
         downloadCount: zine.downloadCount || 0,
         readCount:   zine.readCount    || 0,
+        guestReadCount: zine.guestReadCount || 0,
         estimatedReadTime: zine.estimatedReadTime || null,
         publicationYear: zine.publicationYear,
         averageRating: zine.averageRating || null,

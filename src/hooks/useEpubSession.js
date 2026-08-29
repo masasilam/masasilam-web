@@ -23,19 +23,22 @@ export const useEpubSession = ({ slug, isAuthenticated, isZineMode, refs }) => {
     const sessionId  = sessionIdRef.current
     const deviceType = getDeviceType()
 
-    const buildPayload = () => ({
-      sessionId,
-      durationSeconds:    Math.round((Date.now() - sessionStartRef.current) / 1000),
-      progressPercent:    latestProgressRef.current,
-      progressIsAccurate: locationsReadyRef.current,
-      deviceType,
-      spineIndex:      spineIndexRef.current,
-      totalSpineItems: totalSpineItemsRef.current,
-      chapterLabel:    currentChapterLabelRef.current,
-      chapterIndex:    currentChapterIndexRef.current,
-      totalChapters:   totalChaptersRef.current,
-      lastCfi:         currentCfiRef.current,
-    })
+    const buildPayload = () => {
+      const accurate = locationsReadyRef.current
+      return {
+        sessionId,
+        durationSeconds:    Math.round((Date.now() - sessionStartRef.current) / 1000),
+        progressPercent:    accurate ? latestProgressRef.current : null,
+        progressIsAccurate: accurate,
+        deviceType,
+        spineIndex:      spineIndexRef.current,
+        totalSpineItems: totalSpineItemsRef.current,
+        chapterLabel:    currentChapterLabelRef.current,
+        chapterIndex:    currentChapterIndexRef.current,
+        totalChapters:   totalChaptersRef.current,
+        lastCfi:         currentCfiRef.current,
+      }
+    }
 
     const handleBeforeUnload = () => {
       if (sessionSentRef.current) return
@@ -54,10 +57,18 @@ export const useEpubSession = ({ slug, isAuthenticated, isZineMode, refs }) => {
       }).catch(() => {})
     }
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') handleBeforeUnload()
+    }
+
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
 
       if (sessionSentRef.current) return
       sessionSentRef.current = true

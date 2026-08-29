@@ -43,7 +43,6 @@ export const zineService = {
       const response = await api.get('/zines', { params: cleanParams(params) })
       return formatResponse(response.data?.data, params.limit)
     } catch (error) {
-      console.error('zineService.getZines error:', error)
       return formatResponse(null, params.limit)
     }
   },
@@ -58,7 +57,15 @@ export const zineService = {
     return response.data
   },
 
-  // ── Rating ──────────────────────────────────────────────────────────────────
+  getReadingProgress: async (slug) => {
+    try {
+      const response = await api.get(`/zines/${slug}/reading/progress`)
+      return response.data?.data || response.data
+    } catch (error) {
+      return null
+    }
+  },
+
   addRating: async (slug, ratingData) => {
     const response = await api.post(`/zines/${slug}/rating`, { rating: ratingData.rating })
     return response.data
@@ -79,7 +86,6 @@ export const zineService = {
     return response.data
   },
 
-  // ── Reviews ─────────────────────────────────────────────────────────────────
   getReviews: async (slug, page = 1, limit = 10, sortBy = 'helpful') => {
     try {
       const response = await api.get(`/zines/${slug}/reviews`, { params: { page, limit, sortBy } })
@@ -115,7 +121,6 @@ export const zineService = {
     return response.data
   },
 
-  // ── Replies ─────────────────────────────────────────────────────────────────
   addReply: async (slug, reviewId, replyData) => {
     const response = await api.post(`/zines/${slug}/reviews/${reviewId}/replies`, { content: replyData.content })
     return response.data
@@ -131,7 +136,6 @@ export const zineService = {
     return response.data
   },
 
-  // ── Feedback ─────────────────────────────────────────────────────────────────
   addFeedback: async (slug, reviewId, feedbackData) => {
     const response = await api.post(`/zines/${slug}/reviews/${reviewId}/feedback`, {
       isHelpful: feedbackData.isHelpful,
@@ -144,7 +148,6 @@ export const zineService = {
     return response.data
   },
 
-  // ── Metadata ─────────────────────────────────────────────────────────────────
   getGenres: async (includeZineCount = true) => {
     const response = await api.get('/zines/genres', { params: { includeZineCount } })
     return response.data

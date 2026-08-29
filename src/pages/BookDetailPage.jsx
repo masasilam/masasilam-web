@@ -7,7 +7,7 @@ import {
   Bookmark, Layers, Info, ExternalLink, Feather,
   Users, Tag, AlignLeft, List, Newspaper, Printer,
   ThumbsDown, Frown, Angry, Zap, Activity,
-  Award, BarChart2, Heart as HeartIcon, TrendingUp
+  Award, BarChart2, Heart as HeartIcon, TrendingUp, RotateCcw
 } from 'lucide-react'
 import bookService from '../services/bookService'
 import { useAuth } from '../hooks/useAuth'
@@ -17,10 +17,7 @@ import SEO from '../components/Common/SEO'
 import BookDetailSocialSection from '../components/Social/BookDetailSocialSection'
 import feedEvents, { FEED_EVENTS } from '../services/feedEvents'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CoverImage
-// ─────────────────────────────────────────────────────────────────────────────
-const CoverImage = ({ url, alt, className = '' }) => {
+const CoverImage = ({ url, alt, className = '', onClick }) => {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const imgRef = useRef(null)
@@ -40,7 +37,7 @@ const CoverImage = ({ url, alt, className = '' }) => {
   }
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden ${onClick ? 'cursor-zoom-in' : ''} ${className}`} onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-stone-200 dark:bg-slate-700" />}
       <img
         ref={imgRef}
@@ -52,9 +49,262 @@ const CoverImage = ({ url, alt, className = '' }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RatingModal
-// ─────────────────────────────────────────────────────────────────────────────
+// FIX: SpreadPanel now sizes itself from the *actual* aspect ratio of the loaded
+// image (naturalWidth / naturalHeight) via CSS `aspect-ratio`, instead of relying
+// on hardcoded `min-w-[...]` breakpoints. Previously the <img> used `w-auto h-full`
+// (sizing itself to its own natural ratio) while the wrapping <div> was forced to a
+// guessed `min-w`. Whenever a book's real cover/spine/flap proportions were narrower
+// than that guess, the div stayed at the (too-wide) min-w and the image only filled
+// part of it — the leftover space showed the div's own background color, which is
+// the visible "gap" between panels. Now the container's width is *derived* from the
+// image itself (via aspect-ratio) and the image fills it completely (`w-full h-full
+// object-cover`), so panels always butt up against each other with no stray gap,
+// no matter how wide or narrow the spine (or any other panel) really is.
+const SpreadPanel = ({ url, alt, defaultRatio, className = '', onClick }) => {
+  const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  const [ratio, setRatio] = useState(defaultRatio)
+  const imgRef = useRef(null)
+
+  useEffect(() => { setLoaded(false); setError(false); setRatio(defaultRatio) }, [url, defaultRatio])
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setLoaded(true)
+      setRatio(imgRef.current.naturalWidth / imgRef.current.naturalHeight)
+    }
+  }, [url])
+
+  if (!url || error) return null
+
+  const handleLoad = (e) => {
+    setLoaded(true)
+    const { naturalWidth, naturalHeight } = e.target
+    if (naturalWidth > 0 && naturalHeight > 0) setRatio(naturalWidth / naturalHeight)
+  }
+
+  return (
+    <div
+      className={`relative h-full flex-shrink-0 bg-stone-200 dark:bg-slate-800 ${onClick ? 'cursor-zoom-in' : ''} ${className}`}
+      style={{ aspectRatio: ratio }}
+      onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
+    >
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-stone-200 dark:bg-slate-700" />}
+      <img
+        ref={imgRef}
+        src={url} alt={alt} loading="eager"
+        onLoad={handleLoad} onError={() => setError(true)}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </div>
+  )
+}
+
+const BookJacketSpread = ({ book, onImageClick }) => {
+  const wrapRef = useRef(null)
+  const rowRef = useRef(null)
+  const [scale, setScale] = useState(1)
+  const [boxHeight, setBoxHeight] = useState(null)
+
+  useEffect(() => {
+    const wrap = wrapRef.current
+    const row = rowRef.current
+    if (!wrap || !row) return
+    let raf = null
+
+    const recalc = () => {
+      if (raf) cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const naturalWidth = row.scrollWidth
+        const naturalHeight = row.offsetHeight
+        const available = wrap.offsetWidth
+        if (!naturalWidth || !naturalHeight || !available) return
+        const nextScale = Math.min(1, available / naturalWidth)
+        setScale(nextScale)
+        setBoxHeight(naturalHeight * nextScale)
+      })
+    }
+
+    const ro = new ResizeObserver(recalc)
+    ro.observe(wrap)
+    ro.observe(row)
+    recalc()
+
+    return () => { if (raf) cancelAnimationFrame(raf); ro.disconnect() }
+  }, [book.coverImageUrl, book.backCoverUrl, book.spineCoverUrl, book.frontFlapUrl])
+
+  return (
+    <div
+      ref={wrapRef}
+      className="w-full rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 dark:border-white/5"
+      style={boxHeight ? { height: boxHeight } : undefined}
+    >
+      <div
+        ref={rowRef}
+        className="flex h-[220px] sm:h-[280px] md:h-[340px] lg:h-[400px] xl:h-[440px]"
+        style={{ width: 'max-content', transform: `scale(${scale})`, transformOrigin: 'top left' }}
+      >
+        {/* defaultRatio values are just a placeholder guess used only until each
+            image finishes loading and reports its real aspect ratio — after that,
+            the panel's actual width always matches its own image exactly. */}
+        <SpreadPanel
+          url={book.backCoverUrl} alt={`Cover belakang ${book.title}`}
+          defaultRatio={0.68}
+          className="border-r border-black/15"
+          onClick={() => onImageClick?.('back')}
+        />
+        <SpreadPanel
+          url={book.spineCoverUrl} alt={`Punggung buku ${book.title}`}
+          defaultRatio={0.14}
+          className="border-r border-black/15"
+          onClick={() => onImageClick?.('spine')}
+        />
+        <SpreadPanel
+          url={book.coverImageUrl} alt={`Cover ${book.title}`}
+          defaultRatio={0.68}
+          className="border-r border-black/15"
+          onClick={() => onImageClick?.('front')}
+        />
+        <SpreadPanel
+          url={book.frontFlapUrl} alt={`Flap depan ${book.title}`}
+          defaultRatio={0.35}
+          onClick={() => onImageClick?.('flap')}
+        />
+      </div>
+    </div>
+  )
+}
+
+const CoverLightbox = ({ images, index, onClose, onNavigate, onSelect }) => {
+  const scrollRef = useRef(null)
+  const scrollTimeout = useRef(null)
+  const isProgrammaticScroll = useRef(false)
+  const dragState = useRef({ down: false, startX: 0, startScroll: 0, moved: false })
+
+  useEffect(() => {
+    if (index === null) return
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft') onNavigate(-1)
+      else if (e.key === 'ArrowRight') onNavigate(1)
+    }
+    window.addEventListener('keydown', handleKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', handleKey); document.body.style.overflow = prevOverflow }
+  }, [index, onClose, onNavigate])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || index === null) return
+    const slide = el.children[index]
+    if (!slide) return
+    isProgrammaticScroll.current = true
+    slide.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    const t = setTimeout(() => { isProgrammaticScroll.current = false }, 400)
+    return () => clearTimeout(t)
+  }, [index])
+
+  if (index === null || !images[index]) return null
+  const hasMultiple = images.length > 1
+
+  const resolveClosestSlide = () => {
+    const el = scrollRef.current
+    if (!el || isProgrammaticScroll.current) return
+    const children = Array.from(el.children)
+    const center = el.scrollLeft + el.clientWidth / 2
+    let closest = 0
+    let closestDist = Infinity
+    children.forEach((child, i) => {
+      const childCenter = child.offsetLeft + child.offsetWidth / 2
+      const dist = Math.abs(childCenter - center)
+      if (dist < closestDist) { closestDist = dist; closest = i }
+    })
+    if (closest !== index) onSelect(closest)
+  }
+
+  const handleScroll = () => {
+    if (scrollTimeout.current) clearTimeout(scrollTimeout.current)
+    scrollTimeout.current = setTimeout(resolveClosestSlide, 120)
+  }
+
+  const handleWheel = (e) => {
+    const el = scrollRef.current
+    if (!el) return
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY
+  }
+
+  const handleMouseDown = (e) => {
+    const el = scrollRef.current
+    if (!el) return
+    dragState.current = { down: true, startX: e.clientX, startScroll: el.scrollLeft, moved: false }
+  }
+  const handleMouseMove = (e) => {
+    const el = scrollRef.current
+    if (!el || !dragState.current.down) return
+    const delta = e.clientX - dragState.current.startX
+    if (Math.abs(delta) > 4) dragState.current.moved = true
+    el.scrollLeft = dragState.current.startScroll - delta
+  }
+  const endDrag = () => { dragState.current.down = false }
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col animate-in fade-in duration-200" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+        <span className="text-white/70 text-xs font-medium tracking-wide">{images[index].label}{hasMultiple && ` · ${index + 1}/${images.length}`}</span>
+        <button onClick={onClose} aria-label="Tutup" className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="flex-1 relative flex items-center justify-center min-h-0 px-2 sm:px-4">
+        {hasMultiple && index > 0 && (
+          <button onClick={() => onNavigate(-1)} aria-label="Sebelumnya" className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-20">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        <div className="relative max-w-full sm:w-full sm:max-w-md md:max-w-lg lg:max-w-xl h-[62vh] sm:h-[72vh]">
+          <div
+            ref={scrollRef}
+            className="h-full max-w-full sm:w-full overflow-x-auto scrollbar-none snap-x snap-mandatory flex items-stretch cursor-grab active:cursor-grabbing select-none rounded-xl shadow-2xl shadow-black/70"
+            style={{ touchAction: 'pan-x' }}
+            onScroll={handleScroll}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={endDrag}
+            onMouseLeave={endDrag}
+          >
+            {images.map((img, i) => (
+              <div key={img.key} className={`h-full flex-shrink-0 flex items-stretch sm:w-full sm:items-center sm:justify-center snap-center ${i < images.length - 1 ? 'border-r border-black/25 sm:border-r-0' : ''}`}>
+                <img
+                  src={img.url} alt={img.alt} draggable={false}
+                  onClick={(e) => { e.stopPropagation(); if (dragState.current.moved) return; if (i !== index) onSelect(i) }}
+                  className={`h-full w-auto object-cover sm:h-auto sm:max-h-full sm:w-full sm:object-contain ${i === index ? '' : 'cursor-pointer'}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {hasMultiple && index < images.length - 1 && (
+          <button onClick={() => onNavigate(1)} aria-label="Berikutnya" className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-20">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {hasMultiple && (
+        <div className="flex items-center justify-center gap-2 py-4 flex-shrink-0">
+          {images.map((img, i) => (
+            <button key={img.key} onClick={() => onSelect(i)} aria-label={img.label} className={`h-1.5 rounded-full transition-all ${i === index ? 'bg-amber-400 w-4' : 'bg-white/30 w-1.5'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
@@ -130,9 +380,6 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookTitle }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StarDisplay
-// ─────────────────────────────────────────────────────────────────────────────
 const StarDisplay = ({ avg, size = 'sm' }) => {
   const filled = Math.floor(avg)
   const hasHalf = avg - filled >= 0.25 && avg - filled < 0.75
@@ -154,9 +401,6 @@ const StarDisplay = ({ avg, size = 'sm' }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RatingSummary
-// ─────────────────────────────────────────────────────────────────────────────
 const RatingSummary = ({ ratingStats, onRate, userRating }) => {
   const hasStats = ratingStats?.totalRatings > 0
 
@@ -234,9 +478,6 @@ const RatingSummary = ({ ratingStats, onRate, userRating }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SeriesBookCard
-// ─────────────────────────────────────────────────────────────────────────────
 const SeriesBookCard = ({ seriesBook, currentSlug }) => {
   const isCurrent = seriesBook.slug === currentSlug
   return (
@@ -262,9 +503,6 @@ const SeriesBookCard = ({ seriesBook, currentSlug }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ContributorCard
-// ─────────────────────────────────────────────────────────────────────────────
 const ContributorCard = ({ name, role, photoUrl, slug, isAuthor = false }) => {
   const inner = (
     <div className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all group cursor-pointer ${isAuthor ? 'bg-amber-50 border-amber-200 hover:border-amber-400 hover:shadow-sm dark:bg-amber-900/15 dark:border-amber-800/50' : 'bg-white border-stone-100 hover:border-amber-200 hover:shadow-sm dark:bg-slate-900 dark:border-slate-700 dark:hover:border-amber-700/50'}`}>
@@ -281,9 +519,6 @@ const ContributorCard = ({ name, role, photoUrl, slug, isAuthor = false }) => {
   return slug ? <Link to={`/penulis/${slug}`}>{inner}</Link> : inner
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// InfoRow
-// ─────────────────────────────────────────────────────────────────────────────
 const InfoRow = ({ label, value, icon: Icon, accent = false }) => {
   if (!value && value !== 0) return null
   return (
@@ -301,9 +536,6 @@ const InfoRow = ({ label, value, icon: Icon, accent = false }) => {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StatCard
-// ─────────────────────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, color = 'text-amber-500', bg = 'bg-amber-50 dark:bg-amber-900/20' }) => {
   if (!value && value !== 0) return null
   return (
@@ -317,18 +549,12 @@ const StatCard = ({ icon: Icon, label, value, color = 'text-amber-500', bg = 'bg
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SectionTitle
-// ─────────────────────────────────────────────────────────────────────────────
 const SectionTitle = ({ icon: Icon, title, iconColor = 'text-amber-500' }) => (
   <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2 text-stone-500 dark:text-slate-400">
     <Icon className={`w-4 h-4 ${iconColor}`} />{title}
   </h2>
 )
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BookDetailPage
-// ─────────────────────────────────────────────────────────────────────────────
 const BookDetailPage = () => {
   const { bookSlug } = useParams()
   const navigate = useNavigate()
@@ -352,6 +578,10 @@ const BookDetailPage = () => {
   const [seriesBooks, setSeriesBooks] = useState([])
   const [seriesLoading, setSeriesLoading] = useState(false)
   const [authorPhotos, setAuthorPhotos] = useState({})
+  const [hasProgress, setHasProgress] = useState(false)
+  const [lastCfi, setLastCfi] = useState(null)
+  const [progressPercent, setProgressPercent] = useState(null)
+  const [lightboxIndex, setLightboxIndex] = useState(null)
 
   const [, startTransition] = useTransition()
   const backUrl = useRef(sessionStorage.getItem('booksPageUrl') || '/buku')
@@ -391,7 +621,7 @@ const BookDetailPage = () => {
     const map = {}
     slugs.forEach((slug, i) => { if (photos[i]) map[slug] = photos[i] })
     startTransition(() => setAuthorPhotos(map))
-  }, []) // eslint-disable-line
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -418,7 +648,37 @@ const BookDetailPage = () => {
     }
     init()
     return () => { cancelled = true }
-  }, [bookSlug, isAuthenticated]) // eslint-disable-line
+  }, [bookSlug, isAuthenticated])
+
+  useEffect(() => {
+    let cancelled = false
+    const checkProgress = async () => {
+      if (isAuthenticated) {
+        try {
+          const res = await bookService.getReadingProgress(bookSlug)
+          if (!cancelled && res?.hasProgress) {
+            setHasProgress(true)
+            setLastCfi(res.lastCfi || null)
+            setProgressPercent(typeof res.percentageCompleted === 'number' ? Math.round(res.percentageCompleted) : null)
+          } else if (!cancelled) {
+            setHasProgress(false)
+            setLastCfi(null)
+            setProgressPercent(null)
+          }
+        } catch {
+          if (!cancelled) { setHasProgress(false); setLastCfi(null); setProgressPercent(null) }
+        }
+      } else {
+        const savedCfi = localStorage.getItem(`epub_progress_${bookSlug}`)
+        if (!cancelled) {
+          if (savedCfi) { setHasProgress(true); setLastCfi(savedCfi); setProgressPercent(null) }
+          else { setHasProgress(false); setLastCfi(null); setProgressPercent(null) }
+        }
+      }
+    }
+    checkProgress()
+    return () => { cancelled = true }
+  }, [bookSlug, isAuthenticated])
 
   useEffect(() => {
     if (book) document.title = `${book.title} — ${book.authorNames} | Perpustakaan Digital MasasilaM`
@@ -427,7 +687,7 @@ const BookDetailPage = () => {
   const handleRead = async () => {
     try {
       setReadingLoading(true)
-      navigate(`/buku/${bookSlug}/baca`)
+      navigate(`/buku/${bookSlug}/baca`, hasProgress && lastCfi ? { state: { lastCfi } } : undefined)
       feedEvents.emit(FEED_EVENTS.ACTIVITY_CREATED, { activityType: 'started_reading', entityType: 'BOOK', entitySlug: bookSlug, entityTitle: book?.title, entityCover: book?.coverImageUrl })
     } catch (e) { alert(`Gagal: ${e.message}`) }
     finally { setReadingLoading(false) }
@@ -518,8 +778,6 @@ const BookDetailPage = () => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return null
-    // Kalau cuma tahun (mis. "1925"), jangan dipaksa jadi tanggal lengkap —
-    // new Date("1925") akan salah diinterpretasikan sebagai 1 Januari 1925.
     if (/^\d{4}$/.test(String(dateStr).trim())) return String(dateStr).trim()
     try {
       const d = new Date(dateStr)
@@ -534,6 +792,22 @@ const BookDetailPage = () => {
     try { return new Date(dateStr).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
     catch { return dateStr }
   }
+
+  const openLightbox = (key) => {
+    const idx = coverImages.findIndex(img => img.key === key)
+    if (idx !== -1) setLightboxIndex(idx)
+  }
+
+  const handleLightboxNavigate = (delta) => {
+    setLightboxIndex(prev => {
+      if (prev === null) return prev
+      const next = prev + delta
+      if (next < 0 || next >= coverImages.length) return prev
+      return next
+    })
+  }
+
+  const handleLightboxSelect = (idx) => setLightboxIndex(idx)
 
   if (loading) return <LoadingSpinner fullScreen />
   if (error || !book) return (
@@ -562,8 +836,22 @@ const BookDetailPage = () => {
   const totalRatings = ratingStats?.totalRatings || book.totalRatings || 0
   const hasSeries = !!(book.seriesId && book.seriesName)
   const hasContributors = contributorList.length > 0
+  const hasFullSpread = !!(book.coverImageUrl && book.backCoverUrl && book.spineCoverUrl && book.frontFlapUrl)
   const totalEngagement = (book.totalAngry || 0) + (book.totalLikes || 0) + (book.totalLoves || 0) + (book.totalDislikes || 0) + (book.totalSad || 0)
   const hasReactions = totalEngagement > 0 || book.totalComments > 0
+  const ReadIcon = hasProgress ? RotateCcw : BookOpen
+  const readLabel = readingLoading
+    ? 'Memuat...'
+    : hasProgress
+      ? (progressPercent != null ? `Lanjutkan · ${progressPercent}%` : 'Lanjutkan Membaca')
+      : 'Baca Sekarang'
+
+  const coverImages = [
+    { key: 'back', url: book.backCoverUrl, alt: `Cover belakang ${book.title}`, label: 'Sampul Belakang' },
+    { key: 'spine', url: book.spineCoverUrl, alt: `Punggung buku ${book.title}`, label: 'Punggung Buku' },
+    { key: 'front', url: book.coverImageUrl, alt: `Cover ${book.title}`, label: 'Sampul Depan' },
+    { key: 'flap', url: book.frontFlapUrl, alt: `Flap depan ${book.title}`, label: 'Flap Depan' },
+  ].filter(img => img.url)
 
   const tabs = [
     { id: 'info', label: 'Info', icon: Info },
@@ -571,6 +859,23 @@ const BookDetailPage = () => {
     { id: 'seri', label: 'Dalam Seri', icon: Layers, hidden: !hasSeries },
     { id: 'ulasan', label: 'Ulasan', icon: MessageCircle },
   ].filter(t => !t.hidden)
+
+  const coverBadgesEl = (
+    <>
+      {book.isFeatured && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-bold dark:bg-amber-900/30 dark:text-amber-400"><Star className="w-2 h-2 fill-current" />Pilihan</span>}
+      {book.fileUrl && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold dark:bg-emerald-900/30 dark:text-emerald-400"><Download className="w-2 h-2" />{(book.fileFormat || 'epub').toUpperCase()}</span>}
+      {hasSeries && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[9px] font-bold dark:bg-violet-900/30 dark:text-violet-400"><Layers className="w-2 h-2" />#{book.seriesOrder}</span>}
+      {hasProgress && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500/90 text-white text-[9px] font-bold"><RotateCcw className="w-2 h-2" />Dilanjutkan</span>}
+    </>
+  )
+
+  const ratingBoxEl = avgRating > 0 ? (
+    <>
+      <StarDisplay avg={avgRating} />
+      <span className="text-xs font-bold text-stone-800 dark:text-slate-200">{avgRating.toFixed(1)}</span>
+      {totalRatings > 0 && <span className="text-[9px] text-stone-400 dark:text-slate-500">({totalRatings})</span>}
+    </>
+  ) : null
 
   return (
     <>
@@ -584,41 +889,34 @@ const BookDetailPage = () => {
         publishedTime={book.publishedAt}
       />
 
-      {/*
-        ══════════════════════════════════════════════════════════════
-        ROOT WRAPPER
-        overflow-x-hidden → cegah elemen manapun memicu scrollbar horizontal
-        yang akan mempersempit viewport dan merusak fixed bottom bar
-        ══════════════════════════════════════════════════════════════
-      */}
       <div className="min-h-screen overflow-x-hidden transition-colors duration-300 bg-stone-50 dark:bg-slate-950">
 
-        {/* ════════════════════════════════════════════════════════════
-            HERO — dibungkus overflow-hidden agar scale(1.1) tidak bocor
-        ════════════════════════════════════════════════════════════ */}
         <div className="relative overflow-hidden">
           {book.coverImageUrl && (
             <div
-              className="absolute inset-0 h-64 sm:h-72 pointer-events-none"
+              className="absolute inset-0 pointer-events-none"
               aria-hidden="true"
               style={{
                 backgroundImage: `url(${book.coverImageUrl})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center top',
                 filter: 'blur(60px) brightness(0.25) saturate(1.5)',
-                // KUNCI: transform scale tanpa translate tidak bocor ke kanan
-                // karena parent sudah overflow-hidden
                 transform: 'scale(1.1)',
               }}
             />
           )}
           <div
-            className="absolute inset-0 h-64 sm:h-72 pointer-events-none bg-gradient-to-b from-transparent via-stone-50/40 to-stone-50 dark:via-slate-950/40 dark:to-slate-950"
+            className="absolute inset-0 pointer-events-none dark:hidden"
             aria-hidden="true"
+            style={{ background: 'linear-gradient(to bottom, rgba(10,9,8,0) 0%, rgba(10,9,8,0.78) 32%, rgba(10,9,8,0.78) 90%, #fafaf9 100%)' }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none hidden dark:block"
+            aria-hidden="true"
+            style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 32%, rgba(0,0,0,0.72) 90%, #020617 100%)' }}
           />
 
           <div className="relative container mx-auto px-3 sm:px-4 max-w-5xl">
-            {/* Breadcrumb */}
             <div className="pt-4 pb-2">
               <nav className="flex items-center gap-1.5 text-xs mb-2 overflow-x-auto scrollbar-none text-stone-300 dark:text-slate-600">
                 <Link to="/" className="transition hover:text-stone-100 whitespace-nowrap">Beranda</Link>
@@ -634,30 +932,37 @@ const BookDetailPage = () => {
               </button>
             </div>
 
-            {/* Cover + Info */}
-            <div className="flex gap-4 sm:gap-6 pt-2 pb-6">
-              {/* COVER */}
+            <div className={`flex gap-4 sm:gap-6 lg:gap-8 pt-2 pb-6 ${hasFullSpread ? 'flex-col md:flex-row' : ''}`}>
               <div className="flex-shrink-0">
-                <div className="relative w-[110px] sm:w-[160px] lg:w-[192px]">
-                  <div className="w-full rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 dark:border-white/5" style={{ aspectRatio: '2/3' }}>
-                    <CoverImage url={book.coverImageUrl} alt={`Cover ${book.title}`} className="w-full h-full" />
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {book.isFeatured && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-bold dark:bg-amber-900/30 dark:text-amber-400"><Star className="w-2 h-2 fill-current" />Pilihan</span>}
-                    {book.fileUrl && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold dark:bg-emerald-900/30 dark:text-emerald-400"><Download className="w-2 h-2" />{(book.fileFormat || 'epub').toUpperCase()}</span>}
-                    {hasSeries && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[9px] font-bold dark:bg-violet-900/30 dark:text-violet-400"><Layers className="w-2 h-2" />#{book.seriesOrder}</span>}
-                  </div>
-                  {avgRating > 0 && (
-                    <div className="hidden sm:flex mt-2 items-center gap-1 justify-center px-2 py-1.5 rounded-lg border bg-white/80 dark:bg-slate-900/80 border-stone-200 dark:border-slate-700 backdrop-blur-sm">
-                      <StarDisplay avg={avgRating} />
-                      <span className="text-xs font-bold text-stone-800 dark:text-slate-200">{avgRating.toFixed(1)}</span>
-                      {totalRatings > 0 && <span className="text-[9px] text-stone-400 dark:text-slate-500">({totalRatings})</span>}
+                {hasFullSpread ? (
+                  <div className="flex flex-col items-center md:items-start">
+                    <BookJacketSpread key={bookSlug} book={book} onImageClick={openLightbox} />
+                    <div className="mt-2 flex flex-wrap gap-1 justify-center md:justify-start">
+                      {coverBadgesEl}
                     </div>
-                  )}
-                </div>
+                    {ratingBoxEl && (
+                      <div className="hidden md:flex mt-2 items-center gap-1 justify-center px-2 py-1.5 rounded-lg border bg-white/80 dark:bg-slate-900/80 border-stone-200 dark:border-slate-700 backdrop-blur-sm">
+                        {ratingBoxEl}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative w-[130px] sm:w-[180px] md:w-[210px] lg:w-[240px] xl:w-[260px]">
+                    <div className="w-full rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 dark:border-white/5" style={{ aspectRatio: '2/3' }}>
+                      <CoverImage url={book.coverImageUrl} alt={`Cover ${book.title}`} className="w-full h-full" onClick={() => openLightbox('front')} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {coverBadgesEl}
+                    </div>
+                    {ratingBoxEl && (
+                      <div className="hidden md:flex mt-2 items-center gap-1 justify-center px-2 py-1.5 rounded-lg border bg-white/80 dark:bg-slate-900/80 border-stone-200 dark:border-slate-700 backdrop-blur-sm">
+                        {ratingBoxEl}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* INFO */}
               <div className="flex-1 min-w-0 pt-1">
                 {genreList.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
@@ -669,7 +974,7 @@ const BookDetailPage = () => {
                     ))}
                   </div>
                 )}
-                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold leading-tight mb-1 text-white dark:text-slate-50 drop-shadow-md">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold leading-tight mb-1 text-white drop-shadow-md">
                   {book.title}
                   {book.edition && book.edition > 1 && <span className="ml-2 text-sm font-normal text-white/60">(Edisi {book.edition})</span>}
                 </h1>
@@ -692,24 +997,23 @@ const BookDetailPage = () => {
                     <Layers className="w-3 h-3" />{book.seriesName} · Bagian {book.seriesOrder}
                   </Link>
                 )}
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-white/60">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/80" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.65)' }}>
                   {book.publicationYear && <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-amber-400" />{book.publicationYear}</span>}
                   {book.language && <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-amber-400" />{book.language}</span>}
                   {book.estimatedReadTime && <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-400" />{book.estimatedReadTime} mnt</span>}
                   {book.firstPublished && <span className="flex items-center gap-1"><Printer className="w-3 h-3 text-amber-400" />{new Date(book.firstPublished).getFullYear()}{book.firstPublisher && ` · ${book.firstPublisher}`}</span>}
                 </div>
                 {avgRating > 0 && (
-                  <div className="sm:hidden flex items-center gap-2 mt-2">
+                  <div className="md:hidden flex items-center gap-2 mt-2">
                     <StarDisplay avg={avgRating} />
                     <span className="text-sm font-bold text-white">{avgRating.toFixed(1)}</span>
                     {totalRatings > 0 && <span className="text-xs text-white/50">({totalRatings})</span>}
                   </div>
                 )}
-                {/* Desktop action buttons */}
                 <div className="hidden sm:flex flex-wrap gap-2 mt-4">
                   <button onClick={handleRead} disabled={readingLoading}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-60 bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-900/40">
-                    <BookOpen className="w-4 h-4" />{readingLoading ? 'Memuat...' : 'Baca Sekarang'}
+                    <ReadIcon className="w-4 h-4" />{readLabel}
                   </button>
                   {book.fileUrl && (
                     <button onClick={handleDownload} disabled={downloadLoading}
@@ -718,13 +1022,13 @@ const BookDetailPage = () => {
                       {downloadLoading ? (downloadProgress?.percent != null ? `${downloadProgress.percent}%` : 'Mengunduh...') : `Unduh ${(book.fileFormat || 'EPUB').toUpperCase()}`}
                     </button>
                   )}
-                  <button onClick={handleFavorite} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-500/80 border-red-400/50 text-white' : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white'}`}>
+                  <button onClick={handleFavorite} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-500/80 border-red-400/50 text-white' : 'bg-white/15 border-white/20 text-white/80 hover:bg-white/25 hover:text-white'}`}>
                     <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
                   </button>
-                  <button onClick={handleOpenRatingModal} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${userRating ? 'bg-amber-500/80 border-amber-400/50 text-white' : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white'}`}>
+                  <button onClick={handleOpenRatingModal} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${userRating ? 'bg-amber-500/80 border-amber-400/50 text-white' : 'bg-white/15 border-white/20 text-white/80 hover:bg-white/25 hover:text-white'}`}>
                     <Star className={`w-5 h-5 ${userRating ? 'fill-current' : ''}`} />
                   </button>
-                  <button onClick={handleShare} className="p-2.5 rounded-xl border bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white transition-all active:scale-95">
+                  <button onClick={handleShare} className="p-2.5 rounded-xl border bg-white/15 border-white/20 text-white/80 hover:bg-white/25 hover:text-white transition-all active:scale-95">
                     <Share2 className="w-5 h-5" />
                   </button>
                 </div>
@@ -732,15 +1036,9 @@ const BookDetailPage = () => {
             </div>
           </div>
         </div>
-        {/* ── END HERO ── */}
 
-        {/* ════════════════════════════════════════════════════════════
-            MAIN CONTENT
-            pb-[88px] → ruang untuk fixed bottom bar di mobile
-        ════════════════════════════════════════════════════════════ */}
         <div className="container mx-auto px-3 sm:px-4 max-w-5xl pb-[88px] lg:pb-10">
 
-          {/* Download progress bar */}
           {downloadLoading && downloadProgress && (
             <div className="w-full h-1.5 rounded-full overflow-hidden bg-stone-200 dark:bg-slate-700 mb-4">
               {downloadProgress.percent != null
@@ -750,7 +1048,6 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* User rating pill */}
           {userRating && (
             <div className="flex items-center justify-between p-3 rounded-xl border mb-4 bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800">
               <div className="flex items-center gap-2">
@@ -761,12 +1058,15 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* Engagement stats */}
           {(book.viewCount > 0 || book.readCount > 0 || book.downloadCount > 0 || hasReactions) && (
             <div className="mb-5">
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                 {book.viewCount > 0 && <StatCard icon={Eye} label="Dilihat" value={book.viewCount} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-900/20" />}
-                {book.readCount > 0 && <StatCard icon={BookOpen} label="Pembaca" value={book.readCount} color="text-amber-500" bg="bg-amber-50 dark:bg-amber-900/20" />}
+                {(book.readCount > 0 || book.guestReadCount > 0) && (
+                  <StatCard icon={BookOpen} label="Pembaca"
+                    value={(book.readCount || 0) + (book.guestReadCount || 0)}
+                    color="text-amber-500" bg="bg-amber-50 dark:bg-amber-900/20" />
+                )}
                 {book.downloadCount > 0 && <StatCard icon={Download} label="Diunduh" value={book.downloadCount} color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
                 {book.totalComments > 0 && <StatCard icon={MessageCircle} label="Komentar" value={book.totalComments} color="text-violet-500" bg="bg-violet-50 dark:bg-violet-900/20" />}
                 {book.totalLikes > 0 && <StatCard icon={ThumbsUp} label="Suka" value={book.totalLikes} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />}
@@ -776,12 +1076,10 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* Rating summary */}
           <div className="mb-5">
             <RatingSummary ratingStats={ratingStats} onRate={handleOpenRatingModal} userRating={userRating} />
           </div>
 
-          {/* Series banner */}
           {hasSeries && (
             <div className="mb-5 p-4 rounded-2xl border overflow-hidden bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200 dark:from-violet-900/20 dark:to-slate-900 dark:border-violet-800/50">
               <div className="flex items-start gap-3">
@@ -801,7 +1099,6 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* TABS */}
           <div className="flex gap-1 p-1 rounded-xl mb-5 overflow-x-auto scrollbar-none bg-stone-100 dark:bg-slate-800/60">
             {tabs.map(tab => {
               const Icon = tab.icon
@@ -814,11 +1111,9 @@ const BookDetailPage = () => {
             })}
           </div>
 
-          {/* ── TAB: INFO ── */}
           {activeTab === 'info' && (
             <div className="space-y-5">
 
-              {/* Sinopsis */}
               <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
                 <div className="px-4 sm:px-5 pt-4 pb-1"><SectionTitle icon={BookOpen} title={<>Sinopsis <span className="text-sm text-stone-400 dark:text-slate-500">(Dibikin Otomatis)</span></>} /></div>
                 <div className="px-4 sm:px-5 pb-4">
@@ -840,7 +1135,6 @@ const BookDetailPage = () => {
                 </div>
               </div>
 
-              {/* Riwayat Penerbitan */}
               {(book.firstPublished || book.firstPublisher || book.publisher) && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
                   <div className="px-4 sm:px-5 pt-4 pb-0"><SectionTitle icon={Printer} title="Riwayat Penerbitan" iconColor="text-stone-500" /></div>
@@ -887,11 +1181,6 @@ const BookDetailPage = () => {
                 </div>
               )}
 
-              {/* ═══════════════════════════════════════════════════
-                  DETAIL BUKU
-                  FIX C: grid-cols-2 aktif di SEMUA ukuran layar
-                  InfoRow juga diperkecil agar muat di 2 kolom sempit
-              ═══════════════════════════════════════════════════ */}
               <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
                 <div className="px-4 sm:px-5 pt-4 pb-2"><SectionTitle icon={FileText} title="Detail Buku" /></div>
 
@@ -954,14 +1243,13 @@ const BookDetailPage = () => {
                 </button>
               </div>
 
-              {/* Statistik interaksi */}
               {(hasReactions || book.totalRatings > 0) && (
                 <div className="rounded-2xl border bg-white border-stone-200 dark:bg-slate-900 dark:border-slate-700 p-4 sm:p-5">
                   <SectionTitle icon={BarChart2} title="Statistik Interaksi" iconColor="text-violet-500" />
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                     {book.totalRatings > 0 && <StatCard icon={Star} label="Total Rating" value={book.totalRatings} color="text-amber-500" bg="bg-amber-50 dark:bg-amber-900/20" />}
                     {book.viewCount > 0 && <StatCard icon={Eye} label="Dilihat" value={book.viewCount} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-900/20" />}
-                    {book.readCount > 0 && <StatCard icon={BookOpen} label="Pembaca" value={book.readCount} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
+                    {(book.readCount > 0 || book.guestReadCount > 0) && <StatCard icon={BookOpen} label="Pembaca" value={(book.readCount || 0) + (book.guestReadCount || 0)} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/20" />}
                     {book.downloadCount > 0 && <StatCard icon={Download} label="Diunduh" value={book.downloadCount} color="text-teal-500" bg="bg-teal-50 dark:bg-teal-900/20" />}
                     {book.totalComments > 0 && <StatCard icon={MessageCircle} label="Komentar" value={book.totalComments} color="text-violet-500" bg="bg-violet-50 dark:bg-violet-900/20" />}
                     {book.totalLikes > 0 && <StatCard icon={ThumbsUp} label="Suka" value={book.totalLikes} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />}
@@ -976,7 +1264,6 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* ── TAB: PENULIS ── */}
           {activeTab === 'penulis' && (
             <div className="space-y-5">
               {authorList.length > 0 && (
@@ -1018,7 +1305,6 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* ── TAB: SERI ── */}
           {activeTab === 'seri' && hasSeries && (
             <div className="space-y-4">
               <div className="p-4 sm:p-5 rounded-2xl border bg-white border-violet-200 dark:bg-slate-900 dark:border-violet-800/50">
@@ -1060,7 +1346,6 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          {/* ── TAB: ULASAN ── */}
           {activeTab === 'ulasan' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1126,27 +1411,20 @@ const BookDetailPage = () => {
           <div className="mt-8 mb-8"><BookDetailSocialSection book={book} /></div>
         </div>
 
-        {/* ════════════════════════════════════════════════════════════
-            FIXED BOTTOM BAR — mobile & tablet (< lg)
-            FIX A: overflow-x-hidden di root + inset-x-0 di sini
-            memastikan bar selalu penuh lebar viewport tanpa terpotong
-        ════════════════════════════════════════════════════════════ */}
         <div
           className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-stone-200 dark:border-slate-800"
           style={{ paddingLeft: '12px', paddingRight: '12px', paddingTop: '8px', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
         >
           <div className="flex gap-2">
-            {/* Baca — flex-1 mengisi sisa */}
             <button
               onClick={handleRead}
               disabled={readingLoading}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-200/80 dark:shadow-amber-900/40 transition-all active:scale-[0.98] disabled:opacity-60 min-w-0"
             >
-              <BookOpen className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{readingLoading ? 'Memuat...' : 'Baca Sekarang'}</span>
+              <ReadIcon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{readLabel}</span>
             </button>
 
-            {/* Unduh */}
             {book.fileUrl && (
               <button
                 onClick={handleDownload}
@@ -1157,7 +1435,6 @@ const BookDetailPage = () => {
               </button>
             )}
 
-            {/* Favorit */}
             <button
               onClick={handleFavorite}
               className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-50 border-red-300 text-red-500 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400' : 'bg-white border-stone-200 text-stone-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'}`}
@@ -1165,7 +1442,6 @@ const BookDetailPage = () => {
               <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
             </button>
 
-            {/* Bagikan */}
             <button
               onClick={handleShare}
               className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-stone-200 dark:border-slate-700 text-stone-500 dark:text-slate-400 bg-white dark:bg-slate-900 transition-all active:scale-95"
@@ -1175,6 +1451,7 @@ const BookDetailPage = () => {
           </div>
         </div>
 
+        <CoverLightbox images={coverImages} index={lightboxIndex} onClose={() => setLightboxIndex(null)} onNavigate={handleLightboxNavigate} onSelect={handleLightboxSelect} />
         <RatingModal isOpen={isRatingModalOpen} onClose={() => setIsRatingModalOpen(false)} onSubmit={handleSubmitRating} bookTitle={book.title} />
       </div>
     </>

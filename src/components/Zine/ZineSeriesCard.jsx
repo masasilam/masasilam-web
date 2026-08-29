@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Download, Layers, Star, ChevronRight, Award, Clock } from 'lucide-react'
+import { Eye, Download, Layers, Star, ChevronRight, Award, Clock, BookOpen } from 'lucide-react'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => {
@@ -197,6 +197,11 @@ const ZineSeriesCard = ({ series }) => {
           <span className="inline-flex items-center gap-1">
             <Eye className="w-3 h-3 flex-shrink-0" />
             {fmt(activeIssue?.viewCount ?? 0)}
+          </span>
+          <span className="text-stone-200 dark:text-slate-700 select-none">·</span>
+          <span className="inline-flex items-center gap-1">
+            <BookOpen className="w-3 h-3 flex-shrink-0" />
+            {fmt((activeIssue?.readCount ?? 0) + (activeIssue?.guestReadCount ?? 0))}
           </span>
           <span className="text-stone-200 dark:text-slate-700 select-none">·</span>
           <span className="inline-flex items-center gap-1">

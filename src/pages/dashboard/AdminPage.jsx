@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import api from '../../services/api'
+import bookService from '../../services/bookService'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const inputCls = `
@@ -18,6 +19,21 @@ const inputCls = `
   disabled:opacity-50
 `
 const labelCls = `block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-500 dark:text-slate-400`
+
+// Toggle switch kecil, dipakai untuk boolean field (isFeatured, isActive, isTrailer)
+const ToggleField = ({ label, checked, onChange, disabled }) => (
+  <label className="flex items-center gap-2 cursor-pointer select-none">
+    <div
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative w-9 h-5 rounded-full transition-all cursor-pointer flex-shrink-0
+                  ${checked ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm
+                        transition-transform duration-200
+                        ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
+    </div>
+    <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
+  </label>
+)
 
 // Input URL gambar + tombol preview. Preview-nya memakai rasio slot aslinya di
 // web supaya admin langsung lihat kalau gambar yang dipilih salah bentuk —
@@ -53,6 +69,64 @@ const ImageUrlField = ({ label, hint, value, onChange, disabled, aspectCls, requ
             onError={e => { e.target.style.display = 'none' }} />
         </div>
       )}
+    </div>
+  )
+}
+
+// Input FILE gambar (bukan URL) + preview lokal via object URL. Dipakai untuk
+// cover buku (back cover / spine / front flap) yang memang diupload sebagai
+// file ke backend, bukan ditaruh sebagai link seperti poster film.
+const ImageFileField = ({ label, hint, file, onChange, disabled, aspectCls, currentUrl }) => {
+  const [previewUrl, setPreviewUrl] = useState(null)
+
+  useEffect(() => {
+    if (!file) { setPreviewUrl(null); return undefined }
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <div className="flex gap-3 items-start">
+        {currentUrl && !previewUrl && (
+          <div className={`flex-shrink-0 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700
+                           bg-slate-100 dark:bg-slate-800 ${aspectCls}`}>
+            <img src={currentUrl} alt={`${label} saat ini`} className="w-full h-full object-cover"
+              onError={e => { e.target.style.display = 'none' }} />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex gap-2">
+            <label className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm cursor-pointer
+                               border border-dashed transition-all min-w-0
+                               ${file
+                                 ? 'border-emerald-400 bg-emerald-50/60 dark:border-emerald-600 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300'
+                                 : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-amber-400'}
+                               ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+              <ImageIcon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{file ? file.name : (currentUrl ? 'Ganti gambar...' : 'Pilih gambar (opsional)...')}</span>
+              <input type="file" accept="image/*" className="hidden" disabled={disabled}
+                onChange={e => onChange(e.target.files?.[0] || null)} />
+            </label>
+            {file && (
+              <button type="button" onClick={() => onChange(null)} disabled={disabled}
+                className="flex-shrink-0 p-2.5 rounded-xl border border-slate-200 dark:border-slate-600
+                           text-slate-400 hover:text-red-500 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {hint && <p className="text-xs mt-1 text-slate-400 dark:text-slate-500">{hint}</p>}
+          {previewUrl && (
+            <div className={`mt-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700
+                             bg-slate-100 dark:bg-slate-800 ${aspectCls}`}>
+              <img src={previewUrl} alt={`Preview ${label}`} className="w-full h-full object-cover" />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -238,17 +312,8 @@ const VideoSourcesEditor = ({ value = [], onChange, disabled }) => {
             placeholder="URL Video (YouTube, Archive.org, dll) *" disabled={disabled}
             className={inputCls} />
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <div
-                onClick={() => !disabled && update(i, 'isTrailer', !v.isTrailer)}
-                className={`relative w-9 h-5 rounded-full transition-all cursor-pointer
-                            ${v.isTrailer ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm
-                                  transition-transform duration-200
-                                  ${v.isTrailer ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </div>
-              <span className="text-xs text-slate-600 dark:text-slate-400">Ini trailer</span>
-            </label>
+            <ToggleField label="Ini trailer" checked={v.isTrailer} disabled={disabled}
+              onChange={val => update(i, 'isTrailer', val)} />
             <label className="flex items-center gap-2 flex-1">
               <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Prioritas:</span>
               <input type="number" value={v.priority || 0}
@@ -779,12 +844,15 @@ const FilmForm = ({ mode = 'add', initialSlug = '', onSuccess, onCancel }) => {
   )
 }
 
-// ─── BOOKS TAB ─────────────────────────────────────────────────────────────────
-const BooksTab = () => {
+// ─── ADD BOOK (upload EPUB) ─────────────────────────────────────────────────────
+const AddBookForm = () => {
   const [uploading, setUploading]       = useState(false)
   const [status, setStatus]             = useState(null)
   const [message, setMessage]           = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
+  const [backCoverFile, setBackCoverFile]   = useState(null)
+  const [spineCoverFile, setSpineCoverFile] = useState(null)
+  const [frontFlapFile, setFrontFlapFile]   = useState(null)
 
   const handleFileChange = useCallback((e) => {
     const file = e.target.files?.[0]
@@ -798,23 +866,34 @@ const BooksTab = () => {
     setSelectedFile(file); setStatus(null); setMessage('')
   }, [])
 
+  const resetCoverFiles = () => {
+    setBackCoverFile(null); setSpineCoverFile(null); setFrontFlapFile(null)
+  }
+
   const handleUpload = useCallback(async () => {
     if (!selectedFile) { setStatus('error'); setMessage('Pilih file EPUB terlebih dahulu'); return }
     setUploading(true); setStatus(null)
     try {
       const fd = new FormData()
       fd.append('bookFile', selectedFile)
+      // Cover tambahan ini opsional — kalau admin tidak pilih, backend biarkan
+      // kolomnya null dan bisa diisi belakangan lewat edit.
+      if (backCoverFile) fd.append('backCoverFile', backCoverFile)
+      if (spineCoverFile) fd.append('spineCoverFile', spineCoverFile)
+      if (frontFlapFile) fd.append('frontFlapFile', frontFlapFile)
+
       const res = await api.post('/books', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setStatus('success')
       setMessage(`Buku "${res.data?.data?.title || 'berhasil'}" telah ditambahkan!`)
       setSelectedFile(null)
+      resetCoverFiles()
       const fi = document.getElementById('book-file')
       if (fi) fi.value = ''
     } catch (e) {
       setStatus('error')
       setMessage(e.response?.data?.detail || 'Gagal mengupload buku. Pastikan metadata EPUB lengkap.')
     } finally { setUploading(false) }
-  }, [selectedFile])
+  }, [selectedFile, backCoverFile, spineCoverFile, frontFlapFile])
 
   return (
     <div className="space-y-5">
@@ -855,6 +934,40 @@ const BooksTab = () => {
         </div>
       </div>
 
+      {/* Cover tambahan (opsional) */}
+      <FormSection icon={ImageIcon} title="Cover Tambahan (Opsional)" iconColor="text-rose-500">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-3">
+          Boleh dikosongkan saat upload — cover utama tetap diambil otomatis dari EPUB.
+          Tiga gambar ini bisa diisi sekarang atau menyusul lewat Edit Buku.
+        </p>
+        <div className="space-y-3">
+          <ImageFileField
+            label="Back Cover"
+            hint="Gambar sampul belakang buku."
+            file={backCoverFile}
+            onChange={setBackCoverFile}
+            disabled={uploading}
+            aspectCls="aspect-[2/3] w-24"
+          />
+          <ImageFileField
+            label="Spine"
+            hint="Gambar punggung buku."
+            file={spineCoverFile}
+            onChange={setSpineCoverFile}
+            disabled={uploading}
+            aspectCls="aspect-[1/4] w-16"
+          />
+          <ImageFileField
+            label="Front Flap"
+            hint="Gambar lipatan dalam sampul depan (jika ada, misalnya pada dust jacket)."
+            file={frontFlapFile}
+            onChange={setFrontFlapFile}
+            disabled={uploading}
+            aspectCls="aspect-[3/4] w-24"
+          />
+        </div>
+      </FormSection>
+
       {/* Info */}
       <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/60
                       dark:border-amber-700/50 dark:bg-amber-900/10">
@@ -880,6 +993,258 @@ const BooksTab = () => {
           ? <><Loader className="w-4 h-4 animate-spin" />Mengupload...</>
           : <><Upload className="w-4 h-4" />Upload Buku</>}
       </button>
+    </div>
+  )
+}
+
+// ─── EDIT BOOK ──────────────────────────────────────────────────────────────────
+const BookEditForm = () => {
+  const [slugInput, setSlugInput] = useState('')
+  const [book, setBook]           = useState(null)   // objek Book mentah dari GET /books/{slug}/edit
+  const [fetching, setFetching]   = useState(false)
+  const [loading, setLoading]     = useState(false)
+  const [status, setStatus]       = useState(null)
+  const [message, setMessage]     = useState('')
+  const [backCoverFile, setBackCoverFile]   = useState(null)
+  const [spineCoverFile, setSpineCoverFile] = useState(null)
+  const [frontFlapFile, setFrontFlapFile]   = useState(null)
+
+  const loadBook = useCallback(async (slug) => {
+    if (!slug.trim()) return
+    setFetching(true); setStatus(null)
+    try {
+      const data = await bookService.getBookForEdit(slug.trim())
+      setBook(data)
+      setBackCoverFile(null); setSpineCoverFile(null); setFrontFlapFile(null)
+      setStatus('success')
+      setMessage(`Data "${data.title}" berhasil dimuat`)
+    } catch (e) {
+      setBook(null)
+      setStatus('error')
+      setMessage(e.response?.data?.detail || e.response?.data?.message || 'Buku tidak ditemukan')
+    } finally { setFetching(false) }
+  }, [])
+
+  const set = useCallback((field, value) => setBook(p => ({ ...p, [field]: value })), [])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!book) { setStatus('error'); setMessage('Muat data buku terlebih dahulu'); return }
+    if (!book.title?.trim()) { setStatus('error'); setMessage('Judul buku wajib diisi'); return }
+
+    setLoading(true); setStatus(null)
+    try {
+      const fd = new FormData()
+      // "ebook" wajib dikirim utuh — updateBook() di backend menimpa SEMUA
+      // kolom, jadi field yang tidak diedit di form ini tetap disertakan
+      // apa adanya dari hasil load supaya tidak ketiban null.
+      fd.append('ebook', new Blob([JSON.stringify(book)], { type: 'application/json' }))
+      if (backCoverFile) fd.append('backCoverFile', backCoverFile)
+      if (spineCoverFile) fd.append('spineCoverFile', spineCoverFile)
+      if (frontFlapFile) fd.append('frontFlapFile', frontFlapFile)
+
+      await bookService.updateBookAdmin(book.id, fd)
+      setStatus('success')
+      setMessage(`Buku "${book.title}" berhasil diperbarui!`)
+      setBackCoverFile(null); setSpineCoverFile(null); setFrontFlapFile(null)
+    } catch (e) {
+      setStatus('error')
+      setMessage(e.response?.data?.detail || e.response?.data?.message || 'Gagal menyimpan perubahan')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <StatusBanner status={status} message={message} onDismiss={() => setStatus(null)} />
+
+      {/* Slug lookup */}
+      <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/60
+                      dark:border-amber-700/50 dark:bg-amber-900/10">
+        <label className={labelCls}>Slug Buku yang Ingin Diedit</label>
+        <div className="flex gap-2">
+          <input
+            value={slugInput}
+            onChange={e => setSlugInput(e.target.value)}
+            placeholder="contoh: bumi-manusia"
+            className={inputCls + ' flex-1'}
+            disabled={fetching || loading}
+          />
+          <button type="button" onClick={() => loadBook(slugInput)}
+            disabled={fetching || loading || !slugInput.trim()}
+            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                       bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold
+                       disabled:opacity-50 transition-all">
+            {fetching ? <Loader className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            <span className="hidden sm:inline">Muat</span>
+          </button>
+        </div>
+        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+          Masukkan slug buku lalu klik "Muat" untuk mengisi form dengan data yang ada
+        </p>
+      </div>
+
+      {book && (
+        <>
+          {/* Informasi Utama */}
+          <FormSection icon={Book} title="Informasi Utama" iconColor="text-amber-500" defaultOpen>
+            <div className="space-y-3 mt-1">
+              <div>
+                <label className={labelCls}>Judul <span className="text-red-500">*</span></label>
+                <input value={book.title || ''} onChange={e => set('title', e.target.value)}
+                  disabled={loading} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Subjudul</label>
+                <input value={book.subtitle || ''} onChange={e => set('subtitle', e.target.value)}
+                  disabled={loading} className={inputCls} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={labelCls}>Penerbit</label>
+                  <input value={book.publisher || ''} onChange={e => set('publisher', e.target.value)}
+                    disabled={loading} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Tahun Terbit</label>
+                  <input type="number" value={book.publicationYear || ''}
+                    onChange={e => set('publicationYear', parseInt(e.target.value) || null)}
+                    disabled={loading} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Edisi</label>
+                  <input type="number" value={book.edition || ''}
+                    onChange={e => set('edition', parseInt(e.target.value) || null)}
+                    disabled={loading} className={inputCls} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Kategori</label>
+                  <input value={book.category || ''} onChange={e => set('category', e.target.value)}
+                    disabled={loading} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Sumber</label>
+                  <input value={book.source || ''} onChange={e => set('source', e.target.value)}
+                    disabled={loading} className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Deskripsi</label>
+                <textarea value={book.description || ''} onChange={e => set('description', e.target.value)}
+                  disabled={loading} rows={4} className={inputCls + ' resize-y'} />
+              </div>
+              <div className="flex flex-wrap gap-6 pt-1">
+                <ToggleField label="Featured" checked={!!book.isFeatured} disabled={loading}
+                  onChange={v => set('isFeatured', v)} />
+                <ToggleField label="Aktif" checked={!!book.isActive} disabled={loading}
+                  onChange={v => set('isActive', v)} />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Cover tambahan */}
+          <FormSection icon={ImageIcon} title="Cover Tambahan" iconColor="text-rose-500">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-3">
+              Pilih file baru untuk mengganti gambar yang sudah ada. Kosongkan untuk tetap memakai yang lama.
+            </p>
+            <div className="space-y-4">
+              <ImageFileField
+                label="Back Cover"
+                currentUrl={book.backCoverUrl}
+                file={backCoverFile}
+                onChange={setBackCoverFile}
+                disabled={loading}
+                aspectCls="aspect-[2/3] w-24"
+              />
+              <ImageFileField
+                label="Spine"
+                currentUrl={book.spineCoverUrl}
+                file={spineCoverFile}
+                onChange={setSpineCoverFile}
+                disabled={loading}
+                aspectCls="aspect-[1/4] w-16"
+              />
+              <ImageFileField
+                label="Front Flap"
+                currentUrl={book.frontFlapUrl}
+                file={frontFlapFile}
+                onChange={setFrontFlapFile}
+                disabled={loading}
+                aspectCls="aspect-[3/4] w-24"
+              />
+            </div>
+          </FormSection>
+
+          {/* Info Tambahan */}
+          <FormSection icon={Info} title="Info Tambahan" iconColor="text-slate-500">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+              <div>
+                <label className={labelCls}>Pertama Terbit</label>
+                <input value={book.firstPublished || ''} onChange={e => set('firstPublished', e.target.value)}
+                  disabled={loading} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Penerbit Pertama</label>
+                <input value={book.firstPublisher || ''} onChange={e => set('firstPublisher', e.target.value)}
+                  disabled={loading} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Urutan dalam Seri</label>
+                <input type="number" value={book.seriesOrder || ''}
+                  onChange={e => set('seriesOrder', parseInt(e.target.value) || null)}
+                  disabled={loading} className={inputCls} />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Submit */}
+          <div className="pt-2">
+            <button type="submit" disabled={loading}
+              className="w-full sm:w-auto flex items-center justify-center gap-2
+                         px-6 py-3 rounded-2xl text-sm font-bold transition-all
+                         bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-white
+                         shadow-lg shadow-amber-200/80 dark:shadow-amber-900/40
+                         disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading
+                ? <><Loader className="w-4 h-4 animate-spin" />Menyimpan...</>
+                : <><Save className="w-4 h-4" />Simpan Perubahan</>}
+            </button>
+          </div>
+        </>
+      )}
+    </form>
+  )
+}
+
+// ─── BOOKS TAB ─────────────────────────────────────────────────────────────────
+const BooksTab = () => {
+  const [subMode, setSubMode] = useState('add')
+
+  const subTabs = [
+    { id: 'add',  label: 'Tambah Buku', icon: Plus,  color: 'text-emerald-500' },
+    { id: 'edit', label: 'Edit Buku',   icon: Edit2, color: 'text-amber-500'   },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/60">
+        {subTabs.map(({ id, label, icon: Icon, color }) => (
+          <button key={id} onClick={() => setSubMode(id)}
+            className={`flex-1 flex items-center justify-center gap-1.5
+                        px-3 py-2.5 rounded-xl text-sm font-semibold
+                        transition-all duration-200
+                        ${subMode === id
+                          ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-800 dark:text-slate-200'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+            <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${subMode === id ? color : ''}`} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {subMode === 'add' && <AddBookForm />}
+      {subMode === 'edit' && <BookEditForm />}
     </div>
   )
 }
