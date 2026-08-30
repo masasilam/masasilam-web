@@ -696,29 +696,37 @@ const EpubReaderPage = () => {
 
   useEffect(() => {
     if (!isReady || !renditionRef.current) return
-    annotations.forEach(ann => {
-      try { renditionRef.current.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch { }
-      try {
-        renditionRef.current.annotations.highlight(
-          ann.cfi, {}, null, 'epub-highlight',
-          { fill: ann.color, 'fill-opacity': getHighlightOpacity(colorMode) }
-        )
-      } catch { }
-    })
-  }, [isReady, annotations])
 
-  useEffect(() => {
-    if (!isReady || !renditionRef.current) return
-    pendingCorrections.forEach(c => {
-      try { renditionRef.current.annotations.remove(c.cfi, EPUB_ANNOTATION_TYPE) } catch { }
+    const redraw = async () => {
       try {
-        renditionRef.current.annotations.highlight(
-          c.cfi, {}, null, 'epub-correction',
-          { fill: '#EF4444', 'fill-opacity': '0.30' }
-        )
+        const doc = renditionRef.current?.getContents?.()?.[0]?.document
+        if (doc?.fonts?.ready) await doc.fonts.ready
       } catch { }
-    })
-  }, [isReady, pendingCorrections])
+
+      annotations.forEach(ann => {
+        try { renditionRef.current.annotations.remove(ann.cfi, EPUB_ANNOTATION_TYPE) } catch { }
+        try {
+          renditionRef.current.annotations.highlight(
+            ann.cfi, {}, null, 'epub-highlight',
+            { fill: ann.color, 'fill-opacity': getHighlightOpacity(colorMode) }
+          )
+        } catch { }
+      })
+
+      pendingCorrections.forEach(c => {
+        try { renditionRef.current.annotations.remove(c.cfi, EPUB_ANNOTATION_TYPE) } catch { }
+        try {
+          renditionRef.current.annotations.highlight(
+            c.cfi, {}, null, 'epub-correction',
+            { fill: '#EF4444', 'fill-opacity': '0.30' }
+          )
+        } catch { }
+      })
+    }
+
+    const timer = setTimeout(redraw, 200)
+    return () => clearTimeout(timer)
+  }, [isReady, annotations, pendingCorrections, fontSize, fontFamily, colorMode])
 
   const prevFontSizeRef = useRef(fontSize)
   useEffect(() => {

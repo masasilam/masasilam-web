@@ -7,10 +7,7 @@ const LoadingSpinner = ({ fullScreen = false, size = 'md' }) => {
 
   const spinner = (
     <div
-      className={`${sizeClasses[size]} border-amber-500/20 border-t-amber-500 rounded-full`}
-      style={{
-        animation: 'spin 1s linear infinite',
-      }}
+      className={`${sizeClasses[size]} border-amber-500/20 border-t-amber-500 rounded-full animate-spin motion-reduce:animate-[spin_1.5s_linear_infinite]`}
     />
   )
 
@@ -19,7 +16,9 @@ const LoadingSpinner = ({ fullScreen = false, size = 'md' }) => {
       <div className="min-h-screen flex flex-col justify-center items-center bg-stone-50 dark:bg-slate-950">
         <div className="flex flex-col items-center justify-center">
           {spinner}
-          <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium animate-pulse">Loading...</p>
+          <p className="mt-4 text-stone-600 dark:text-slate-400 font-medium animate-pulse motion-reduce:animate-none">
+            Loading...
+          </p>
         </div>
       </div>
     )

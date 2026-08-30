@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { COLOR_MODES } from '../constants/readerConstants'
-import { getZineVars, injectZineDocStyles } from '../utils/zineTheme'
+import { getZineVars, injectZineDocStyles, injectCustomFonts } from '../utils/zineTheme'
 
 export const useEpubTheme = () => {
   const applyTheme = useCallback((rendition, mode, size, family) => {
@@ -88,6 +88,8 @@ export const useEpubTheme = () => {
           try {
             const doc = content.document
             if (!doc) return
+
+            injectCustomFonts(doc)   // <-- BARU: load Google Fonts sebelum apply font-family
 
             let dynamicStyle = doc.getElementById('__epub_dynamic__')
             if (!dynamicStyle) { dynamicStyle = doc.createElement('style'); dynamicStyle.id = '__epub_dynamic__'; (doc.head || doc.documentElement).appendChild(dynamicStyle) }

@@ -56,3 +56,15 @@ export const injectZineDocStyles = (doc, mode) => {
     `
   } catch { }
 }
+
+export const injectCustomFonts = (doc) => {
+  if (!doc) return
+  try {
+    if (doc.getElementById('reader-google-fonts')) return
+    const link = doc.createElement('link')
+    link.id = 'reader-google-fonts'
+    link.rel = 'stylesheet'
+    link.href = 'https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=Lexend:wght@400;500;600&display=swap'
+    ;(doc.head || doc.documentElement).appendChild(link)
+  } catch { }
+}

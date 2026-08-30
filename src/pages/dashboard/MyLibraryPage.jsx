@@ -67,6 +67,7 @@ const AVG_SPINE_W = 30
 const SPINE_GAP = 3
 const SPINE_MAX_HEIGHT = 190
 const SPINE_MIN_HEIGHT = 92
+const SPINE_REAL_HEIGHT = 168
 
 const WOOD_THEMES = {
   dark: {
@@ -99,6 +100,32 @@ const WOOD_THEMES = {
     emptyTitle: 'text-amber-900/55',
     emptySubtitle: 'text-amber-900/35',
   },
+}
+
+function useNaturalRatio(url) {
+  const [ratio, setRatio] = useState(null)
+  const imgRef = useRef(null)
+
+  useEffect(() => {
+    setRatio(null)
+    if (!url) return
+    const img = new Image()
+    img.onload = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setRatio(img.naturalWidth / img.naturalHeight)
+      }
+    }
+    img.src = url
+    imgRef.current = img
+    return () => {
+      if (imgRef.current) {
+        imgRef.current.onload = null
+        imgRef.current.onerror = null
+      }
+    }
+  }, [url])
+
+  return ratio
 }
 
 function useBookColor(coverUrl, fallbackIndex) {
@@ -229,12 +256,11 @@ const BookSpine = ({ book, index, scale }) => {
   const colors = useBookColor(hasRealSpine ? null : book?.coverImageUrl, index)
   const [hovered, setHovered] = useState(false)
   const [imgError, setImgError] = useState(false)
-  const [naturalRatio, setNaturalRatio] = useState(null)
   const spineRef = useRef(null)
+  const naturalRatio = useNaturalRatio(hasRealSpine ? book?.spineCoverUrl : null)
 
   useEffect(() => {
     setImgError(false)
-    setNaturalRatio(null)
   }, [book?.spineCoverUrl])
 
   const baseHeight = Math.round(SPINE_HEIGHTS[index % SPINE_HEIGHTS.length] * scale)
@@ -254,34 +280,14 @@ const BookSpine = ({ book, index, scale }) => {
   let height = baseHeight
 
   if (showRealSpine && naturalRatio) {
-    const maxH = SPINE_MAX_HEIGHT * scale
-    const minH = SPINE_MIN_HEIGHT * scale
-    let proportionalWidth = fallbackWidth
-    let proportionalHeight = proportionalWidth / naturalRatio
-
-    if (proportionalHeight > maxH) {
-      proportionalHeight = maxH
-      proportionalWidth = proportionalHeight * naturalRatio
-    } else if (proportionalHeight < minH) {
-      proportionalHeight = minH
-      proportionalWidth = proportionalHeight * naturalRatio
-    }
-
-    width = Math.max(20, Math.round(proportionalWidth))
-    height = Math.round(proportionalHeight)
+    height = Math.round(SPINE_REAL_HEIGHT * scale)
+    width = Math.max(8, Math.round(height * naturalRatio))
   }
 
   const handleClick = useCallback(() => {
     if (!book?.bookSlug) return
     navigate(`/buku/${book.bookSlug}/baca`, { state: book.lastCfi ? { lastCfi: book.lastCfi } : {} })
   }, [navigate, book?.bookSlug, book?.lastCfi])
-
-  const handleImageLoad = useCallback((e) => {
-    const img = e.currentTarget
-    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      setNaturalRatio(img.naturalWidth / img.naturalHeight)
-    }
-  }, [])
 
   return (
     <>
@@ -321,8 +327,6 @@ const BookSpine = ({ book, index, scale }) => {
             <img
               src={book.spineCoverUrl}
               alt={book?.bookTitle}
-              loading="lazy"
-              onLoad={handleImageLoad}
               onError={() => setImgError(true)}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />

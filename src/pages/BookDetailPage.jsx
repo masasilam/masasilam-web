@@ -49,17 +49,6 @@ const CoverImage = ({ url, alt, className = '', onClick }) => {
   )
 }
 
-// FIX: SpreadPanel now sizes itself from the *actual* aspect ratio of the loaded
-// image (naturalWidth / naturalHeight) via CSS `aspect-ratio`, instead of relying
-// on hardcoded `min-w-[...]` breakpoints. Previously the <img> used `w-auto h-full`
-// (sizing itself to its own natural ratio) while the wrapping <div> was forced to a
-// guessed `min-w`. Whenever a book's real cover/spine/flap proportions were narrower
-// than that guess, the div stayed at the (too-wide) min-w and the image only filled
-// part of it — the leftover space showed the div's own background color, which is
-// the visible "gap" between panels. Now the container's width is *derived* from the
-// image itself (via aspect-ratio) and the image fills it completely (`w-full h-full
-// object-cover`), so panels always butt up against each other with no stray gap,
-// no matter how wide or narrow the spine (or any other panel) really is.
 const SpreadPanel = ({ url, alt, defaultRatio, className = '', onClick }) => {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
@@ -893,22 +882,39 @@ const BookDetailPage = () => {
 
         <div className="relative overflow-hidden">
           {book.coverImageUrl && (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              aria-hidden="true"
-              style={{
-                backgroundImage: `url(${book.coverImageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center top',
-                filter: 'blur(60px) brightness(0.25) saturate(1.5)',
-                transform: 'scale(1.1)',
-              }}
-            />
+            <>
+              {/* Light mode: brighter, more colorful treatment of the cover so the
+                  hero reads as a warm accent band, not a black slab sitting on a
+                  light page. */}
+              <div
+                className="absolute inset-0 pointer-events-none dark:hidden"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${book.coverImageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center top',
+                  filter: 'blur(60px) brightness(1.15) saturate(1.3)',
+                  transform: 'scale(1.1)',
+                }}
+              />
+              {/* Dark mode: original moody, darkened treatment */}
+              <div
+                className="absolute inset-0 pointer-events-none hidden dark:block"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${book.coverImageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center top',
+                  filter: 'blur(60px) brightness(0.25) saturate(1.5)',
+                  transform: 'scale(1.1)',
+                }}
+              />
+            </>
           )}
           <div
             className="absolute inset-0 pointer-events-none dark:hidden"
             aria-hidden="true"
-            style={{ background: 'linear-gradient(to bottom, rgba(10,9,8,0) 0%, rgba(10,9,8,0.78) 32%, rgba(10,9,8,0.78) 90%, #fafaf9 100%)' }}
+            style={{ background: 'linear-gradient(to bottom, rgba(250,250,249,0.35) 0%, rgba(250,250,249,0.82) 42%, #fafaf9 92%)' }}
           />
           <div
             className="absolute inset-0 pointer-events-none hidden dark:block"
@@ -918,16 +924,16 @@ const BookDetailPage = () => {
 
           <div className="relative container mx-auto px-3 sm:px-4 max-w-5xl">
             <div className="pt-4 pb-2">
-              <nav className="flex items-center gap-1.5 text-xs mb-2 overflow-x-auto scrollbar-none text-stone-300 dark:text-slate-600">
-                <Link to="/" className="transition hover:text-stone-100 whitespace-nowrap">Beranda</Link>
+              <nav className="flex items-center gap-1.5 text-xs mb-2 overflow-x-auto scrollbar-none text-stone-500 dark:text-slate-600">
+                <Link to="/" className="transition hover:text-stone-900 dark:hover:text-stone-100 whitespace-nowrap">Beranda</Link>
                 <span>/</span>
-                <Link to={backUrl.current} className="transition hover:text-stone-100 whitespace-nowrap">Koleksi Buku</Link>
-                {hasSeries && (<><span>/</span><Link to={`/buku/seri/${book.seriesSlug}`} className="transition hover:text-stone-100 whitespace-nowrap truncate max-w-[100px]">{book.seriesName}</Link></>)}
+                <Link to={backUrl.current} className="transition hover:text-stone-900 dark:hover:text-stone-100 whitespace-nowrap">Koleksi Buku</Link>
+                {hasSeries && (<><span>/</span><Link to={`/buku/seri/${book.seriesSlug}`} className="transition hover:text-stone-900 dark:hover:text-stone-100 whitespace-nowrap truncate max-w-[100px]">{book.seriesName}</Link></>)}
                 <span>/</span>
-                <span className="truncate max-w-[140px] text-stone-200 dark:text-slate-500">{book.title}</span>
+                <span className="truncate max-w-[140px] text-stone-700 dark:text-slate-500">{book.title}</span>
               </nav>
               <button onClick={() => navigate(backUrl.current)}
-                className="inline-flex items-center gap-1.5 text-sm font-medium group transition-colors text-stone-300 hover:text-white dark:text-slate-500 dark:hover:text-slate-300">
+                className="inline-flex items-center gap-1.5 text-sm font-medium group transition-colors text-stone-600 hover:text-stone-900 dark:text-slate-500 dark:hover:text-slate-300">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />Kembali
               </button>
             </div>
@@ -968,46 +974,46 @@ const BookDetailPage = () => {
                   <div className="flex flex-wrap gap-1 mb-2">
                     {genreList.slice(0, 3).map((g, i) => (
                       <Link key={i} to={`/kategori/${g.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')}`}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-400/20 text-amber-200 border border-amber-400/30 hover:bg-amber-400/30 transition-colors dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50">
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50">
                         {g}
                       </Link>
                     ))}
                   </div>
                 )}
-                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold leading-tight mb-1 text-white drop-shadow-md">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold leading-tight mb-1 text-stone-900 dark:text-white dark:drop-shadow-md">
                   {book.title}
-                  {book.edition && book.edition > 1 && <span className="ml-2 text-sm font-normal text-white/60">(Edisi {book.edition})</span>}
+                  {book.edition && book.edition > 1 && <span className="ml-2 text-sm font-normal text-stone-500 dark:text-white/60">(Edisi {book.edition})</span>}
                 </h1>
-                {book.subtitle && <p className="text-sm text-white/70 mb-2 leading-snug italic">{book.subtitle}</p>}
+                {book.subtitle && <p className="text-sm text-stone-600 dark:text-white/70 mb-2 leading-snug italic">{book.subtitle}</p>}
                 {authorList.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     {authorList.map((a, i) => (
                       <Link key={i} to={a.slug ? `/penulis/${a.slug}` : '#'} className="flex items-center gap-1.5 group">
                         {a.photoUrl
-                          ? <img src={a.photoUrl} alt={a.name} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border border-amber-300/40" />
-                          : <div className="w-5 h-5 rounded-full bg-amber-400/20 flex items-center justify-center"><User className="w-3 h-3 text-amber-300" /></div>
+                          ? <img src={a.photoUrl} alt={a.name} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border border-amber-400/50 dark:border-amber-300/40" />
+                          : <div className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-400/20 flex items-center justify-center"><User className="w-3 h-3 text-amber-600 dark:text-amber-300" /></div>
                         }
-                        <span className="text-sm font-semibold text-amber-300 group-hover:text-amber-200 transition-colors">{a.name}</span>
+                        <span className="text-sm font-semibold text-amber-700 group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200 transition-colors">{a.name}</span>
                       </Link>
                     ))}
                   </div>
                 )}
                 {hasSeries && (
-                  <Link to={`/buku/seri/${book.seriesSlug}`} className="inline-flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-lg bg-violet-400/20 border border-violet-400/30 text-violet-200 text-xs font-medium hover:bg-violet-400/30 transition-colors">
+                  <Link to={`/buku/seri/${book.seriesSlug}`} className="inline-flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-lg bg-violet-100 border border-violet-300 text-violet-700 hover:bg-violet-200 dark:bg-violet-400/20 dark:border-violet-400/30 dark:text-violet-200 dark:hover:bg-violet-400/30 text-xs font-medium transition-colors">
                     <Layers className="w-3 h-3" />{book.seriesName} · Bagian {book.seriesOrder}
                   </Link>
                 )}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/80" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.65)' }}>
-                  {book.publicationYear && <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-amber-400" />{book.publicationYear}</span>}
-                  {book.language && <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-amber-400" />{book.language}</span>}
-                  {book.estimatedReadTime && <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-400" />{book.estimatedReadTime} mnt</span>}
-                  {book.firstPublished && <span className="flex items-center gap-1"><Printer className="w-3 h-3 text-amber-400" />{new Date(book.firstPublished).getFullYear()}{book.firstPublisher && ` · ${book.firstPublisher}`}</span>}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-600 dark:text-white/80 dark:[text-shadow:0_1px_3px_rgba(0,0,0,0.65)]">
+                  {book.publicationYear && <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-amber-500 dark:text-amber-400" />{book.publicationYear}</span>}
+                  {book.language && <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-amber-500 dark:text-amber-400" />{book.language}</span>}
+                  {book.estimatedReadTime && <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500 dark:text-amber-400" />{book.estimatedReadTime} mnt</span>}
+                  {book.firstPublished && <span className="flex items-center gap-1"><Printer className="w-3 h-3 text-amber-500 dark:text-amber-400" />{new Date(book.firstPublished).getFullYear()}{book.firstPublisher && ` · ${book.firstPublisher}`}</span>}
                 </div>
                 {avgRating > 0 && (
                   <div className="md:hidden flex items-center gap-2 mt-2">
                     <StarDisplay avg={avgRating} />
-                    <span className="text-sm font-bold text-white">{avgRating.toFixed(1)}</span>
-                    {totalRatings > 0 && <span className="text-xs text-white/50">({totalRatings})</span>}
+                    <span className="text-sm font-bold text-stone-900 dark:text-white">{avgRating.toFixed(1)}</span>
+                    {totalRatings > 0 && <span className="text-xs text-stone-400 dark:text-white/50">({totalRatings})</span>}
                   </div>
                 )}
                 <div className="hidden sm:flex flex-wrap gap-2 mt-4">
@@ -1017,18 +1023,18 @@ const BookDetailPage = () => {
                   </button>
                   {book.fileUrl && (
                     <button onClick={handleDownload} disabled={downloadLoading}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60 bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm border border-white/20">
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60 bg-stone-900/5 hover:bg-stone-900/10 text-stone-700 border border-stone-300 backdrop-blur-sm dark:bg-white/15 dark:hover:bg-white/25 dark:text-white dark:border-white/20">
                       <Download className="w-4 h-4" />
                       {downloadLoading ? (downloadProgress?.percent != null ? `${downloadProgress.percent}%` : 'Mengunduh...') : `Unduh ${(book.fileFormat || 'EPUB').toUpperCase()}`}
                     </button>
                   )}
-                  <button onClick={handleFavorite} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-500/80 border-red-400/50 text-white' : 'bg-white/15 border-white/20 text-white/80 hover:bg-white/25 hover:text-white'}`}>
+                  <button onClick={handleFavorite} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${isFavorited ? 'bg-red-500/80 border-red-400/50 text-white' : 'bg-stone-900/5 border-stone-300 text-stone-600 hover:bg-stone-900/10 hover:text-stone-900 dark:bg-white/15 dark:border-white/20 dark:text-white/80 dark:hover:bg-white/25 dark:hover:text-white'}`}>
                     <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
                   </button>
-                  <button onClick={handleOpenRatingModal} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${userRating ? 'bg-amber-500/80 border-amber-400/50 text-white' : 'bg-white/15 border-white/20 text-white/80 hover:bg-white/25 hover:text-white'}`}>
+                  <button onClick={handleOpenRatingModal} className={`p-2.5 rounded-xl border transition-all active:scale-95 ${userRating ? 'bg-amber-500/80 border-amber-400/50 text-white' : 'bg-stone-900/5 border-stone-300 text-stone-600 hover:bg-stone-900/10 hover:text-stone-900 dark:bg-white/15 dark:border-white/20 dark:text-white/80 dark:hover:bg-white/25 dark:hover:text-white'}`}>
                     <Star className={`w-5 h-5 ${userRating ? 'fill-current' : ''}`} />
                   </button>
-                  <button onClick={handleShare} className="p-2.5 rounded-xl border bg-white/15 border-white/20 text-white/80 hover:bg-white/25 hover:text-white transition-all active:scale-95">
+                  <button onClick={handleShare} className="p-2.5 rounded-xl border bg-stone-900/5 border-stone-300 text-stone-600 hover:bg-stone-900/10 hover:text-stone-900 dark:bg-white/15 dark:border-white/20 dark:text-white/80 dark:hover:bg-white/25 dark:hover:text-white transition-all active:scale-95">
                     <Share2 className="w-5 h-5" />
                   </button>
                 </div>
